@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
-  Key
+  Key,
+  Info
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -48,6 +49,7 @@ export function Navigation({ currentPage, onPageChange, collapsed, onToggleColla
     { name: t('settings'), page: 'settings', icon: Settings },
     { name: t('templates'), page: 'templates', icon: FileText },
     { name: t('export'), page: 'export', icon: Download },
+    { name: t('about'), page: 'about', icon: Info },
   ];
 
 function classNames(...classes: string[]) {

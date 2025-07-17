@@ -2,6 +2,7 @@ import React from 'react';
 import { useState } from 'react';
 import { Navigation } from './Navigation';
 import { Header } from './Header';
+import { Footer } from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,6 +30,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
             {children}
           </div>
         </main>
+        <Footer />
       </div>
     </div>
   );

@@ -22,6 +22,7 @@ import { PrivacyPage } from './components/pages/PrivacyPage';
 import { APIPage } from './components/pages/APIPage';
 import { BackupPage } from './components/pages/BackupPage';
 import { BlockchainPage } from './components/pages/BlockchainPage';
+import { AboutPage } from './components/pages/AboutPage';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -80,6 +81,8 @@ function AppContent() {
         return <BackupPage />;
       case 'blockchain':
         return <BlockchainPage />;
+      case 'about':
+        return <AboutPage />;
       default:
         return <Dashboard onPageChange={setCurrentPage} />;
     }
