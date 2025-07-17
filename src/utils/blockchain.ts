@@ -18,14 +18,14 @@ export async function sendEth({ to, amount }: { to: string; amount: string }) {
 }
 
 // Call a smart contract (read-only)
-export async function callContract({ address, abi, method, args = [] }: { address: string; abi: any; method: string; args?: any[] }) {
+export async function callContract({ address, abi, method, args = [] }: { address: string; abi: unknown; method: string; args?: unknown[] }) {
   const provider = await getProvider();
   const contract = new ethers.Contract(address, abi, provider);
   return contract[method](...args);
 }
 
 // Call a smart contract (write)
-export async function sendContractTx({ address, abi, method, args = [] }: { address: string; abi: any; method: string; args?: any[] }) {
+export async function sendContractTx({ address, abi, method, args = [] }: { address: string; abi: unknown; method: string; args?: unknown[] }) {
   const provider = await getProvider();
   const signer = await provider.getSigner();
   const contract = new ethers.Contract(address, abi, signer);
@@ -37,7 +37,7 @@ import { EncryptionService } from './encryption';
 export interface Block {
   index: number;
   timestamp: Date;
-  data: any;
+  data: unknown;
   previousHash: string;
   hash: string;
   nonce: number;
@@ -79,7 +79,7 @@ export class Blockchain {
     }
   }
 
-  addBlock(data: any): Block {
+  addBlock(data: unknown): Block {
     const previousBlock = this.getLatestBlock();
     const newBlock: Block = {
       index: previousBlock.index + 1,

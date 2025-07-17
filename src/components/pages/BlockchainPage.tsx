@@ -1,6 +1,8 @@
 import { EthereumWallet } from '../EthereumWallet';
 import { SendEthForm } from '../SendEthForm';
 import { ContractInteractionForm } from '../ContractInteractionForm';
+import { NetworkInfo } from '../NetworkInfo';
+import { LocalBlockchain } from '../LocalBlockchain';
 
 export function BlockchainPage() {
   return (
@@ -13,9 +15,11 @@ export function BlockchainPage() {
         <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl animate-pulse z-0" />
         <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-pink-400/20 rounded-full blur-2xl animate-pulse z-0" />
       </div>
+      <NetworkInfo />
       <EthereumWallet />
       <SendEthForm />
       <ContractInteractionForm />
+      <LocalBlockchain />
     </div>
   );
 }
