@@ -14,6 +14,17 @@ import {
   Globe
 } from 'lucide-react';
 
+interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  assetCount: number;
+  isPublic: boolean;
+  createdAt: string;
+  thumbnail: string;
+  tags: string[];
+}
+
 const mockCollections = [
   {
     id: '1',
@@ -58,13 +69,21 @@ const mockCollections = [
 ];
 
 export function CollectionsPage() {
+  const [collections, setCollections] = useState<Collection[]>([...mockCollections]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
 
-  const filteredCollections = mockCollections.filter(collection =>
+  const [viewItem, setViewItem] = useState<Collection | null>(null);
+  const [shareItem, setShareItem] = useState<Collection | null>(null);
+  const [editItem, setEditItem] = useState<Collection | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [deleteItem, setDeleteItem] = useState<Collection | null>(null);
+
+  const filteredCollections = collections.filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     collection.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     collection.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -97,7 +116,7 @@ export function CollectionsPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Collections</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{mockCollections.length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{collections.length}</p>
             </div>
           </div>
         </div>
@@ -109,7 +128,7 @@ export function CollectionsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Assets</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {mockCollections.reduce((sum, col) => sum + col.assetCount, 0)}
+                {collections.reduce((sum, col) => sum + col.assetCount, 0)}
               </p>
             </div>
           </div>
@@ -122,7 +141,7 @@ export function CollectionsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Public</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {mockCollections.filter(col => col.isPublic).length}
+                {collections.filter(col => col.isPublic).length}
               </p>
             </div>
           </div>
@@ -135,7 +154,7 @@ export function CollectionsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Private</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockCollections.filter(col => !col.isPublic).length}
+                {collections.filter(col => !col.isPublic).length}
               </p>
             </div>
           </div>
@@ -212,18 +231,36 @@ export function CollectionsPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white">
+                      <button
+                        onClick={() => setViewItem(collection)}
+                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white"
+                      >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white">
+                      <button
+                        onClick={() => {
+                          setShareItem(collection);
+                        }}
+                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white"
+                      >
                         <Share2 className="h-4 w-4" />
                       </button>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white">
+                      <button
+                        onClick={() => {
+                          setEditItem(collection);
+                          setEditName(collection.name);
+                          setEditDesc(collection.description);
+                        }}
+                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white"
+                      >
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white">
+                      <button
+                        onClick={() => setDeleteItem(collection)}
+                        className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -265,16 +302,32 @@ export function CollectionsPage() {
                     ))}
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600">
+                    <button
+                      onClick={() => setViewItem(collection)}
+                      className="p-2 text-gray-400 hover:text-blue-600"
+                    >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600">
+                    <button
+                      onClick={() => setShareItem(collection)}
+                      className="p-2 text-gray-400 hover:text-blue-600"
+                    >
                       <Share2 className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600">
+                    <button
+                      onClick={() => {
+                        setEditItem(collection);
+                        setEditName(collection.name);
+                        setEditDesc(collection.description);
+                      }}
+                      className="p-2 text-gray-400 hover:text-blue-600"
+                    >
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-red-600">
+                    <button
+                      onClick={() => setDeleteItem(collection)}
+                      className="p-2 text-gray-400 hover:text-red-600"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -294,16 +347,19 @@ export function CollectionsPage() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              mockCollections.unshift({
-                id: String(Date.now()),
-                name: newName,
-                description: newDesc,
-                assetCount: 0,
-                isPublic: false,
-                createdAt: new Date().toISOString().slice(0, 10),
-                thumbnail: '',
-                tags: [],
-              });
+              setCollections((prev) => [
+                {
+                  id: Date.now().toString(),
+                  name: newName,
+                  description: newDesc,
+                  assetCount: 0,
+                  isPublic: false,
+                  createdAt: new Date().toISOString().slice(0, 10),
+                  thumbnail: '',
+                  tags: [],
+                },
+                ...prev,
+              ]);
               setNewName('');
               setNewDesc('');
               setShowCreateModal(false);
@@ -338,6 +394,103 @@ export function CollectionsPage() {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    )}
+
+    {viewItem && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewItem(null)}>
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{viewItem.name}</h3>
+          <p className="text-sm text-gray-600 mb-2">{viewItem.description}</p>
+          <p className="text-sm text-gray-600 mb-2">{viewItem.assetCount} assets</p>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {viewItem.tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {tag}
+              </span>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <button className="px-4 py-2 rounded-lg bg-blue-600 text-white" onClick={() => setViewItem(null)}>Close</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {shareItem && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShareItem(null)}>
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Share {shareItem.name}</h3>
+          <div className="flex items-center mb-4">
+            <input
+              readOnly
+              value={`https://vault.example.com/collections/${shareItem.id}`}
+              className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2"
+            />
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(`https://vault.example.com/collections/${shareItem.id}`)}
+              className="px-3 py-2 bg-blue-600 text-white rounded-r-lg"
+            >
+              Copy
+            </button>
+          </div>
+          <div className="flex justify-end">
+            <button className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700" onClick={() => setShareItem(null)}>Close</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {editItem && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setEditItem(null)}>
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Collection</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setCollections((prev) => prev.map(c => c.id === editItem.id ? { ...c, name: editName, description: editDesc } : c));
+              setEditItem(null);
+            }}
+          >
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+            />
+            <textarea
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+            />
+            <div className="flex justify-end space-x-2">
+              <button type="button" onClick={() => setEditItem(null)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">Cancel</button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {deleteItem && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDeleteItem(null)}>
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete {deleteItem.name}?</h3>
+          <div className="flex justify-end space-x-2">
+            <button className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700" onClick={() => setDeleteItem(null)}>Cancel</button>
+            <button
+              className="px-4 py-2 rounded-lg bg-red-600 text-white"
+              onClick={() => {
+                setCollections((prev) => prev.filter(c => c.id !== deleteItem.id));
+                setDeleteItem(null);
+              }}
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     )}
