@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { APIKeyModal } from './APIKeyModal';
 import { fetchApiKeys, createApiKey, deleteApiKey, regenerateApiKey } from '../../utils/apikeys';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,7 +19,7 @@ import {
   BarChart3
 } from 'lucide-react';
 
-const mockApiKeys = [
+const demoApiKeys = [
   {
     id: '1',
     name: 'Production API Key',
@@ -81,6 +81,14 @@ export function APIPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  // auto hide toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const [search, setSearch] = useState('');
 
   const toggleKeyVisibility = (keyId: string) => {
     setVisibleKeys(prev => 
@@ -157,7 +165,7 @@ export function APIPage() {
   };
 
   const handleOpenDocs = () => {
-    window.open('https://your-api-docs-url.com', '_blank');
+    window.open('https://vault-of-legacy-docs.example.com/api', '_blank');
   };
 
 
@@ -179,6 +187,10 @@ export function APIPage() {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const filteredKeys = (apiKeys.length ? apiKeys : demoApiKeys).filter((k) =>
+    k.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -225,7 +237,9 @@ export function APIPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Keys</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{mockApiKeys.filter(k => k.status === 'active').length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {(apiKeys.length ? apiKeys : demoApiKeys).filter(k => k.status === 'active').length}
+              </p>
             </div>
           </div>
         </div>
@@ -237,7 +251,7 @@ export function APIPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Requests</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {mockApiKeys.reduce((sum, key) => sum + key.requests, 0).toLocaleString()}
+                {(apiKeys.length ? apiKeys : demoApiKeys).reduce((sum, key) => sum + (key.requests || 0), 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -268,8 +282,15 @@ export function APIPage() {
 
       {/* API Keys List */}
       <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">API Keys</h3>
+          <input
+            type="text"
+            placeholder="Search keys..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mt-2 md:mt-0 px-3 py-2 border rounded w-full md:w-60"
+          />
         </div>
         {loading ? (
           <div className="p-6 text-gray-500">Loading...</div>
@@ -277,7 +298,7 @@ export function APIPage() {
           <div className="p-6 text-red-500">{error}</div>
         ) : (
         <div className="divide-y divide-gray-200">
-          {apiKeys.map((apiKey) => (
+          {filteredKeys.map((apiKey) => (
             <div key={apiKey.id} className="p-6 hover:bg-gray-50">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
