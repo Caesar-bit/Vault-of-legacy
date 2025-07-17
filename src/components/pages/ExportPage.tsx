@@ -21,6 +21,35 @@ import {
   Database
 } from 'lucide-react';
 
+const parseSize = (size: string) => {
+  const [value, unit] = size.split(' ');
+  const num = parseFloat(value);
+  switch (unit?.toLowerCase()) {
+    case 'gb':
+      return num * 1024 * 1024 * 1024;
+    case 'mb':
+      return num * 1024 * 1024;
+    case 'kb':
+      return num * 1024;
+    default:
+      return num;
+  }
+};
+
+const formatSize = (bytes: number) => {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${bytes} B`;
+};
+
+const generateRandomSize = () => {
+  const bytes =
+    Math.floor(Math.random() * (5 * 1024 ** 3 - 100 * 1024 ** 2)) +
+    100 * 1024 ** 2;
+  return formatSize(bytes);
+};
+
 const exportFormats = [
   {
     id: 'pdf',
@@ -126,6 +155,8 @@ export function ExportPage() {
   const [newName, setNewName] = useState('');
   const [format, setFormat] = useState('zip');
   const [toast, setToast] = useState<string | null>(null);
+  const [detailsExport, setDetailsExport] = useState<typeof defaultExports[number] | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const [exportsList, setExportsList] = useState(() => {
     const stored = localStorage.getItem('exports');
@@ -141,6 +172,70 @@ export function ExportPage() {
   useEffect(() => {
     localStorage.setItem('exports', JSON.stringify(exportsList));
   }, [exportsList]);
+
+  const simulateProcessing = (id: string) => {
+    setTimeout(() => {
+      setExportsList((prev) =>
+        prev.map((ex) =>
+          ex.id === id
+            ? {
+                ...ex,
+                status: 'completed',
+                size: ex.size === '0 MB' ? generateRandomSize() : ex.size,
+              }
+            : ex
+        )
+      );
+      setToast('Export completed');
+    }, 3000);
+  };
+
+  const exportCSV = () => {
+    const headers = ['Name', 'Format', 'Size', 'Status', 'Created'];
+    const rows = exportsList.map((e) =>
+      [e.name, e.format, e.size, e.status, e.created].join(',')
+    );
+    const blob = new Blob([
+      [headers.join(','), ...rows].join('\n')
+    ], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'exports.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareExport = async (item: typeof defaultExports[number]) => {
+    const url = `${window.location.origin}?export=${item.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: item.name, url });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setToast('Link copied to clipboard');
+      }
+    } catch (e) {
+      setToast('Unable to share');
+    }
+  };
+
+  const deleteExport = (id: string) => {
+    setExportsList((prev) => prev.filter((e) => e.id !== id));
+    setDeleteId(null);
+    setToast('Export deleted');
+  };
+
+  const refreshStatuses = () => {
+    exportsList.forEach((e) => {
+      if (e.status === 'processing') simulateProcessing(e.id);
+    });
+    setToast('Refreshing exports');
+  };
+
+  const totalSize = formatSize(
+    exportsList.reduce((sum, e) => sum + parseSize(e.size), 0)
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -188,13 +283,29 @@ export function ExportPage() {
           <h1 className="text-3xl font-bold text-gray-900">Export & Migration</h1>
           <p className="mt-2 text-gray-600">Export your data in various formats for backup or migration</p>
         </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Create Export
-        </button>
+        <div className="flex space-x-2 mt-4 sm:mt-0">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Create Export
+          </button>
+          <button
+            onClick={refreshStatuses}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </button>
+          <button
+            onClick={exportCSV}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -230,7 +341,7 @@ export function ExportPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Size</p>
-              <p className="text-2xl font-bold text-gray-900">4.5 GB</p>
+              <p className="text-2xl font-bold text-gray-900">{totalSize}</p>
             </div>
           </div>
         </div>
@@ -417,13 +528,22 @@ export function ExportPage() {
                       <Download className="h-4 w-4" />
                     </button>
                     )}
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button
+                      onClick={() => setDetailsExport(exportItem)}
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                    >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button
+                      onClick={() => shareExport(exportItem)}
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                    >
                       <Share2 className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                    <button
+                      onClick={() => setDeleteId(exportItem.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -454,6 +574,7 @@ export function ExportPage() {
                 includes: selectedContent,
               };
               setExportsList(prev => [newExport, ...prev]);
+              simulateProcessing(newExport.id);
               setToast('Export queued');
               setNewName('');
               setFormat('zip');
@@ -488,6 +609,55 @@ export function ExportPage() {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    )}
+
+    {detailsExport && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">{detailsExport.name}</h3>
+          <p className="text-sm text-gray-500">Format: {detailsExport.format}</p>
+          <p className="text-sm text-gray-500">Size: {detailsExport.size}</p>
+          <p className="text-sm text-gray-500">Created: {formatDate(detailsExport.created)}</p>
+          <div className="flex flex-wrap gap-1">
+            {detailsExport.includes.map((inc) => (
+              <span key={inc} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {inc}
+              </span>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setDetailsExport(null)}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {deleteId && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Delete Export?</h3>
+          <p className="text-sm text-gray-500">This action cannot be undone.</p>
+          <div className="flex justify-end space-x-2">
+            <button
+              onClick={() => setDeleteId(null)}
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteExport(deleteId)}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     )}
