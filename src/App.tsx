@@ -81,7 +81,7 @@ function AppContent() {
       case 'blockchain':
         return <BlockchainPage />;
       default:
-        return <Dashboard />;
+        return <Dashboard onPageChange={setCurrentPage} />;
     }
   };
 

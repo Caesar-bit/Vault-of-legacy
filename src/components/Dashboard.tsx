@@ -1,5 +1,7 @@
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useState } from 'react';
+import { UploadMediaModal } from './UploadMediaModal';
 import { 
   TrendingUp, 
   Users, 
@@ -55,11 +57,36 @@ function getActivityIcon(type: string) {
   }
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  onPageChange: (page: string) => void;
+}
+
+export function Dashboard({ onPageChange }: DashboardProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const handleQuickAction = (actionName: string) => {
+    switch (actionName) {
+      case 'Upload Media':
+        setShowUploadModal(true);
+        break;
+      case 'Create Timeline':
+        onPageChange('timeline');
+        break;
+      case 'New Collection':
+        onPageChange('collections');
+        break;
+      case 'Archive Content':
+        onPageChange('archive');
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
+    <>
     <div className="space-y-8">
       {/* Hero Welcome Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-purple-500 to-orange-400 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 shadow-2xl mb-4">
@@ -153,6 +180,7 @@ export function Dashboard() {
                 return (
                 <button
                   key={action.name}
+                  onClick={() => handleQuickAction(action.name)}
                   className="flex flex-col items-center p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary-300 hover:bg-gradient-to-br hover:from-primary-50 hover:to-purple-50 transition-all duration-300 group hover:shadow-lg"
                 >
                   <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${gradients[index]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
@@ -244,6 +272,14 @@ export function Dashboard() {
         </div>
       </div>
     </div>
+    {showUploadModal && (
+      <UploadMediaModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUpload={(file) => console.log('Uploaded', file.name)}
+      />
+    )}
+    </>
   );
 // Simple calendar mini component for visual effect
 function CalendarMini() {
