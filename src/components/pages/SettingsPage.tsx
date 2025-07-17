@@ -1,23 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { 
-  Settings, 
-  User, 
-  Shield, 
-  Bell, 
-  Palette, 
-  Database, 
-  Globe, 
-  Key, 
-  Download, 
+  User,
+  Shield,
+  Bell,
+  Palette,
+  Database,
+  Globe,
+  Key,
+  Download,
   Upload,
   Save,
-  RefreshCw,
   Eye,
   EyeOff,
   Check,
-  X,
-  AlertTriangle,
-  Info
+  AlertTriangle
 } from 'lucide-react';
 
 

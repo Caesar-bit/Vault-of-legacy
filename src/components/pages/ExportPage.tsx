@@ -14,7 +14,6 @@ import {
   Eye,
   Trash2,
   Share2,
-  Filter,
   Search,
   HardDrive,
   Cloud,
@@ -215,7 +214,8 @@ export function ExportPage() {
         await navigator.clipboard.writeText(url);
         setToast('Link copied to clipboard');
       }
-    } catch (e) {
+    } catch (err) {
+      console.error(err);
       setToast('Unable to share');
     }
   };

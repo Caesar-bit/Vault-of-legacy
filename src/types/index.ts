@@ -17,7 +17,7 @@ export interface Asset {
   uploadedAt: Date;
   uploadedBy: string;
   tags: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Collection {
@@ -46,7 +46,7 @@ export interface BlockchainRecord {
   hash: string;
   previousHash: string;
   timestamp: Date;
-  data: any;
+  data: unknown;
   nonce: number;
 }
 

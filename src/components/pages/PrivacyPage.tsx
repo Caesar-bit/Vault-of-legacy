@@ -1,18 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Shield, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Globe, 
-  Users, 
-  FileText, 
-  Settings,
+import {
+  Shield,
+  Lock,
   Save,
   AlertTriangle,
-  CheckCircle,
   Info,
-  Key,
   Database,
   UserCheck
 } from 'lucide-react';
@@ -43,7 +35,7 @@ export function PrivacyPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const handleSettingChange = (key: string, value: any) => {
+  const handleSettingChange = (key: string, value: boolean | string) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 

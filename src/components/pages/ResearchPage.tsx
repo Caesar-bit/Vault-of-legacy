@@ -242,7 +242,7 @@ export function ResearchPage() {
       <div className="bg-white/70 rounded-3xl border border-white/30 p-6 mb-6 shadow-xl backdrop-blur-lg">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Research Sources</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {researchSources.map((source, i) => (
+          {researchSources.map((source) => (
             <div key={source.name} className="glassy-card border border-white/40 rounded-2xl p-5 shadow-lg hover:scale-[1.03] hover:shadow-2xl transition group relative overflow-hidden">
               <div className="absolute -top-6 -right-6 w-16 h-16 bg-blue-400/10 rounded-full blur-xl group-hover:scale-125 transition" />
               <div className="flex items-center justify-between mb-2 relative z-10">

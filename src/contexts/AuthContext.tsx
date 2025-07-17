@@ -49,7 +49,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else {
           setAuthState(prev => ({ ...prev, isLoading: false }));
         }
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         setAuthState(prev => ({ ...prev, isLoading: false, error: 'Session validation failed' }));
       }
     };
@@ -92,7 +93,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading: false,
         error: null,
       });
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
@@ -137,7 +139,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading: false,
         error: null,
       });
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
@@ -171,7 +174,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       setAuthState(prev => ({ ...prev, isLoading: false }));
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
@@ -199,7 +203,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       setAuthState(prev => ({ ...prev, isLoading: false }));
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
