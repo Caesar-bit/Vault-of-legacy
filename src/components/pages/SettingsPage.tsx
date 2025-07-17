@@ -35,6 +35,8 @@ const settingsSections = [
 export function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState([{ id: '1', key: 'sk-1234-5678-ABCD' }]);
   const [settings, setSettings] = useState({
     profile: {
       name: 'John Smith',
@@ -75,6 +77,60 @@ export function SettingsPage() {
       dataSharing: false
     }
   });
+
+  const saveSettings = () => {
+    localStorage.setItem('vault_settings', JSON.stringify(settings));
+    setToast('Settings saved');
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const downloadFile = (data: string, name: string, type: string) => {
+    const blob = new Blob([data], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBackup = () => {
+    downloadFile(JSON.stringify(settings, null, 2), 'vault-backup.json', 'application/json');
+    setToast('Backup downloaded');
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleExport = (format: 'csv' | 'json') => {
+    if (format === 'json') {
+      downloadFile(JSON.stringify(settings, null, 2), 'vault-export.json', 'application/json');
+    } else {
+      const csv = Object.entries(settings.profile)
+        .map(([k, v]) => `${k},${String(v)}`)
+        .join('\n');
+      downloadFile(csv, 'vault-export.csv', 'text/csv');
+    }
+    setToast(`Exported ${format.toUpperCase()}`);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const copyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    setToast('Key copied');
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const revokeKey = (id: string) => {
+    setApiKeys(prev => prev.filter(k => k.id !== id));
+    setToast('Key revoked');
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const generateKey = () => {
+    const newKey = `sk-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
+    setApiKeys(prev => [...prev, { id: Date.now().toString(), key: newKey }]);
+    setToast('Key generated');
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const renderProfileSettings = () => (
     <div className="space-y-6">
@@ -466,12 +522,34 @@ export function SettingsPage() {
           <div className="p-4 border border-gray-200 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Your API Keys</h4>
             <p className="text-sm text-gray-600 mb-2">Manage your API keys for integrations and automation.</p>
-            <div className="flex items-center space-x-2">
-              <input type="text" value="sk-1234-5678-ABCD" readOnly className="w-64 px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" />
-              <button className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Copy</button>
-              <button className="px-3 py-2 rounded-lg bg-red-100 text-red-700 text-sm font-medium hover:bg-red-200">Revoke</button>
-            </div>
-            <button className="mt-4 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">Generate New Key</button>
+            {apiKeys.map(key => (
+              <div key={key.id} className="flex items-center space-x-2 mb-2">
+                <input
+                  type="text"
+                  value={key.key}
+                  readOnly
+                  className="w-64 px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+                />
+                <button
+                  onClick={() => copyKey(key.key)}
+                  className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={() => revokeKey(key.id)}
+                  className="px-3 py-2 rounded-lg bg-red-100 text-red-700 text-sm font-medium hover:bg-red-200"
+                >
+                  Revoke
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={generateKey}
+              className="mt-4 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+            >
+              Generate New Key
+            </button>
           </div>
         </div>
       </div>
@@ -487,14 +565,29 @@ export function SettingsPage() {
           <div className="p-4 border border-gray-200 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Backup Data</h4>
             <p className="text-sm text-gray-600 mb-2">Download a backup of your data for safekeeping.</p>
-            <button className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 inline-flex items-center"><Download className="h-4 w-4 mr-2" />Download Backup</button>
+            <button
+              onClick={handleBackup}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 inline-flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />Download Backup
+            </button>
           </div>
           <div className="p-4 border border-gray-200 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Export Data</h4>
             <p className="text-sm text-gray-600 mb-2">Export your data in CSV or JSON format.</p>
             <div className="flex space-x-2">
-              <button className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">Export CSV</button>
-              <button className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700">Export JSON</button>
+              <button
+                onClick={() => handleExport('csv')}
+                className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+              >
+                Export CSV
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700"
+              >
+                Export JSON
+              </button>
             </div>
           </div>
         </div>
@@ -519,13 +612,21 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-8">
+      {toast && (
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
+          {toast}
+        </div>
+      )}
       {/* Glassy Animated Header */}
       <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden" style={{background: 'linear-gradient(120deg,rgba(59,130,246,0.10),rgba(236,72,153,0.10) 100%)'}}>
         <div>
           <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm tracking-tight">Settings</h1>
           <p className="mt-2 text-lg text-gray-700">Manage your account preferences and configuration</p>
         </div>
-        <button className="mt-6 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-pink-500 shadow-lg hover:scale-105 hover:shadow-xl transition">
+        <button
+          onClick={saveSettings}
+          className="mt-6 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-pink-500 shadow-lg hover:scale-105 hover:shadow-xl transition"
+        >
           <Save className="h-4 w-4 mr-2" />
           Save Changes
         </button>
