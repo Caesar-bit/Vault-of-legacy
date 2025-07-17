@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   BookOpen, 
-  FileText, 
-  Link, 
-  Quote, 
+  FileText,
+  Quote,
   CheckCircle, 
   AlertTriangle, 
   Plus, 
   Filter, 
   Calendar, 
-  User, 
   Globe,
   Archive,
-  Bookmark,
   Edit,
   Trash2,
-  ExternalLink,
   Download,
   Share2
 } from 'lucide-react';
@@ -86,6 +82,20 @@ const researchSources = [
   { name: 'Personal Collection', type: 'personal', reliability: 'high', count: 156 }
 ];
 
+interface ResearchItem {
+  id: string;
+  title: string;
+  type: string;
+  source: string;
+  date: string;
+  verified: boolean;
+  reliability: 'high' | 'medium' | 'low';
+  notes: string;
+  citations: string[];
+  tags: string[];
+  attachments: string[];
+}
+
 
 export function ResearchPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,6 +103,27 @@ export function ResearchPage() {
   const [filterReliability, setFilterReliability] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [researchItems, setResearchItems] = useState<ResearchItem[]>(() => {
+    const stored = localStorage.getItem('research_items');
+    return stored ? JSON.parse(stored) : mockResearchItems;
+  });
+  const [form, setForm] = useState({
+    title: '',
+    type: 'document',
+    source: '',
+    date: '',
+    verified: false,
+    reliability: 'high',
+    notes: '',
+    citations: '',
+    tags: '',
+    attachments: ''
+  });
+
+  useEffect(() => {
+    localStorage.setItem('research_items', JSON.stringify(researchItems));
+  }, [researchItems]);
 
   // Glassy color helpers
   const getReliabilityColor = (reliability: string) => {
@@ -112,6 +143,53 @@ export function ResearchPage() {
       case 'vital': return BookOpen;
       default: return FileText;
     }
+  };
+
+  const handleDownload = (item: ResearchItem) => {
+    const data = JSON.stringify(item, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${item.title.replace(/\s+/g, '_')}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async (item: ResearchItem) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: item.title, text: item.notes });
+      } else {
+        await navigator.clipboard.writeText(`${item.title}\n${item.notes}`);
+        alert('Info copied to clipboard');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Delete this research item?')) {
+      setResearchItems(prev => prev.filter(r => r.id !== id));
+    }
+  };
+
+  const openEdit = (item: ResearchItem) => {
+    setEditingId(item.id);
+    setForm({
+      title: item.title,
+      type: item.type,
+      source: item.source,
+      date: item.date,
+      verified: item.verified,
+      reliability: item.reliability,
+      notes: item.notes,
+      citations: item.citations.join(', '),
+      tags: item.tags.join(', '),
+      attachments: item.attachments.join(', ')
+    });
+    setShowAddModal(true);
   };
 
   return (
@@ -227,7 +305,19 @@ export function ResearchPage() {
           <h3 className="text-lg font-bold text-gray-900">Research Items</h3>
         </div>
         <div className="divide-y divide-white/30">
-          {mockResearchItems.map((item) => {
+          {researchItems
+            .filter((item) => {
+              const matchesSearch =
+                item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.tags.some((t) =>
+                  t.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+              const matchesType = filterType === 'all' || item.type === filterType;
+              const matchesRel =
+                filterReliability === 'all' || item.reliability === filterReliability;
+              return matchesSearch && matchesType && matchesRel;
+            })
+            .map((item) => {
             const TypeIcon = getTypeIcon(item.type);
             const expanded = expandedItem === item.id;
             return (
@@ -290,16 +380,40 @@ export function ResearchPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(item);
+                      }}
+                    >
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(item);
+                      }}
+                    >
                       <Download className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShare(item);
+                      }}
+                    >
                       <Share2 className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -319,22 +433,143 @@ export function ResearchPage() {
         <Plus className="h-7 w-7" />
       </button>
 
-      {/* Add Research Modal (UI only) */}
+      {/* Add/Edit Research Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative animate-fade-in">
-            <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => setShowAddModal(false)}>
-              <Trash2 className="h-5 w-5" />
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
+              onClick={() => setShowAddModal(false)}
+            >
+              &times;
             </button>
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Add New Research</h2>
-            <form className="space-y-4">
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Title" />
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Source" />
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Date" />
-              <textarea className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Notes" />
+            <h2 className="text-xl font-bold mb-4 text-gray-900">
+              {editingId ? 'Edit Research' : 'Add New Research'}
+            </h2>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const newItem: ResearchItem = {
+                  id: editingId ?? Date.now().toString(),
+                  title: form.title,
+                  type: form.type,
+                  source: form.source,
+                  date: form.date,
+                  verified: form.verified,
+                  reliability: form.reliability as 'high' | 'medium' | 'low',
+                  notes: form.notes,
+                  citations: form.citations
+                    ? form.citations.split(/,\s*/)
+                    : [],
+                  tags: form.tags ? form.tags.split(/,\s*/) : [],
+                  attachments: form.attachments
+                    ? form.attachments.split(/,\s*/)
+                    : []
+                };
+                setResearchItems((prev) => {
+                  if (editingId) {
+                    return prev.map((it) => (it.id === editingId ? newItem : it));
+                  }
+                  return [newItem, ...prev];
+                });
+                setShowAddModal(false);
+                setEditingId(null);
+                setForm({
+                  title: '',
+                  type: 'document',
+                  source: '',
+                  date: '',
+                  verified: false,
+                  reliability: 'high',
+                  notes: '',
+                  citations: '',
+                  tags: '',
+                  attachments: ''
+                });
+              }}
+            >
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Source"
+                value={form.source}
+                onChange={(e) => setForm({ ...form, source: e.target.value })}
+              />
+              <input
+                type="date"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+              <textarea
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Notes"
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Citations (comma separated)"
+                value={form.citations}
+                onChange={(e) => setForm({ ...form, citations: e.target.value })}
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Tags (comma separated)"
+                value={form.tags}
+                onChange={(e) => setForm({ ...form, tags: e.target.value })}
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Attachments (comma separated)"
+                value={form.attachments}
+                onChange={(e) => setForm({ ...form, attachments: e.target.value })}
+              />
+              <div className="flex items-center space-x-2">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.verified}
+                    onChange={(e) => setForm({ ...form, verified: e.target.checked })}
+                  />
+                  <span>Verified</span>
+                </label>
+                <select
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={form.reliability}
+                  onChange={(e) =>
+                    setForm({ ...form, reliability: e.target.value })
+                  }
+                >
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
               <div className="flex space-x-2">
-                <button type="button" className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200">Cancel</button>
-                <button type="submit" className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Add</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingId(null);
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                >
+                  {editingId ? 'Save' : 'Add'}
+                </button>
               </div>
             </form>
           </div>
