@@ -80,18 +80,30 @@ const getEventTypeIcon = (type: string) => {
 
 
 export function TimelinePage() {
+  const [events, setEvents] = useState(mockEvents);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    type: 'milestone',
+    location: '',
+    assets: ''
+  });
 
-  const filteredEvents = mockEvents.filter(event => {
+  const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || event.type === selectedType;
     return matchesSearch && matchesType;
   });
 
-  const sortedEvents = filteredEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sortedEvents = filteredEvents.sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
 
   return (
     <div className="relative min-h-screen pb-20">
@@ -102,7 +114,11 @@ export function TimelinePage() {
           <p className="mt-2 text-lg text-gray-600">Chronicle your life's journey through time</p>
         </div>
         <button
-          onClick={() => setShowAddEvent(true)}
+          onClick={() => {
+            setEditingId(null);
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: '' });
+            setShowForm(true);
+          }}
           className="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           <Plus className="h-5 w-5 mr-2" />
@@ -118,7 +134,7 @@ export function TimelinePage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Total Events</p>
-            <p className="text-2xl font-extrabold text-gray-900">{mockEvents.length}</p>
+            <p className="text-2xl font-extrabold text-gray-900">{events.length}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -234,10 +250,27 @@ export function TimelinePage() {
                       )}
                     </div>
                     <div className="flex flex-col items-end space-y-2 ml-6">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white/70 transition-colors">
+                      <button
+                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white/70 transition-colors"
+                        onClick={() => {
+                          setEditingId(event.id);
+                          setForm({
+                            title: event.title,
+                            description: event.description,
+                            date: event.date,
+                            type: event.type,
+                            location: event.location,
+                            assets: event.assets.join(', ')
+                          });
+                          setShowForm(true);
+                        }}
+                      >
                         <Edit className="h-5 w-5" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white/70 transition-colors">
+                      <button
+                        className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white/70 transition-colors"
+                        onClick={() => setEvents((prev) => prev.filter((ev) => ev.id !== event.id))}
+                      >
                         <Trash2 className="h-5 w-5" />
                       </button>
                     </div>
@@ -250,7 +283,11 @@ export function TimelinePage() {
 
         {/* Floating Add Event Button */}
         <button
-          onClick={() => setShowAddEvent(true)}
+          onClick={() => {
+            setEditingId(null);
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: '' });
+            setShowForm(true);
+          }}
           className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400 animate-bounce"
           title="Add Event"
         >
@@ -258,22 +295,97 @@ export function TimelinePage() {
         </button>
       </div>
 
-      {/* Add Event Modal (Coming Soon) */}
-      {showAddEvent && (
+      {/* Add/Edit Event Modal */}
+      {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-lg relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-xl"
-              onClick={() => setShowAddEvent(false)}
-              title="Close"
+              className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
+              onClick={() => setShowForm(false)}
             >
               &times;
             </button>
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Add New Event</h2>
-            <p className="text-gray-500 mb-6">Event creation coming soon!</p>
-            <div className="flex items-center justify-center">
-              <Plus className="h-12 w-12 text-blue-400 animate-pulse" />
-            </div>
+            <h2 className="text-xl font-bold mb-4 text-gray-900">{editingId ? 'Edit Event' : 'Add New Event'}</h2>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (editingId) {
+                  setEvents((prev) =>
+                    prev.map((ev) =>
+                      ev.id === editingId
+                        ? { ...ev, ...form, assets: form.assets ? form.assets.split(/,\s*/) : [] }
+                        : ev
+                    )
+                  );
+                } else {
+                  setEvents((prev) => [
+                    ...prev,
+                    {
+                      id: Date.now().toString(),
+                      ...form,
+                      assets: form.assets ? form.assets.split(/,\s*/) : []
+                    }
+                  ]);
+                }
+                setShowForm(false);
+              }}
+            >
+              <input
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
+              <textarea
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Description"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                required
+              />
+              <input
+                type="date"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                required
+              />
+              <input
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Location"
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+              />
+              <select
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
+              >
+                <option value="milestone">Milestone</option>
+                <option value="event">Event</option>
+                <option value="achievement">Achievement</option>
+              </select>
+              <input
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Assets (comma separated)"
+                value={form.assets}
+                onChange={(e) => setForm({ ...form, assets: e.target.value })}
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                  {editingId ? 'Save' : 'Create'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
