@@ -35,7 +35,7 @@ export interface TemplateItem {
   tags: string[];
 }
 
-const templates: TemplateItem[] = [
+const defaultTemplates: TemplateItem[] = [
   {
     id: '1',
     name: 'Family Heritage Timeline',
@@ -153,7 +153,7 @@ export function TemplatesPage() {
   });
   const [templates, setTemplates] = useState<TemplateItem[]>(() => {
     const stored = localStorage.getItem('vault_templates');
-    return stored ? JSON.parse(stored) : templates;
+    return stored ? JSON.parse(stored) : defaultTemplates;
   });
 
   useEffect(() => {
