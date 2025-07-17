@@ -1,27 +1,19 @@
 import React, { useState } from 'react';
 import { 
-  Archive, 
-  Download, 
-  Upload, 
-  Search, 
-  Filter, 
-  Calendar, 
-  Clock, 
-  Shield, 
-  Database,
+  Archive,
+  Download,
+  Search,
+  Filter,
+  Clock,
+  Shield,
   HardDrive,
   FileText,
   Image,
-  Video,
-  Music,
   Folder,
-  CheckCircle,
-  AlertTriangle,
   MoreHorizontal,
   Eye,
   Trash2,
-  RefreshCw,
-  Settings
+  RefreshCw
 } from 'lucide-react';
 
 const mockArchives = [
@@ -78,6 +70,8 @@ export function ArchivePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('collection');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -99,6 +93,7 @@ export function ArchivePage() {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -310,5 +305,60 @@ export function ArchivePage() {
         </div>
       )}
     </div>
+
+    {showCreateModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Archive</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mockArchives.unshift({
+                id: String(Date.now()),
+                name,
+                type,
+                size: '0 MB',
+                items: 0,
+                created: new Date().toISOString().slice(0, 10),
+                lastBackup: new Date().toISOString().slice(0, 10),
+                status: 'active',
+                retention: '25 years',
+                format: 'ZIP',
+                checksum: 'SHA-256',
+              });
+              setName('');
+              setType('collection');
+              setShowCreateModal(false);
+            }}
+          >
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+            >
+              <option value="collection">Collection</option>
+              <option value="documents">Documents</option>
+              <option value="media">Media</option>
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -67,7 +67,17 @@ export function APIPage() {
   useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [visibleKeys, setVisibleKeys] = useState<string[]>([]);
-  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  interface ApiKey {
+    id: string;
+    name: string;
+    key: string;
+    permissions: string[];
+    lastUsed?: string;
+    created: string;
+    status: string;
+    requests?: number;
+  }
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -90,8 +100,9 @@ export function APIPage() {
         if (!token) throw new Error('Not authenticated');
         const keys = await fetchApiKeys(token);
         setApiKeys(keys);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load API keys');
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to load API keys';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -106,8 +117,9 @@ export function APIPage() {
       const newKey = await createApiKey(token, name, permissions);
       setApiKeys(prev => [newKey, ...prev]);
       setToast('API key created!');
-    } catch (e: any) {
-      setToast(e.message || 'Failed to create API key');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to create API key';
+      setToast(message);
     }
   };
 
@@ -123,8 +135,9 @@ export function APIPage() {
       const updated = await regenerateApiKey(token, id);
       setApiKeys(prev => prev.map(k => k.id === id ? updated : k));
       setToast('API key regenerated!');
-    } catch (e: any) {
-      setToast(e.message || 'Failed to regenerate API key');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to regenerate API key';
+      setToast(message);
     }
   };
 
@@ -136,8 +149,9 @@ export function APIPage() {
         await deleteApiKey(token, id);
         setApiKeys(prev => prev.filter(k => k.id !== id));
         setToast('API key revoked!');
-      } catch (e: any) {
-        setToast(e.message || 'Failed to revoke API key');
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to revoke API key';
+        setToast(message);
       }
     }
   };

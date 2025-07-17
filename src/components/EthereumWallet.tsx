@@ -2,7 +2,7 @@ import { useState } from 'react';
 // Add TypeScript support for window.ethereum
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: ethers.Eip1193Provider;
   }
 }
 import { ethers } from 'ethers';
@@ -27,8 +27,9 @@ export function EthereumWallet() {
       setAddress(accounts[0]);
       const bal = await provider.getBalance(accounts[0]);
       setBalance(ethers.formatEther(bal));
-    } catch (err) {
-      setError('Could not connect wallet.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not connect wallet.';
+      setError(message);
     }
     setIsLoading(false);
   };

@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import { 
-  HardDrive, 
-  Cloud, 
-  Download, 
-  Upload, 
-  RefreshCw, 
-  Calendar, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle,
+  HardDrive,
+  Cloud,
+  Download,
+  RefreshCw,
+  Calendar,
+  Clock,
+  CheckCircle,
   Settings,
   Shield,
   Database,
   Archive,
   Zap,
-  Globe,
   Server,
   Save
 } from 'lucide-react';
@@ -62,8 +59,10 @@ const backupSchedules = [
 ];
 
 export function BackupPage() {
-  const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('full');
+  const [location, setLocation] = useState('cloud');
   const [backupSettings, setBackupSettings] = useState({
     autoBackup: true,
     cloudSync: true,
@@ -102,6 +101,7 @@ export function BackupPage() {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -377,5 +377,68 @@ export function BackupPage() {
         </div>
       </div>
     </div>
+
+    {showCreateModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Backup</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mockBackups.unshift({
+                id: String(Date.now()),
+                name,
+                type,
+                size: '0 MB',
+                created: new Date().toISOString(),
+                status: 'scheduled',
+                location,
+                retention: '30 days',
+                encrypted: true,
+              });
+              setName('');
+              setType('full');
+              setLocation('cloud');
+              setShowCreateModal(false);
+            }}
+          >
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+            >
+              <option value="full">Full</option>
+              <option value="incremental">Incremental</option>
+              <option value="selective">Selective</option>
+            </select>
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            >
+              <option value="cloud">Cloud</option>
+              <option value="local">Local</option>
+              <option value="remote">Remote</option>
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

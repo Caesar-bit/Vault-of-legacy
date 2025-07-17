@@ -28,8 +28,9 @@ export function ContractInteractionForm() {
         const res = await callContract({ address, abi: parsedAbi, method, args: parsedArgs });
         setResult(JSON.stringify(res));
       }
-    } catch (err: any) {
-      setError(err.message || 'Contract call failed');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Contract call failed';
+      setError(message);
     }
     setIsLoading(false);
   };

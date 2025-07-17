@@ -10,7 +10,6 @@ import {
   Trash2,
   FolderOpen,
   ImageIcon,
-  Users,
   Lock,
   Globe
 } from 'lucide-react';
@@ -62,6 +61,8 @@ export function CollectionsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
 
   const filteredCollections = mockCollections.filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,6 +71,7 @@ export function CollectionsPage() {
   );
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -283,5 +285,62 @@ export function CollectionsPage() {
         )}
       </div>
     </div>
+
+    {showCreateModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">New Collection</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mockCollections.unshift({
+                id: String(Date.now()),
+                name: newName,
+                description: newDesc,
+                assetCount: 0,
+                isPublic: false,
+                createdAt: new Date().toISOString().slice(0, 10),
+                thumbnail: '',
+                tags: [],
+              });
+              setNewName('');
+              setNewDesc('');
+              setShowCreateModal(false);
+            }}
+          >
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="Name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              required
+            />
+            <textarea
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="Description"
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white"
+              >
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

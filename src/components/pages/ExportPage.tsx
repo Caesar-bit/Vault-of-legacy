@@ -6,8 +6,7 @@ import {
   Video, 
   Music, 
   Archive, 
-  Settings, 
-  Calendar, 
+  Settings,
   Clock,
   CheckCircle,
   AlertTriangle,
@@ -124,6 +123,8 @@ export function ExportPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [format, setFormat] = useState('zip');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -158,6 +159,7 @@ export function ExportPage() {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -394,5 +396,60 @@ export function ExportPage() {
         </div>
       </div>
     </div>
+
+    {showCreateModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Export</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mockExports.unshift({
+                id: String(Date.now()),
+                name: newName || 'New Export',
+                format,
+                status: 'processing',
+                created: new Date().toISOString(),
+                size: '0 MB',
+                downloads: 0,
+              });
+              setNewName('');
+              setFormat('zip');
+              setShowCreateModal(false);
+            }}
+          >
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="Export Name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={format}
+              onChange={(e) => setFormat(e.target.value)}
+            >
+              {exportFormats.map((fmt) => (
+                <option key={fmt.id} value={fmt.id}>{fmt.name}</option>
+              ))}
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
