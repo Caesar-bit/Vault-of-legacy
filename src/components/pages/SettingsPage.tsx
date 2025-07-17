@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Settings, 
   User, 
@@ -36,14 +36,18 @@ export function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [apiKeys, setApiKeys] = useState([{ id: '1', key: 'sk-1234-5678-ABCD' }]);
-  const [settings, setSettings] = useState({
-    profile: {
-      name: 'John Smith',
-      email: 'john.smith@email.com',
-      bio: 'Digital heritage enthusiast preserving family history for future generations.',
-      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=100'
-    },
+  const [isSaving, setIsSaving] = useState(false);
+  const [apiKeys, setApiKeys] = useState(() => {
+    const stored = localStorage.getItem('vault_api_keys');
+    return stored ? JSON.parse(stored) : [{ id: '1', key: 'sk-1234-5678-ABCD' }];
+  });
+  const defaultSettings = {
+      profile: {
+        name: 'John Smith',
+        email: 'john.smith@email.com',
+        bio: 'Digital heritage enthusiast preserving family history for future generations.',
+        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=100'
+      },
     security: {
       twoFactorEnabled: true,
       passwordLastChanged: '2024-01-15',
@@ -76,12 +80,29 @@ export function SettingsPage() {
       analyticsTracking: true,
       dataSharing: false
     }
+  };
+  const [settings, setSettings] = useState(() => {
+    const stored = localStorage.getItem('vault_settings');
+    return stored ? JSON.parse(stored) : defaultSettings;
   });
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [passwordInputs, setPasswordInputs] = useState({ current: '', new: '', confirm: '' });
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const saveSettings = () => {
-    localStorage.setItem('vault_settings', JSON.stringify(settings));
-    setToast('Settings saved');
-    setTimeout(() => setToast(null), 3000);
+    setIsSaving(true);
+    setTimeout(() => {
+      localStorage.setItem('vault_settings', JSON.stringify(settings));
+      localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));
+      setIsSaving(false);
+      setToast('Settings saved');
+    }, 800);
   };
 
   const downloadFile = (data: string, name: string, type: string) => {
@@ -116,20 +137,59 @@ export function SettingsPage() {
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
     setToast('Key copied');
-    setTimeout(() => setToast(null), 3000);
   };
 
   const revokeKey = (id: string) => {
-    setApiKeys(prev => prev.filter(k => k.id !== id));
+    setApiKeys(prev => {
+      const updated = prev.filter(k => k.id !== id);
+      localStorage.setItem('vault_api_keys', JSON.stringify(updated));
+      return updated;
+    });
     setToast('Key revoked');
-    setTimeout(() => setToast(null), 3000);
   };
 
   const generateKey = () => {
     const newKey = `sk-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
-    setApiKeys(prev => [...prev, { id: Date.now().toString(), key: newKey }]);
+    setApiKeys(prev => {
+      const updated = [...prev, { id: Date.now().toString(), key: newKey }];
+      localStorage.setItem('vault_api_keys', JSON.stringify(updated));
+      return updated;
+    });
     setToast('Key generated');
-    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handlePhotoClick = () => fileInputRef.current?.click();
+  const onPhotoChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () =>
+        setSettings(prev => ({
+          ...prev,
+          profile: { ...prev.profile, avatar: reader.result as string },
+        }));
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePasswordUpdate = () => {
+    if (!passwordInputs.new || passwordInputs.new !== passwordInputs.confirm) {
+      setToast('Passwords do not match');
+      return;
+    }
+    setIsSaving(true);
+    setTimeout(() => {
+      setSettings(prev => ({
+        ...prev,
+        security: {
+          ...prev.security,
+          passwordLastChanged: new Date().toISOString().slice(0, 10),
+        },
+      }));
+      setPasswordInputs({ current: '', new: '', confirm: '' });
+      setIsSaving(false);
+      setToast('Password updated');
+    }, 800);
   };
 
   const renderProfileSettings = () => (
@@ -144,11 +204,15 @@ export function SettingsPage() {
               className="w-20 h-20 rounded-full object-cover"
             />
             <div>
-              <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <button
+                onClick={handlePhotoClick}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
                 <Upload className="h-4 w-4 mr-2" />
                 Change Photo
               </button>
               <p className="text-xs text-gray-500 mt-1">JPG, PNG up to 5MB</p>
+              <input ref={fileInputRef} onChange={onPhotoChange} type="file" accept="image/*" className="hidden" />
             </div>
           </div>
           
@@ -238,6 +302,8 @@ export function SettingsPage() {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    value={passwordInputs.current}
+                    onChange={e => setPasswordInputs(p => ({ ...p, current: e.target.value }))}
                     className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -258,6 +324,8 @@ export function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
                   <input
                     type="password"
+                    value={passwordInputs.new}
+                    onChange={e => setPasswordInputs(p => ({ ...p, new: e.target.value }))}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -265,12 +333,17 @@ export function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
                   <input
                     type="password"
+                    value={passwordInputs.confirm}
+                    onChange={e => setPasswordInputs(p => ({ ...p, confirm: e.target.value }))}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
-              <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                Update Password
+              <button
+                onClick={handlePasswordUpdate}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                {isSaving ? 'Updating...' : 'Update Password'}
               </button>
             </div>
           </div>
@@ -625,10 +698,11 @@ export function SettingsPage() {
         </div>
         <button
           onClick={saveSettings}
-          className="mt-6 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-pink-500 shadow-lg hover:scale-105 hover:shadow-xl transition"
+          disabled={isSaving}
+          className="mt-6 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-pink-500 shadow-lg hover:scale-105 hover:shadow-xl transition disabled:opacity-60"
         >
           <Save className="h-4 w-4 mr-2" />
-          Save Changes
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
         {/* Animated background blobs */}
         <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl animate-pulse z-0" />

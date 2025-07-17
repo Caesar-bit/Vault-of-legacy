@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   HardDrive,
   Cloud,
@@ -16,7 +16,7 @@ import {
   Save
 } from 'lucide-react';
 
-const mockBackups = [
+const defaultBackups = [
   {
     id: '1',
     name: 'Full System Backup',
@@ -52,7 +52,7 @@ const mockBackups = [
   }
 ];
 
-const backupSchedules = [
+const defaultSchedules = [
   { name: 'Daily Incremental', frequency: 'daily', time: '02:00', enabled: true },
   { name: 'Weekly Full', frequency: 'weekly', time: 'Sunday 03:00', enabled: true },
   { name: 'Monthly Archive', frequency: 'monthly', time: '1st 04:00', enabled: false }
@@ -63,6 +63,18 @@ export function BackupPage() {
   const [name, setName] = useState('');
   const [type, setType] = useState('full');
   const [location, setLocation] = useState('cloud');
+  const [toast, setToast] = useState<string | null>(null);
+
+  const [backups, setBackups] = useState(() => {
+    const stored = localStorage.getItem('backups');
+    return stored ? JSON.parse(stored) : defaultBackups;
+  });
+
+  const [schedules, setSchedules] = useState(() => {
+    const stored = localStorage.getItem('backup_schedules');
+    return stored ? JSON.parse(stored) : defaultSchedules;
+  });
+
   const [backupSettings, setBackupSettings] = useState({
     autoBackup: true,
     cloudSync: true,
@@ -71,6 +83,20 @@ export function BackupPage() {
     retentionDays: 365,
     maxBackups: 10
   });
+
+  useEffect(() => {
+    localStorage.setItem('backups', JSON.stringify(backups));
+  }, [backups]);
+
+  useEffect(() => {
+    localStorage.setItem('backup_schedules', JSON.stringify(schedules));
+  }, [schedules]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -103,6 +129,11 @@ export function BackupPage() {
   return (
     <>
     <div className="space-y-6">
+      {toast && (
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
+          {toast}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -110,7 +141,10 @@ export function BackupPage() {
           <p className="mt-2 text-gray-600">Manage backups, schedules, and data recovery options</p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+          <button
+            onClick={() => setToast('Sync started')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync Now
           </button>
@@ -133,7 +167,7 @@ export function BackupPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Backups</p>
-              <p className="text-2xl font-bold text-gray-900">{mockBackups.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{backups.length}</p>
             </div>
           </div>
         </div>
@@ -145,7 +179,7 @@ export function BackupPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Successful</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockBackups.filter(b => b.status === 'completed').length}
+                {backups.filter(b => b.status === 'completed').length}
               </p>
             </div>
           </div>
@@ -178,7 +212,7 @@ export function BackupPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Backup Schedules</h3>
         <div className="space-y-4">
-          {backupSchedules.map((schedule, index) => (
+          {schedules.map((schedule: typeof defaultSchedules[number], index: number) => (
             <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
               <div className="flex items-center space-x-4">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -198,6 +232,11 @@ export function BackupPage() {
                   {schedule.enabled ? 'Active' : 'Inactive'}
                 </span>
                 <button
+                  onClick={() => {
+                    const updated = schedules.map((s, i) => i === index ? { ...s, enabled: !s.enabled } : s);
+                    setSchedules(updated);
+                    localStorage.setItem('backup_schedules', JSON.stringify(updated));
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     schedule.enabled ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
@@ -220,7 +259,7 @@ export function BackupPage() {
           <h3 className="text-lg font-semibold text-gray-900">Backup History</h3>
         </div>
         <div className="divide-y divide-gray-200">
-          {mockBackups.map((backup) => {
+          {backups.map((backup) => {
             const TypeIcon = getTypeIcon(backup.type);
             const LocationIcon = getLocationIcon(backup.location);
             return (
@@ -255,10 +294,16 @@ export function BackupPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50">
+                    <button
+                      onClick={() => setToast('Downloading...')}
+                      className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
+                    >
                       <Download className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button
+                      onClick={() => setToast('Restoring...')}
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                    >
                       <RefreshCw className="h-4 w-4" />
                     </button>
                     <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
@@ -386,7 +431,7 @@ export function BackupPage() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              mockBackups.unshift({
+              const newBackup = {
                 id: String(Date.now()),
                 name,
                 type,
@@ -396,11 +441,15 @@ export function BackupPage() {
                 location,
                 retention: '30 days',
                 encrypted: true,
-              });
+              };
+              const updated = [newBackup, ...backups];
+              setBackups(updated);
+              localStorage.setItem('backups', JSON.stringify(updated));
               setName('');
               setType('full');
               setLocation('cloud');
               setShowCreateModal(false);
+              setToast('Backup scheduled');
             }}
           >
             <input

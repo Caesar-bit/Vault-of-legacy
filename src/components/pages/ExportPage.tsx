@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Download, 
   FileText, 
@@ -60,7 +60,7 @@ const exportFormats = [
   }
 ];
 
-const mockExports = [
+const defaultExports = [
   {
     id: '1',
     name: 'Family Heritage Complete Export',
@@ -125,6 +125,22 @@ export function ExportPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [format, setFormat] = useState('zip');
+  const [toast, setToast] = useState<string | null>(null);
+
+  const [exportsList, setExportsList] = useState(() => {
+    const stored = localStorage.getItem('exports');
+    return stored ? JSON.parse(stored) : defaultExports;
+  });
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  useEffect(() => {
+    localStorage.setItem('exports', JSON.stringify(exportsList));
+  }, [exportsList]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -161,6 +177,11 @@ export function ExportPage() {
   return (
     <>
     <div className="space-y-6">
+      {toast && (
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
+          {toast}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -185,7 +206,7 @@ export function ExportPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Exports</p>
-              <p className="text-2xl font-bold text-gray-900">{mockExports.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{exportsList.length}</p>
             </div>
           </div>
         </div>
@@ -197,7 +218,7 @@ export function ExportPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Completed</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockExports.filter(e => e.status === 'completed').length}
+                {exportsList.filter(e => e.status === 'completed').length}
               </p>
             </div>
           </div>
@@ -221,7 +242,7 @@ export function ExportPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Downloads</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockExports.reduce((sum, e) => sum + e.downloadCount, 0)}
+                {exportsList.reduce((sum, e) => sum + e.downloadCount, 0)}
               </p>
             </div>
           </div>
@@ -334,7 +355,12 @@ export function ExportPage() {
           </div>
         </div>
         <div className="divide-y divide-gray-200">
-          {mockExports.map((exportItem) => {
+          {exportsList
+            .filter((e) =>
+              (filterStatus === 'all' || e.status === filterStatus) &&
+              e.name.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((exportItem) => {
             const StatusIcon = getStatusIcon(exportItem.status);
             return (
               <div key={exportItem.id} className="p-6 hover:bg-gray-50">
@@ -375,9 +401,21 @@ export function ExportPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     {exportItem.status === 'completed' && (
-                      <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50">
-                        <Download className="h-4 w-4" />
-                      </button>
+                    <button
+                      onClick={() => {
+                        setExportsList((prev) =>
+                          prev.map((ex) =>
+                            ex.id === exportItem.id
+                              ? { ...ex, downloadCount: (ex.downloadCount || 0) + 1 }
+                              : ex
+                          )
+                        );
+                        setToast('Download started');
+                      }}
+                      className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
                     )}
                     <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
                       <Eye className="h-4 w-4" />
@@ -405,15 +443,18 @@ export function ExportPage() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              mockExports.unshift({
+              const newExport = {
                 id: String(Date.now()),
                 name: newName || 'New Export',
                 format,
                 status: 'processing',
                 created: new Date().toISOString(),
                 size: '0 MB',
-                downloads: 0,
-              });
+                downloadCount: 0,
+                includes: selectedContent,
+              };
+              setExportsList(prev => [newExport, ...prev]);
+              setToast('Export queued');
               setNewName('');
               setFormat('zip');
               setShowCreateModal(false);
