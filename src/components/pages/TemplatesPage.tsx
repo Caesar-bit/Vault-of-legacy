@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  FileText, 
-  Plus, 
-  Search, 
+import {
+  FileText,
+  Plus,
+  Search,
   Filter, 
   Eye, 
   Download, 
@@ -19,6 +19,7 @@ import {
   Image,
   Calendar
 } from 'lucide-react';
+import { FileUpload } from '../FileUpload';
 
 export interface TemplateItem {
   id: string;
@@ -208,11 +209,11 @@ export function TemplatesPage() {
     setToast('Template copied to clipboard');
   };
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm({ name: '', description: '', category: 'timeline', type: 'free', tags: '', preview: '' });
-    setShowCreateModal(true);
-  };
+const openCreate = () => {
+  setEditingId(null);
+  setForm({ name: '', description: '', category: 'timeline', type: 'free', tags: '', preview: '', attachments: [] });
+  setShowCreateModal(true);
+};
 
   const openEdit = (template: TemplateItem) => {
     setEditingId(template.id);
@@ -222,7 +223,8 @@ export function TemplatesPage() {
       category: template.category,
       type: template.type,
       tags: template.tags.join(', '),
-      preview: template.preview
+      preview: template.preview,
+      attachments: template.attachments ? [...template.attachments] : []
     });
     setShowCreateModal(true);
   };
@@ -248,7 +250,8 @@ export function TemplatesPage() {
       rating: editingId ? templates.find(t => t.id === editingId)!.rating : 0,
       lastUpdated: new Date().toISOString().split('T')[0],
       featured: editingId ? templates.find(t => t.id === editingId)!.featured : false,
-      tags: form.tags ? form.tags.split(/,\s*/) : []
+      tags: form.tags ? form.tags.split(/,\s*/) : [],
+      attachments: form.attachments.map(f => f.name)
     };
 
     setTemplates(prev => {
@@ -259,7 +262,7 @@ export function TemplatesPage() {
     });
     setShowCreateModal(false);
     setEditingId(null);
-    setForm({ name: '', description: '', category: 'timeline', type: 'free', tags: '', preview: '' });
+    setForm({ name: '', description: '', category: 'timeline', type: 'free', tags: '', preview: '', attachments: [] });
     setToast(editingId ? 'Template updated' : 'Template created');
   };
 
@@ -449,6 +452,15 @@ export function TemplatesPage() {
                 value={form.preview}
                 onChange={e => setForm({ ...form, preview: e.target.value })}
               />
+              <div className="w-full">
+                <FileUpload
+                  accept="image/*"
+                  multiple
+                  onFilesSelected={files =>
+                    setForm({ ...form, attachments: Array.from(files) })
+                  }
+                />
+              </div>
               <input
                 className="w-full border border-gray-200 rounded-lg px-3 py-2"
                 placeholder="Tags (comma separated)"
@@ -510,6 +522,11 @@ export function TemplatesPage() {
             <div className="flex flex-wrap gap-2">
               {viewTemplate.tags.map(t => (
                 <span key={t} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{t}</span>
+              ))}
+              {viewTemplate.attachments && viewTemplate.attachments.map(name => (
+                <span key={name} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {name}
+                </span>
               ))}
             </div>
           </div>
@@ -592,6 +609,11 @@ export function TemplatesPage() {
                           {tag}
                         </span>
                       ))}
+                      {template.attachments && template.attachments.length > 0 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {template.attachments.length} files
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -638,6 +660,12 @@ export function TemplatesPage() {
                           <Star className="h-3 w-3 mr-1 text-yellow-500 fill-current" />
                           {template.rating}
                         </div>
+                        {template.attachments && (
+                          <div className="flex items-center">
+                            <FileText className="h-3 w-3 mr-1" />
+                            {template.attachments.length}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

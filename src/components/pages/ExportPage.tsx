@@ -19,6 +19,7 @@ import {
   Cloud,
   Database
 } from 'lucide-react';
+import { FileUpload } from '../FileUpload';
 
 const parseSize = (size: string) => {
   const [value, unit] = size.split(' ');
@@ -98,7 +99,8 @@ const defaultExports = [
     created: '2024-01-20T10:30:00Z',
     expires: '2024-02-20T10:30:00Z',
     downloadCount: 3,
-    includes: ['photos', 'documents', 'timeline', 'collections']
+    includes: ['photos', 'documents', 'timeline', 'collections'],
+    attachments: []
   },
   {
     id: '2',
@@ -109,7 +111,8 @@ const defaultExports = [
     created: '2024-01-19T15:45:00Z',
     expires: '2024-02-19T15:45:00Z',
     downloadCount: 0,
-    includes: ['photos', 'timeline']
+    includes: ['photos', 'timeline'],
+    attachments: []
   },
   {
     id: '3',
@@ -120,7 +123,8 @@ const defaultExports = [
     created: '2024-01-18T09:20:00Z',
     expires: '2024-02-18T09:20:00Z',
     downloadCount: 1,
-    includes: ['documents', 'research', 'citations']
+    includes: ['documents', 'research', 'citations'],
+    attachments: []
   },
   {
     id: '4',
@@ -131,7 +135,8 @@ const defaultExports = [
     created: '2024-01-17T14:15:00Z',
     expires: null,
     downloadCount: 0,
-    includes: ['photos', 'videos']
+    includes: ['photos', 'videos'],
+    attachments: []
   }
 ];
 
@@ -153,6 +158,7 @@ export function ExportPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [format, setFormat] = useState('zip');
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [detailsExport, setDetailsExport] = useState<typeof defaultExports[number] | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -507,6 +513,11 @@ export function ExportPage() {
                             {include}
                           </span>
                         ))}
+                        {exportItem.attachments && exportItem.attachments.map((att) => (
+                          <span key={att} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {att}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -572,12 +583,14 @@ export function ExportPage() {
                 size: '0 MB',
                 downloadCount: 0,
                 includes: selectedContent,
+                attachments: attachments.map(f => f.name),
               };
               setExportsList(prev => [newExport, ...prev]);
               simulateProcessing(newExport.id);
               setToast('Export queued');
               setNewName('');
               setFormat('zip');
+              setAttachments([]);
               setShowCreateModal(false);
             }}
           >
@@ -596,10 +609,19 @@ export function ExportPage() {
                 <option key={fmt.id} value={fmt.id}>{fmt.name}</option>
               ))}
             </select>
+            <div className="w-full">
+              <FileUpload
+                multiple
+                onFilesSelected={files => setAttachments(Array.from(files))}
+              />
+            </div>
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setAttachments([]);
+                }}
                 className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
               >
                 Cancel
@@ -624,6 +646,11 @@ export function ExportPage() {
             {detailsExport.includes.map((inc) => (
               <span key={inc} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 {inc}
+              </span>
+            ))}
+            {detailsExport.attachments && detailsExport.attachments.map((att) => (
+              <span key={att} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {att}
               </span>
             ))}
           </div>
