@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FolderPlus,
   Upload,
@@ -9,6 +9,7 @@ import {
   Music,
   Archive,
   File,
+  Eye,
   Edit,
   Trash2
 } from 'lucide-react';
@@ -22,10 +23,11 @@ interface VaultFile {
   owner: string;
   starred: boolean;
   items?: number;
+  url?: string;
 }
 
 export function VaultPage() {
-  const [files, setFiles] = useState<VaultFile[]>([
+  const defaultFiles: VaultFile[] = [
     {
       id: 1,
       name: 'Documents',
@@ -82,7 +84,13 @@ export function VaultPage() {
       owner: 'John Doe',
       starred: false
     }
-  ]);
+  ];
+
+  const [files, setFiles] = useState<VaultFile[]>(() => {
+    const stored = localStorage.getItem('vault_files');
+    return stored ? JSON.parse(stored) : defaultFiles;
+  });
+  const [previewFile, setPreviewFile] = useState<VaultFile | null>(null);
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -147,16 +155,28 @@ export function VaultPage() {
     }
   };
 
-  const handleFiles = (fileList: FileList) => {
-    const newFiles: VaultFile[] = Array.from(fileList).map((f) => ({
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 8),
-      name: f.name,
-      type: detectType(f.name),
-      size: formatBytes(f.size),
-      modified: new Date().toISOString().slice(0, 10),
-      owner: 'You',
-      starred: false
-    }));
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject();
+      reader.readAsDataURL(file);
+    });
+
+  const handleFiles = async (fileList: FileList) => {
+    const arr = Array.from(fileList);
+    const newFiles: VaultFile[] = await Promise.all(
+      arr.map(async (f) => ({
+        id: Date.now().toString() + Math.random().toString(36).slice(2, 8),
+        name: f.name,
+        type: detectType(f.name),
+        size: formatBytes(f.size),
+        modified: new Date().toISOString().slice(0, 10),
+        owner: 'You',
+        starred: false,
+        url: await toBase64(f),
+      }))
+    );
     setFiles((prev) => [...newFiles, ...prev]);
   };
 
@@ -203,6 +223,12 @@ export function VaultPage() {
     setShowRenameModal(true);
   };
 
+  const openPreview = (file: VaultFile) => {
+    if (file.type !== 'folder') {
+      setPreviewFile(file);
+    }
+  };
+
   const renameFile = () => {
     if (selected) {
       setFiles((prev) =>
@@ -211,6 +237,10 @@ export function VaultPage() {
     }
     setShowRenameModal(false);
   };
+
+  useEffect(() => {
+    localStorage.setItem('vault_files', JSON.stringify(files));
+  }, [files]);
 
   const filteredFiles = files.filter(f =>
     f.name.toLowerCase().includes(search.toLowerCase())
@@ -312,6 +342,12 @@ export function VaultPage() {
                 </div>
                 <div className="mt-2 flex justify-center space-x-2">
                   <button
+                    onClick={() => openPreview(file)}
+                    className="p-1 text-gray-400 hover:text-primary-600"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => openRename(file)}
                     className="p-1 text-gray-400 hover:text-blue-600"
                   >
@@ -386,6 +422,30 @@ export function VaultPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {previewFile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewFile(null)}>
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{previewFile.name}</h3>
+              {previewFile.url ? (
+                previewFile.type === 'image' ? (
+                  <img src={previewFile.url} alt={previewFile.name} className="max-h-96 w-auto mx-auto" />
+                ) : previewFile.type === 'video' ? (
+                  <video src={previewFile.url} controls className="max-h-96 w-full" />
+                ) : previewFile.type === 'audio' ? (
+                  <audio src={previewFile.url} controls className="w-full" />
+                ) : (
+                  <iframe src={previewFile.url} className="w-full h-96" title={previewFile.name} />
+                )
+              ) : (
+                <p className="text-sm text-gray-500">No preview available.</p>
+              )}
+              <div className="flex justify-end mt-4">
+                <button onClick={() => setPreviewFile(null)} className="px-4 py-2 rounded-lg bg-blue-600 text-white">Close</button>
+              </div>
             </div>
           </div>
         )}
