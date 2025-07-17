@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Image, 
   Video, 
@@ -7,21 +7,35 @@ import {
   Share2, 
   Heart, 
   Eye, 
-  Search, 
-  Filter, 
+  Search,
   Grid3X3, 
   List, 
   Plus,
   Camera,
   Film,
   Palette,
-  Maximize2,
   MoreHorizontal,
   Star,
   Calendar,
   MapPin,
   Tag
 } from 'lucide-react';
+import { UploadMediaModal } from '../UploadMediaModal';
+
+interface GalleryItem {
+  id: string;
+  title: string;
+  type: 'image' | 'video';
+  url: string;
+  thumbnail: string;
+  date: string;
+  location: string;
+  views: number;
+  likes: number;
+  tags: string[];
+  featured: boolean;
+  duration?: string;
+}
 
 const mockGalleryItems = [
   {
@@ -127,7 +141,12 @@ const exhibitions = [
 
 
 // Lightbox Modal for viewing images/videos
-function LightboxModal({ item, onClose }) {
+interface LightboxModalProps {
+  item: GalleryItem;
+  onClose: () => void;
+}
+
+function LightboxModal({ item, onClose }: LightboxModalProps) {
   if (!item) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
@@ -165,11 +184,66 @@ export function GalleryPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [selectedItems, setSelectedItems] = useState([]);
   const [showExhibitions, setShowExhibitions] = useState(false);
-  const [lightboxItem, setLightboxItem] = useState(null);
+  const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
+    const stored = localStorage.getItem('gallery_items');
+    return stored ? JSON.parse(stored) : mockGalleryItems;
+  });
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
-  const filteredItems = mockGalleryItems.filter(item => {
+  useEffect(() => {
+    localStorage.setItem('gallery_items', JSON.stringify(galleryItems));
+  }, [galleryItems]);
+
+  const handleUpload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const type = file.type.startsWith('video') ? 'video' : 'image';
+    const newItem: GalleryItem = {
+      id: Date.now().toString(),
+      title: file.name,
+      type,
+      url,
+      thumbnail: url,
+      date: new Date().toISOString().split('T')[0],
+      location: 'Unknown',
+      views: 0,
+      likes: 0,
+      tags: [],
+      featured: false,
+      duration: type === 'video' ? '' : undefined,
+    };
+    setGalleryItems((prev) => [newItem, ...prev]);
+  };
+
+  const handleLike = (id: string) => {
+    setGalleryItems((items) =>
+      items.map((it) => (it.id === id ? { ...it, likes: it.likes + 1 } : it))
+    );
+  };
+
+  const handleDownload = (item: GalleryItem) => {
+    const link = document.createElement('a');
+    link.href = item.url;
+    link.download = item.title;
+    link.click();
+  };
+
+  const handleShare = async (item: GalleryItem) => {
+    const shareData = { title: item.title, url: item.url };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(item.url);
+        alert('Link copied to clipboard');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const filteredItems = galleryItems.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === 'all' || item.type === filterType;
@@ -195,7 +269,7 @@ export function GalleryPage() {
             <Palette className="h-5 w-5 mr-2" />
             Exhibitions
           </button>
-          <button className="inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform">
+          <button onClick={() => setShowUploadModal(true)} className="inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform">
             <Plus className="h-5 w-5 mr-2" />
             Add Media
           </button>
@@ -349,13 +423,31 @@ export function GalleryPage() {
                     </div>
                   )}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                    <button className="p-1 bg-white rounded shadow-sm hover:bg-gray-50" title="More">
+                    <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-gray-50"
+                      title="More"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MoreHorizontal className="h-4 w-4 text-gray-600" />
                     </button>
-                    <button className="p-1 bg-white rounded shadow-sm hover:bg-blue-50" title="Download">
+                    <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-blue-50"
+                      title="Download"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(item);
+                      }}
+                    >
                       <Download className="h-4 w-4 text-blue-600" />
                     </button>
-                    <button className="p-1 bg-white rounded shadow-sm hover:bg-red-50" title="Like">
+                    <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-red-50"
+                      title="Like"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(item.id);
+                      }}
+                    >
                       <Heart className="h-4 w-4 text-red-500" />
                     </button>
                   </div>
@@ -433,16 +525,44 @@ export function GalleryPage() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-blue-600" title="View">
+                  <button
+                    className="p-2 text-gray-400 hover:text-blue-600"
+                    title="View"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxItem(item);
+                    }}
+                  >
                     <Eye className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-green-600" title="Download">
+                  <button
+                    className="p-2 text-gray-400 hover:text-green-600"
+                    title="Download"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(item);
+                    }}
+                  >
                     <Download className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-blue-600" title="Share">
+                  <button
+                    className="p-2 text-gray-400 hover:text-blue-600"
+                    title="Share"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShare(item);
+                    }}
+                  >
                     <Share2 className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-red-600" title="Like">
+                  <button
+                    className="p-2 text-gray-400 hover:text-red-600"
+                    title="Like"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleLike(item.id);
+                    }}
+                  >
                     <Heart className="h-4 w-4" />
                   </button>
                 </div>
@@ -453,6 +573,7 @@ export function GalleryPage() {
 
         {/* Floating Add Media Button */}
         <button
+          onClick={() => setShowUploadModal(true)}
           className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400 animate-bounce"
           title="Add Media"
         >
@@ -460,7 +581,16 @@ export function GalleryPage() {
         </button>
 
         {/* Lightbox Modal */}
-        {lightboxItem && <LightboxModal item={lightboxItem} onClose={() => setLightboxItem(null)} />}
+        {lightboxItem && (
+          <LightboxModal item={lightboxItem} onClose={() => setLightboxItem(null)} />
+        )}
+        {showUploadModal && (
+          <UploadMediaModal
+            isOpen={showUploadModal}
+            onClose={() => setShowUploadModal(false)}
+            onUpload={handleUpload}
+          />
+        )}
       </div>
 
       {/* Custom Styles for glass and animation */}
