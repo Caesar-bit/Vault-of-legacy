@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -21,7 +21,19 @@ import {
   Key
 } from 'lucide-react';
 
-const mockUsers = [
+export interface UserItem {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'editor' | 'contributor' | 'viewer';
+  status: 'active' | 'pending' | 'inactive' | 'suspended';
+  lastLogin: string | null;
+  joinDate: string;
+  permissions: string[];
+  avatar: string;
+}
+
+const mockUsers: UserItem[] = [
   {
     id: '1',
     name: 'John Smith',
@@ -106,6 +118,16 @@ export function UsersPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showProfileModal, setShowProfileModal] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [users, setUsers] = useState<UserItem[]>(() => {
+    const stored = localStorage.getItem('users');
+    return stored ? JSON.parse(stored) : mockUsers;
+  });
+  const [form, setForm] = useState({ name: '', email: '', role: 'viewer' });
+
+  useEffect(() => {
+    localStorage.setItem('users', JSON.stringify(users));
+  }, [users]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -148,6 +170,76 @@ export function UsersPage() {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const filteredUsers = users.filter(u => {
+    const matchSearch =
+      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchRole = filterRole === 'all' || u.role === filterRole;
+    const matchStatus = filterStatus === 'all' || u.status === filterStatus;
+    return matchSearch && matchRole && matchStatus;
+  });
+
+  const openEdit = (user: UserItem) => {
+    setEditingId(user.id);
+    setForm({ name: user.name, email: user.email, role: user.role });
+    setShowInviteModal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Remove this user?')) {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setSelectedUsers((prev) => prev.filter((uid) => uid !== id));
+    }
+  };
+
+  const resetPassword = (user: UserItem) => {
+    alert(`Password reset link sent to ${user.email}`);
+  };
+
+  const handleInviteSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const roleInfo = roles.find((r) => r.value === form.role);
+    const newUser: UserItem = {
+      id: editingId ?? Date.now().toString(),
+      name: form.name,
+      email: form.email,
+      role: form.role as UserItem['role'],
+      status: editingId ? users.find((u) => u.id === editingId)!.status : 'pending',
+      lastLogin: editingId ? users.find((u) => u.id === editingId)!.lastLogin : null,
+      joinDate: editingId ? users.find((u) => u.id === editingId)!.joinDate : new Date().toISOString().split('T')[0],
+      permissions: roleInfo?.permissions ?? ['read'],
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(form.name)}`,
+    };
+
+    setUsers((prev) => {
+      if (editingId) {
+        return prev.map((u) => (u.id === editingId ? { ...u, ...newUser } : u));
+      }
+      return [newUser, ...prev];
+    });
+    setEditingId(null);
+    setForm({ name: '', email: '', role: 'viewer' });
+    setShowInviteModal(false);
+  };
+
+  const sendBulkMessage = () => {
+    const names = users.filter((u) => selectedUsers.includes(u.id)).map((u) => u.name).join(', ');
+    alert(`Message sent to: ${names}`);
+  };
+
+  const bulkChangeRole = () => {
+    const role = prompt('Enter new role (admin, editor, contributor, viewer):', 'viewer');
+    if (!role) return;
+    setUsers((prev) => prev.map((u) => (selectedUsers.includes(u.id) ? { ...u, role } : u)));
+  };
+
+  const bulkRemove = () => {
+    if (confirm('Remove selected users?')) {
+      setUsers((prev) => prev.filter((u) => !selectedUsers.includes(u.id)));
+      setSelectedUsers([]);
+    }
+  };
+
   return (
     <div className="relative min-h-screen pb-24">
       {/* Animated Glassy Hero */}
@@ -177,10 +269,10 @@ export function UsersPage() {
       {/* Animated Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         {[
-          { icon: <Users className="h-7 w-7 text-blue-600" />, label: 'Total Users', value: mockUsers.length, color: 'from-blue-100 to-blue-50' },
-          { icon: <CheckCircle className="h-7 w-7 text-green-600" />, label: 'Active', value: mockUsers.filter(u => u.status === 'active').length, color: 'from-green-100 to-green-50' },
-          { icon: <Clock className="h-7 w-7 text-yellow-600" />, label: 'Pending', value: mockUsers.filter(u => u.status === 'pending').length, color: 'from-yellow-100 to-yellow-50' },
-          { icon: <Crown className="h-7 w-7 text-red-600" />, label: 'Admins', value: mockUsers.filter(u => u.role === 'admin').length, color: 'from-red-100 to-red-50' },
+          { icon: <Users className="h-7 w-7 text-blue-600" />, label: 'Total Users', value: users.length, color: 'from-blue-100 to-blue-50' },
+          { icon: <CheckCircle className="h-7 w-7 text-green-600" />, label: 'Active', value: users.filter(u => u.status === 'active').length, color: 'from-green-100 to-green-50' },
+          { icon: <Clock className="h-7 w-7 text-yellow-600" />, label: 'Pending', value: users.filter(u => u.status === 'pending').length, color: 'from-yellow-100 to-yellow-50' },
+          { icon: <Crown className="h-7 w-7 text-red-600" />, label: 'Admins', value: users.filter(u => u.role === 'admin').length, color: 'from-red-100 to-red-50' },
         ].map((stat, i) => (
           <div key={stat.label} className={`bg-gradient-to-br ${stat.color} p-6 rounded-2xl border border-white/40 shadow flex items-center space-x-4 glassy-card animate-fade-in`} style={{animationDelay: `${i * 80}ms`}}>
             <div className="p-3 bg-white/60 rounded-xl shadow">
@@ -272,7 +364,7 @@ export function UsersPage() {
           <h3 className="text-lg font-bold text-gray-900">Users</h3>
         </div>
         <div className="divide-y divide-white/30">
-          {mockUsers.map((user) => {
+          {filteredUsers.map((user) => {
             const StatusIcon = getStatusIcon(user.status);
             const RoleIcon = getRoleIcon(user.role);
             return (
@@ -327,13 +419,31 @@ export function UsersPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" onClick={e => e.stopPropagation()}>
+                      <button
+                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEdit(user);
+                        }}
+                      >
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-orange-600 rounded-lg hover:bg-orange-50 transition" onClick={e => e.stopPropagation()}>
+                      <button
+                        className="p-2 text-gray-400 hover:text-orange-600 rounded-lg hover:bg-orange-50 transition"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          resetPassword(user);
+                        }}
+                      >
                         <Key className="h-4 w-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" onClick={e => e.stopPropagation()}>
+                      <button
+                        className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(user.id);
+                        }}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                       <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition" onClick={e => e.stopPropagation()}>
@@ -361,20 +471,44 @@ export function UsersPage() {
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative animate-fade-in">
-            <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => setShowInviteModal(false)}>
-              <Trash2 className="h-5 w-5" />
+            <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => { setShowInviteModal(false); setEditingId(null); }}>
+              &times;
             </button>
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Invite New User</h2>
-            <form className="space-y-4">
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Name" />
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Email" />
-              <select className="w-full border border-gray-200 rounded-lg px-3 py-2">
-                <option value="">Select Role</option>
-                {roles.map(role => <option key={role.value} value={role.value}>{role.name}</option>)}
+            <h2 className="text-xl font-bold mb-4 text-gray-900">{editingId ? 'Edit User' : 'Invite New User'}</h2>
+            <form className="space-y-4" onSubmit={handleInviteSubmit}>
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
+              <select
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+              >
+                {roles.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.name}
+                  </option>
+                ))}
               </select>
               <div className="flex space-x-2">
-                <button type="button" className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200" onClick={() => setShowInviteModal(false)}>Cancel</button>
-                <button type="submit" className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Invite</button>
+                <button type="button" className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200" onClick={() => { setShowInviteModal(false); setEditingId(null); }}>
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">
+                  {editingId ? 'Save' : 'Invite'}
+                </button>
               </div>
             </form>
           </div>
@@ -383,7 +517,7 @@ export function UsersPage() {
 
       {/* User Profile Quick View Modal (UI only) */}
       {showProfileModal && (() => {
-        const user = mockUsers.find(u => u.id === showProfileModal);
+        const user = users.find(u => u.id === showProfileModal);
         if (!user) return null;
         const StatusIcon = getStatusIcon(user.status);
         const RoleIcon = getRoleIcon(user.role);
@@ -428,15 +562,24 @@ export function UsersPage() {
             {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} selected
           </span>
           <div className="flex space-x-2">
-            <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50">
+            <button
+              className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50"
+              onClick={sendBulkMessage}
+            >
               <Mail className="h-4 w-4 mr-1" />
               Send Message
             </button>
-            <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50">
+            <button
+              className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50"
+              onClick={bulkChangeRole}
+            >
               <Shield className="h-4 w-4 mr-1" />
               Change Role
             </button>
-            <button className="inline-flex items-center px-3 py-1 border border-red-300 rounded text-sm font-semibold text-red-700 bg-white hover:bg-red-50">
+            <button
+              className="inline-flex items-center px-3 py-1 border border-red-300 rounded text-sm font-semibold text-red-700 bg-white hover:bg-red-50"
+              onClick={bulkRemove}
+            >
               <Trash2 className="h-4 w-4 mr-1" />
               Remove
             </button>
