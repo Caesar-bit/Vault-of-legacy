@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   FileText, 
   Plus, 
@@ -20,7 +20,22 @@ import {
   Calendar
 } from 'lucide-react';
 
-const mockTemplates = [
+export interface TemplateItem {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  type: 'free' | 'premium';
+  preview: string;
+  author: string;
+  downloads: number;
+  rating: number;
+  lastUpdated: string;
+  featured: boolean;
+  tags: string[];
+}
+
+const templates: TemplateItem[] = [
   {
     id: '1',
     name: 'Family Heritage Timeline',
@@ -122,8 +137,36 @@ export function TemplatesPage() {
   const [filterType, setFilterType] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [builderSections, setBuilderSections] = useState<string[]>(['Header', 'Content', 'Images']);
+  const [sectionInput, setSectionInput] = useState('');
+  const [viewTemplate, setViewTemplate] = useState<TemplateItem | null>(null);
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    category: 'timeline',
+    type: 'free',
+    tags: '',
+    preview: ''
+  });
+  const [templates, setTemplates] = useState<TemplateItem[]>(() => {
+    const stored = localStorage.getItem('vault_templates');
+    return stored ? JSON.parse(stored) : templates;
+  });
 
-  const filteredTemplates = mockTemplates.filter(template => {
+  useEffect(() => {
+    localStorage.setItem('vault_templates', JSON.stringify(templates));
+  }, [templates]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -145,8 +188,108 @@ export function TemplatesPage() {
     return cat?.icon || FileText;
   };
 
+  const handleView = (template: TemplateItem) => {
+    setViewTemplate(template);
+  };
+
+  const handleDownload = (template: TemplateItem) => {
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template.name.replace(/\s+/g, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast('Template downloaded');
+  };
+
+  const handleCopy = (template: TemplateItem) => {
+    navigator.clipboard.writeText(JSON.stringify(template, null, 2));
+    setToast('Template copied to clipboard');
+  };
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ name: '', description: '', category: 'timeline', type: 'free', tags: '', preview: '' });
+    setShowCreateModal(true);
+  };
+
+  const openEdit = (template: TemplateItem) => {
+    setEditingId(template.id);
+    setForm({
+      name: template.name,
+      description: template.description,
+      category: template.category,
+      type: template.type,
+      tags: template.tags.join(', '),
+      preview: template.preview
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Delete this template?')) {
+      setTemplates(prev => prev.filter(t => t.id !== id));
+      setToast('Template deleted');
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newTemplate: TemplateItem = {
+      id: editingId ?? Date.now().toString(),
+      name: form.name,
+      description: form.description,
+      category: form.category,
+      type: form.type as 'free' | 'premium',
+      preview: form.preview || 'https://via.placeholder.com/400x300?text=Preview',
+      author: 'You',
+      downloads: editingId ? templates.find(t => t.id === editingId)!.downloads : 0,
+      rating: editingId ? templates.find(t => t.id === editingId)!.rating : 0,
+      lastUpdated: new Date().toISOString().split('T')[0],
+      featured: editingId ? templates.find(t => t.id === editingId)!.featured : false,
+      tags: form.tags ? form.tags.split(/,\s*/) : []
+    };
+
+    setTemplates(prev => {
+      if (editingId) {
+        return prev.map(t => (t.id === editingId ? newTemplate : t));
+      }
+      return [newTemplate, ...prev];
+    });
+    setShowCreateModal(false);
+    setEditingId(null);
+    setForm({ name: '', description: '', category: 'timeline', type: 'free', tags: '', preview: '' });
+    setToast(editingId ? 'Template updated' : 'Template created');
+  };
+
+  const addSection = () => {
+    if (!sectionInput.trim()) return;
+    setBuilderSections(prev => [...prev, sectionInput.trim()]);
+    setSectionInput('');
+  };
+
+  const removeSection = (index: number) => {
+    setBuilderSections(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const exportBuilder = () => {
+    const blob = new Blob([JSON.stringify(builderSections, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template-builder.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-8">
+      {toast && (
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
+          {toast}
+        </div>
+      )}
       {/* Glassy Animated Header */}
       <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden" style={{background: 'linear-gradient(120deg,rgba(59,130,246,0.10),rgba(236,72,153,0.10) 100%)'}}>
         <div>
@@ -154,12 +297,15 @@ export function TemplatesPage() {
           <p className="mt-2 text-lg text-gray-700">Pre-built layouts and structures for your content</p>
         </div>
         <div className="mt-6 sm:mt-0 flex space-x-3">
-          <button className="inline-flex items-center px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 bg-white/80 hover:bg-blue-50 shadow transition">
+          <button
+            onClick={() => setShowBuilder(true)}
+            className="inline-flex items-center px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 bg-white/80 hover:bg-blue-50 shadow transition"
+          >
             <Palette className="h-4 w-4 mr-2" />
             Template Builder
           </button>
-          <button 
-            onClick={() => setShowCreateModal(true)}
+          <button
+            onClick={openCreate}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-pink-500 shadow-lg hover:scale-105 hover:shadow-xl transition"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -174,9 +320,9 @@ export function TemplatesPage() {
       {/* Animated Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         {[
-          { icon: <FileText className="h-7 w-7 text-blue-600" />, label: 'Total Templates', value: mockTemplates.length, color: 'from-blue-100 to-blue-50' },
-          { icon: <Download className="h-7 w-7 text-green-600" />, label: 'Downloads', value: mockTemplates.reduce((sum, t) => sum + t.downloads, 0).toLocaleString(), color: 'from-green-100 to-green-50' },
-          { icon: <Star className="h-7 w-7 text-yellow-600" />, label: 'Featured', value: mockTemplates.filter(t => t.featured).length, color: 'from-yellow-100 to-yellow-50' },
+          { icon: <FileText className="h-7 w-7 text-blue-600" />, label: 'Total Templates', value: templates.length, color: 'from-blue-100 to-blue-50' },
+          { icon: <Download className="h-7 w-7 text-green-600" />, label: 'Downloads', value: templates.reduce((sum, t) => sum + t.downloads, 0).toLocaleString(), color: 'from-green-100 to-green-50' },
+          { icon: <Star className="h-7 w-7 text-yellow-600" />, label: 'Featured', value: templates.filter(t => t.featured).length, color: 'from-yellow-100 to-yellow-50' },
           { icon: <User className="h-7 w-7 text-purple-600" />, label: 'Contributors', value: 12, color: 'from-purple-100 to-purple-50' },
         ].map((stat, i) => (
           <div key={stat.label} className={`bg-gradient-to-br ${stat.color} p-6 rounded-2xl border border-white/40 shadow flex items-center space-x-4 glassy-card animate-fade-in`} style={{animationDelay: `${i * 80}ms`}}>
@@ -258,33 +404,114 @@ export function TemplatesPage() {
 
       {/* Templates Grid/List */}
       <div className="glassy-card rounded-3xl border border-white/30 shadow-xl backdrop-blur-lg">
-      {/* Create Template Modal (UI only, not floating) */}
+      {/* Create/Edit Template Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative animate-fade-in">
             <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => setShowCreateModal(false)}>
               <Trash2 className="h-5 w-5" />
             </button>
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Create New Template</h2>
-            <form className="space-y-4">
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Template Name" />
-              <textarea className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Description" />
-              <select className="w-full border border-gray-200 rounded-lg px-3 py-2">
-                <option value="">Select Category</option>
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">{editingId ? 'Edit Template' : 'Create New Template'}</h2>
+            <form className="space-y-4" onSubmit={handleFormSubmit}>
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Template Name"
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                required
+              />
+              <textarea
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Description"
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+              />
+              <select
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                value={form.category}
+                onChange={e => setForm({ ...form, category: e.target.value })}
+              >
                 {categories.filter(c => c.id !== 'all').map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
-              <select className="w-full border border-gray-200 rounded-lg px-3 py-2">
+              <select
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                value={form.type}
+                onChange={e => setForm({ ...form, type: e.target.value })}
+              >
                 <option value="free">Free</option>
                 <option value="premium">Premium</option>
               </select>
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Tags (comma separated)" />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Preview URL"
+                value={form.preview}
+                onChange={e => setForm({ ...form, preview: e.target.value })}
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Tags (comma separated)"
+                value={form.tags}
+                onChange={e => setForm({ ...form, tags: e.target.value })}
+              />
               <div className="flex space-x-2">
                 <button type="button" className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                <button type="submit" className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Create</button>
+                <button type="submit" className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">{editingId ? 'Save' : 'Create'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Template Builder Modal */}
+      {showBuilder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-xl relative animate-fade-in">
+            <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => setShowBuilder(false)}>
+              <Trash2 className="h-5 w-5" />
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Template Builder</h2>
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {builderSections.map((sec, i) => (
+                <div key={i} className="flex items-center justify-between border rounded px-3 py-2">
+                  <span>{sec}</span>
+                  <button className="text-red-500" onClick={() => removeSection(i)}>&times;</button>
+                </div>
+              ))}
+            </div>
+            <div className="flex mt-4 space-x-2">
+              <input
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="New section"
+                value={sectionInput}
+                onChange={e => setSectionInput(e.target.value)}
+              />
+              <button className="px-4 py-2 rounded-lg bg-blue-600 text-white" onClick={addSection}>Add</button>
+            </div>
+            <div className="flex mt-6 justify-end space-x-2">
+              <button className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700" onClick={() => setShowBuilder(false)}>Close</button>
+              <button className="px-4 py-2 rounded-lg bg-green-600 text-white" onClick={exportBuilder}>Download JSON</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Preview Modal */}
+      {viewTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setViewTemplate(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative animate-fade-in" onClick={e => e.stopPropagation()}>
+            <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => setViewTemplate(null)}>
+              <Trash2 className="h-5 w-5" />
+            </button>
+            <img src={viewTemplate.preview} alt={viewTemplate.name} className="w-full h-64 object-cover rounded mb-4" />
+            <h3 className="text-xl font-bold mb-2 text-gray-900">{viewTemplate.name}</h3>
+            <p className="text-gray-700 mb-2">{viewTemplate.description}</p>
+            <div className="flex flex-wrap gap-2">
+              {viewTemplate.tags.map(t => (
+                <span key={t} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{t}</span>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -325,13 +552,13 @@ export function TemplatesPage() {
                     </div>
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
-                        <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50">
+                        <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50" onClick={() => handleView(template)}>
                           <Eye className="h-4 w-4 text-gray-600" />
                         </button>
-                        <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50">
+                        <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50" onClick={() => handleDownload(template)}>
                           <Download className="h-4 w-4 text-gray-600" />
                         </button>
-                        <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50">
+                        <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50" onClick={() => handleCopy(template)}>
                           <Copy className="h-4 w-4 text-gray-600" />
                         </button>
                       </div>
@@ -415,17 +642,20 @@ export function TemplatesPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" onClick={() => handleView(template)}>
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50">
+                    <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50" onClick={() => handleDownload(template)}>
                       <Download className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" onClick={() => handleCopy(template)}>
                       <Copy className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+                    <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50" onClick={() => openEdit(template)}>
                       <Edit className="h-4 w-4" />
+                    </button>
+                    <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50" onClick={() => handleDelete(template.id)}>
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
