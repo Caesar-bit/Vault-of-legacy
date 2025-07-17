@@ -1,8 +1,31 @@
-import { useState } from 'react';
-import { FolderPlus, Upload, Star, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
+import { useRef, useState } from 'react';
+import {
+  FolderPlus,
+  Upload,
+  Star,
+  FileText,
+  Image,
+  Video,
+  Music,
+  Archive,
+  File,
+  Edit,
+  Trash2
+} from 'lucide-react';
+
+interface VaultFile {
+  id: string;
+  name: string;
+  type: string;
+  size: string | null;
+  modified: string;
+  owner: string;
+  starred: boolean;
+  items?: number;
+}
 
 export function VaultPage() {
-  const [files] = useState([
+  const [files, setFiles] = useState<VaultFile[]>([
     {
       id: 1,
       name: 'Documents',
@@ -81,6 +104,118 @@ export function VaultPage() {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState('');
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [selected, setSelected] = useState<VaultFile | null>(null);
+  const [renameName, setRenameName] = useState('');
+  const [showRenameModal, setShowRenameModal] = useState(false);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const detectType = (name: string) => {
+    const ext = name.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return 'pdf';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return 'image';
+      case 'mp4':
+      case 'mov':
+        return 'video';
+      case 'mp3':
+        return 'audio';
+      case 'zip':
+      case 'rar':
+        return 'archive';
+      case 'pptx':
+        return 'presentation';
+      case 'xlsx':
+        return 'spreadsheet';
+      default:
+        return 'document';
+    }
+  };
+
+  const handleFiles = (fileList: FileList) => {
+    const newFiles: VaultFile[] = Array.from(fileList).map((f) => ({
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 8),
+      name: f.name,
+      type: detectType(f.name),
+      size: formatBytes(f.size),
+      modified: new Date().toISOString().slice(0, 10),
+      owner: 'You',
+      starred: false
+    }));
+    setFiles((prev) => [...newFiles, ...prev]);
+  };
+
+  const handleUploadClick = () => fileInputRef.current?.click();
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) handleFiles(e.target.files);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const createFolder = () => {
+    setFiles((prev) => [
+      {
+        id: Date.now().toString(),
+        name: newFolderName,
+        type: 'folder',
+        size: null,
+        modified: new Date().toISOString().slice(0, 10),
+        owner: 'You',
+        starred: false,
+        items: 0
+      },
+      ...prev
+    ]);
+    setNewFolderName('');
+    setShowFolderModal(false);
+  };
+
+  const toggleStar = (id: string) =>
+    setFiles((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, starred: !f.starred } : f))
+    );
+
+  const deleteFile = (id: string) =>
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+
+  const openRename = (file: VaultFile) => {
+    setSelected(file);
+    setRenameName(file.name);
+    setShowRenameModal(true);
+  };
+
+  const renameFile = () => {
+    if (selected) {
+      setFiles((prev) =>
+        prev.map((f) => (f.id === selected.id ? { ...f, name: renameName } : f))
+      );
+    }
+    setShowRenameModal(false);
+  };
+
+  const filteredFiles = files.filter(f =>
+    f.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-purple-50 to-orange-50">
       {/* Hero Section */}
@@ -115,34 +250,145 @@ export function VaultPage() {
             </defs>
           </svg>
         </div>
-      </div>
-
-      {/* Drag & Drop Upload Area */}
-      <div className="mx-4 mb-6">
-        <div className="border-2 border-dashed border-primary-300 rounded-2xl bg-white/60 p-8 flex flex-col items-center justify-center hover:bg-primary-50 transition-all duration-300 cursor-pointer">
-          <Upload className="h-10 w-10 text-primary-400 mb-2 animate-bounce" />
-          <span className="text-primary-600 font-semibold">Drag & drop files here or click to upload</span>
         </div>
-      </div>
 
-      {/* File Grid */}
-      <div className="p-4 md:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {files.map((file: any) => (
-            <div key={file.id} className="relative bg-white rounded-lg border-2 p-4 hover:shadow-md transition-shadow cursor-pointer">
-              <div className="flex flex-col items-center text-center">
-                <div className="mb-3">{getFileIcon(file.type)}</div>
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate w-full mb-1">{file.name}</h3>
-                <p className="text-xs text-gray-500">{file.type === 'folder' ? `${file.items} items` : file.size}</p>
-                <p className="text-xs text-gray-400 mt-1">{file.modified}</p>
+        {/* Actions */}
+        <div className="px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex-1 max-w-md">
+            <input
+              type="text"
+              placeholder="Search files..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowFolderModal(true)}
+              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <FolderPlus className="h-4 w-4 mr-2" /> New Folder
+            </button>
+            <button
+              onClick={handleUploadClick}
+              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+            >
+              <Upload className="h-4 w-4 mr-2" /> Upload
+            </button>
+            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInput} />
+          </div>
+        </div>
+
+        {/* Drag & Drop Upload Area */}
+        <div className="mx-4 mb-6">
+          <div
+            className="border-2 border-dashed border-primary-300 rounded-2xl bg-white/60 p-8 flex flex-col items-center justify-center hover:bg-primary-50 transition-all duration-300 cursor-pointer"
+            onClick={handleUploadClick}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+          >
+            <Upload className="h-10 w-10 text-primary-400 mb-2 animate-bounce" />
+            <span className="text-primary-600 font-semibold">Drag & drop files here or click to upload</span>
+          </div>
+        </div>
+
+        {/* File Grid */}
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {filteredFiles.map((file) => (
+              <div key={file.id} className="relative bg-white rounded-lg border-2 p-4 hover:shadow-md transition-shadow">
+                <button
+                  onClick={() => toggleStar(file.id)}
+                  className="absolute top-2 right-2 p-1 text-yellow-500 hover:text-yellow-600"
+                >
+                  {file.starred ? <Star className="h-4 w-4 fill-current" /> : <Star className="h-4 w-4" />}
+                </button>
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-3">{getFileIcon(file.type)}</div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate w-full mb-1">{file.name}</h3>
+                  <p className="text-xs text-gray-500">{file.type === 'folder' ? `${file.items} items` : file.size}</p>
+                  <p className="text-xs text-gray-400 mt-1">{file.modified}</p>
+                </div>
+                <div className="mt-2 flex justify-center space-x-2">
+                  <button
+                    onClick={() => openRename(file)}
+                    className="p-1 text-gray-400 hover:text-blue-600"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteFile(file.id)}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              {file.starred && (
-                <Star className="absolute top-2 right-2 h-4 w-4 text-yellow-500 fill-current" />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {showFolderModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">New Folder</h3>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  createFolder();
+                }}
+              >
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  placeholder="Folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  required
+                />
+                <div className="flex justify-end space-x-2">
+                  <button type="button" onClick={() => setShowFolderModal(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                    Create
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showRenameModal && selected && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Rename</h3>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  renameFile();
+                }}
+              >
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  required
+                />
+                <div className="flex justify-end space-x-2">
+                  <button type="button" onClick={() => setShowRenameModal(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
   );
 }
