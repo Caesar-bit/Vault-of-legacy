@@ -22,8 +22,9 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
-        <Header 
+        <Header
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onNavigate={onPageChange}
         />
         <main className="py-8">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
