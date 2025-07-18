@@ -173,6 +173,15 @@ export function ResearchPage() {
     URL.revokeObjectURL(url);
   };
 
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleShare = async (item: ResearchItem) => {
     try {
       if (navigator.share) {
@@ -472,12 +481,14 @@ export function ResearchPage() {
             </h2>
             <form
               className="space-y-4"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                const uploaded = form.attachments.map((f) => ({
-                  name: f.name,
-                  url: URL.createObjectURL(f),
-                }));
+                const uploaded = await Promise.all(
+                  form.attachments.map(async (f) => ({
+                    name: f.name,
+                    url: await readFileAsDataURL(f),
+                  }))
+                );
                 const baseItem = {
                   id: editingId ?? Date.now().toString(),
                   title: form.title,
