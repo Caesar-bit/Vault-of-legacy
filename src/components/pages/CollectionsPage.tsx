@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -13,6 +13,7 @@ import {
   Lock,
   Globe
 } from 'lucide-react';
+import { FileManager, VaultItem } from '../FileManager';
 
 interface Collection {
   id: string;
@@ -68,8 +69,37 @@ const mockCollections = [
   }
 ];
 
+const defaultCollectionFiles: Record<string, VaultItem[]> = {
+  '1': [
+    {
+      id: 'p1',
+      name: 'portrait1.jpg',
+      type: 'image',
+      size: '2 MB',
+      modified: '2024-01-15',
+      owner: 'You',
+      starred: false,
+    },
+  ],
+  '2': [
+    {
+      id: 'd1',
+      name: 'letter.pdf',
+      type: 'pdf',
+      size: '1 MB',
+      modified: '2024-01-10',
+      owner: 'You',
+      starred: false,
+    },
+  ],
+};
+
 export function CollectionsPage() {
   const [collections, setCollections] = useState<Collection[]>([...mockCollections]);
+  const [collectionFiles, setCollectionFiles] = useState<Record<string, VaultItem[]>>(() => {
+    const stored = localStorage.getItem('collection_files');
+    return stored ? JSON.parse(stored) : defaultCollectionFiles;
+  });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -82,6 +112,10 @@ export function CollectionsPage() {
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [deleteItem, setDeleteItem] = useState<Collection | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('collection_files', JSON.stringify(collectionFiles));
+  }, [collectionFiles]);
 
   const filteredCollections = collections.filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -400,20 +434,17 @@ export function CollectionsPage() {
 
     {viewItem && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewItem(null)}>
-        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">{viewItem.name}</h3>
-          <p className="text-sm text-gray-600 mb-2">{viewItem.description}</p>
-          <p className="text-sm text-gray-600 mb-2">{viewItem.assetCount} assets</p>
-          <div className="flex flex-wrap gap-1 mb-4">
-            {viewItem.tags.map((tag) => (
-              <span key={tag} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {tag}
-              </span>
-            ))}
+        <div className="bg-white rounded-xl shadow-xl p-4 w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">{viewItem.name}</h3>
+            <button onClick={() => setViewItem(null)} className="text-gray-500 hover:text-red-600">&times;</button>
           </div>
-          <div className="flex justify-end">
-            <button className="px-4 py-2 rounded-lg bg-blue-600 text-white" onClick={() => setViewItem(null)}>Close</button>
-          </div>
+          <FileManager
+            initialItems={collectionFiles[viewItem.id] || []}
+            onChange={(items) =>
+              setCollectionFiles((prev) => ({ ...prev, [viewItem.id]: items }))
+            }
+          />
         </div>
       </div>
     )}
