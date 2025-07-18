@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Edit, 
-  Trash2, 
-  ImageIcon, 
+import { FileUpload } from '../FileUpload';
+import {
+  Plus,
+  Calendar,
+  MapPin,
+  Clock,
+  Edit,
+  Trash2,
+  ImageIcon,
   FileText,
-  Filter,
   Search
 } from 'lucide-react';
+
+interface EventAsset {
+  name: string;
+  url: string;
+}
 
 const mockEvents = [
   {
@@ -20,7 +25,10 @@ const mockEvents = [
     date: '1950-03-15',
     type: 'milestone',
     location: 'Springfield, IL',
-    assets: ['birth_certificate.pdf', 'hospital_photo.jpg']
+    assets: [
+      { name: 'birth_certificate.pdf', url: '#' },
+      { name: 'hospital_photo.jpg', url: '#' }
+    ]
   },
   {
     id: '2',
@@ -29,7 +37,9 @@ const mockEvents = [
     date: '1955-09-01',
     type: 'event',
     location: 'Springfield, IL',
-    assets: ['school_photo.jpg']
+    assets: [
+      { name: 'school_photo.jpg', url: '#' }
+    ]
   },
   {
     id: '3',
@@ -38,7 +48,11 @@ const mockEvents = [
     date: '1968-06-15',
     type: 'achievement',
     location: 'Springfield, IL',
-    assets: ['diploma.pdf', 'graduation_photo.jpg', 'speech.mp3']
+    assets: [
+      { name: 'diploma.pdf', url: '#' },
+      { name: 'graduation_photo.jpg', url: '#' },
+      { name: 'speech.mp3', url: '#' }
+    ]
   },
   {
     id: '4',
@@ -47,7 +61,10 @@ const mockEvents = [
     date: '1972-08-20',
     type: 'milestone',
     location: 'Springfield, IL',
-    assets: ['wedding_photos.zip', 'marriage_certificate.pdf']
+    assets: [
+      { name: 'wedding_photos.zip', url: '#' },
+      { name: 'marriage_certificate.pdf', url: '#' }
+    ]
   },
   {
     id: '5',
@@ -56,7 +73,10 @@ const mockEvents = [
     date: '1975-04-10',
     type: 'milestone',
     location: 'Springfield, IL',
-    assets: ['baby_photos.jpg', 'birth_announcement.pdf']
+    assets: [
+      { name: 'baby_photos.jpg', url: '#' },
+      { name: 'birth_announcement.pdf', url: '#' }
+    ]
   }
 ];
 
@@ -91,7 +111,7 @@ export function TimelinePage() {
     date: '',
     type: 'milestone',
     location: '',
-    assets: ''
+    assets: [] as File[]
   });
 
   const filteredEvents = events.filter(event => {
@@ -116,7 +136,7 @@ export function TimelinePage() {
         <button
           onClick={() => {
             setEditingId(null);
-            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: '' });
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
             setShowForm(true);
           }}
           className="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -202,7 +222,7 @@ export function TimelinePage() {
         <div className="absolute left-12 top-8 bottom-8 w-1 bg-gradient-to-b from-blue-300 via-purple-200 to-pink-200 animate-pulse-timeline rounded-full z-0" style={{ minHeight: 'calc(100% - 4rem)' }}></div>
 
         <div className="space-y-12 relative z-10">
-          {sortedEvents.map((event, index) => (
+          {sortedEvents.map((event) => (
             <div key={event.id} className="relative flex items-start space-x-8 group">
               {/* Timeline Dot with Icon */}
               <div className="relative flex items-center justify-center w-24 h-24 bg-white/80 border-4 border-blue-200 shadow-lg rounded-full z-20 group-hover:scale-105 transition-transform">
@@ -239,11 +259,17 @@ export function TimelinePage() {
                         <div className="flex items-center space-x-2 mt-2">
                           <span className="text-sm text-gray-500">Assets:</span>
                           <div className="flex flex-wrap gap-2">
-                            {event.assets.map((asset, assetIndex) => (
-                              <span key={assetIndex} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 shadow">
+                            {event.assets.map((asset: EventAsset, assetIndex: number) => (
+                              <a
+                                key={assetIndex}
+                                href={asset.url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 shadow"
+                              >
                                 <FileText className="h-3 w-3 mr-1" />
-                                {asset}
-                              </span>
+                                {asset.name ?? asset}
+                              </a>
                             ))}
                           </div>
                         </div>
@@ -260,7 +286,7 @@ export function TimelinePage() {
                             date: event.date,
                             type: event.type,
                             location: event.location,
-                            assets: event.assets.join(', ')
+                            assets: []
                           });
                           setShowForm(true);
                         }}
@@ -285,7 +311,7 @@ export function TimelinePage() {
         <button
           onClick={() => {
             setEditingId(null);
-            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: '' });
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
             setShowForm(true);
           }}
           className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400 animate-bounce"
@@ -301,7 +327,10 @@ export function TimelinePage() {
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative">
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false);
+                setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+              }}
             >
               &times;
             </button>
@@ -310,11 +339,15 @@ export function TimelinePage() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
+                const uploaded = form.assets.map((f) => ({
+                  name: f.name,
+                  url: URL.createObjectURL(f),
+                }));
                 if (editingId) {
                   setEvents((prev) =>
                     prev.map((ev) =>
                       ev.id === editingId
-                        ? { ...ev, ...form, assets: form.assets ? form.assets.split(/,\s*/) : [] }
+                        ? { ...ev, ...form, assets: [...ev.assets, ...uploaded] }
                         : ev
                     )
                   );
@@ -324,11 +357,12 @@ export function TimelinePage() {
                     {
                       id: Date.now().toString(),
                       ...form,
-                      assets: form.assets ? form.assets.split(/,\s*/) : []
-                    }
+                      assets: uploaded,
+                    },
                   ]);
                 }
                 setShowForm(false);
+                setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
               }}
             >
               <input
@@ -367,16 +401,21 @@ export function TimelinePage() {
                 <option value="event">Event</option>
                 <option value="achievement">Achievement</option>
               </select>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="Assets (comma separated)"
-                value={form.assets}
-                onChange={(e) => setForm({ ...form, assets: e.target.value })}
-              />
+              <div className="w-full">
+                <FileUpload
+                  multiple
+                  onFilesSelected={(files) =>
+                    setForm({ ...form, assets: Array.from(files) })
+                  }
+                />
+              </div>
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+                  }}
                   className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
                 >
                   Cancel
