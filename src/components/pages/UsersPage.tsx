@@ -21,6 +21,7 @@ import {
   Key
 } from 'lucide-react';
 import { fetchUsers, createUser, updateUser, removeUser } from '../../utils/users';
+import { useAuth } from '../../contexts/AuthContext';
 
 export interface UserItem {
   id: string;
@@ -34,52 +35,6 @@ export interface UserItem {
   avatar: string;
 }
 
-const mockUsers: UserItem[] = [
-  {
-    id: '1',
-    name: 'John Smith',
-    email: 'john.smith@email.com',
-    role: 'admin',
-    status: 'active',
-    lastLogin: '2024-01-20T10:30:00Z',
-    joinDate: '2023-01-15',
-    permissions: ['read', 'write', 'delete', 'admin'],
-    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=100'
-  },
-  {
-    id: '2',
-    name: 'Mary Johnson',
-    email: 'mary.johnson@email.com',
-    role: 'editor',
-    status: 'active',
-    lastLogin: '2024-01-19T15:45:00Z',
-    joinDate: '2023-03-20',
-    permissions: ['read', 'write'],
-    avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?w=100'
-  },
-  {
-    id: '3',
-    name: 'Robert Wilson',
-    email: 'robert.wilson@email.com',
-    role: 'contributor',
-    status: 'pending',
-    lastLogin: null,
-    joinDate: '2024-01-18',
-    permissions: ['read'],
-    avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?w=100'
-  },
-  {
-    id: '4',
-    name: 'Sarah Davis',
-    email: 'sarah.davis@email.com',
-    role: 'viewer',
-    status: 'inactive',
-    lastLogin: '2023-12-15T09:20:00Z',
-    joinDate: '2023-06-10',
-    permissions: ['read'],
-    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?w=100'
-  }
-];
 
 const roles = [
   {
@@ -125,23 +80,25 @@ export function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', email: '', role: 'viewer' });
 
+  const { token } = useAuth();
+
   useEffect(() => {
+    if (!token) return;
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchUsers();
-        setUsers(data.length ? data : mockUsers);
+        const data = await fetchUsers(token);
+        setUsers(data);
       } catch (e) {
         console.error(e);
         setError('Failed to load users');
-        setUsers(mockUsers);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [token]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

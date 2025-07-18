@@ -1,67 +1,42 @@
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5138';
+
 export interface StoredUser {
-  id: string;
-  name: string;
+  id: number;
+  userName: string;
   email: string;
-  role: 'admin' | 'editor' | 'contributor' | 'viewer';
-  status: 'active' | 'pending' | 'inactive' | 'suspended';
-  lastLogin: string | null;
-  joinDate: string;
-  permissions: string[];
-  avatar: string;
 }
 
-const STORAGE_KEY = 'vault_users';
-
-function readUsers(): StoredUser[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) : [];
-}
-
-function writeUsers(users: StoredUser[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-}
-
-export async function fetchUsers(): Promise<StoredUser[]> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve(readUsers());
-    }, 300);
+export async function fetchUsers(token: string): Promise<StoredUser[]> {
+  const res = await fetch(`${API_URL}/api/users`, {
+    headers: { Authorization: `Bearer ${token}` }
   });
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return data.map((u: string, index: number) => ({ id: index, userName: u, email: '' }));
 }
 
-export async function createUser(user: StoredUser): Promise<StoredUser> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      const users = readUsers();
-      users.unshift(user);
-      writeUsers(users);
-      resolve(user);
-    }, 300);
+export async function createUser(token: string, user: { userName: string; email: string; password: string }): Promise<void> {
+  const res = await fetch(`${API_URL}/api/users/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(user)
   });
+  if (!res.ok) throw new Error(await res.text());
 }
 
-export async function updateUser(id: string, data: Partial<StoredUser>): Promise<StoredUser | null> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      let users = readUsers();
-      const index = users.findIndex(u => u.id === id);
-      if (index === -1) {
-        resolve(null);
-        return;
-      }
-      users[index] = { ...users[index], ...data };
-      writeUsers(users);
-      resolve(users[index]);
-    }, 300);
+export async function updateUser(token: string, id: number, user: { userName: string; email: string; password?: string }): Promise<void> {
+  const res = await fetch(`${API_URL}/api/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(user)
   });
+  if (!res.ok) throw new Error(await res.text());
 }
 
-export async function removeUser(id: string): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      const users = readUsers().filter(u => u.id !== id);
-      writeUsers(users);
-      resolve();
-    }, 300);
+export async function removeUser(token: string, id: number): Promise<void> {
+  const res = await fetch(`${API_URL}/api/users/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
   });
+  if (!res.ok) throw new Error(await res.text());
 }

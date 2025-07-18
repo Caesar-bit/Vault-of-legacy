@@ -34,7 +34,7 @@ namespace Backend.Controllers
                 return BadRequest("User already exists");
             }
 
-            var user = new User { UserName = dto.UserName };
+            var user = new User { UserName = dto.UserName, Email = dto.Email };
             user.PasswordHash = _hasher.HashPassword(user, dto.Password);
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -77,9 +77,37 @@ namespace Backend.Controllers
             return await _context.Users.Select(u => u.UserName).ToListAsync();
         }
 
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UserDto dto)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+            user.UserName = dto.UserName;
+            user.Email = dto.Email;
+            if (!string.IsNullOrEmpty(dto.Password))
+            {
+                user.PasswordHash = _hasher.HashPassword(user, dto.Password);
+            }
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
         public class UserDto
         {
             public string UserName { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
             public string Password { get; set; } = string.Empty;
         }
     }

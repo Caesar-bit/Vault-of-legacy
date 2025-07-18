@@ -15,7 +15,9 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signup, isLoading, error } = useAuth();
+  const { signup, isAuthenticated } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const passwordRequirements = [
     { text: 'At least 8 characters', met: formData.password.length >= 8 },
@@ -30,7 +32,14 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
     if (formData.password !== formData.confirmPassword) {
       return;
     }
-    await signup(formData.email, formData.password, formData.name);
+    setIsLoading(true);
+    setError(null);
+    try {
+      await signup(formData.email, formData.email, formData.password);
+    } catch (err: any) {
+      setError(err.message);
+    }
+    setIsLoading(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

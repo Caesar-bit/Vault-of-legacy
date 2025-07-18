@@ -11,11 +11,20 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading, error } = useAuth();
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(email, password);
+    setIsLoading(true);
+    setError(null);
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      setError(err.message);
+    }
+    setIsLoading(false);
   };
 
   return (
