@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FolderPlus,
   Upload,
@@ -14,7 +14,7 @@ import {
   Trash2
 } from 'lucide-react';
 
-interface VaultFile {
+interface VaultItem {
   id: string;
   name: string;
   type: string;
@@ -22,31 +22,31 @@ interface VaultFile {
   modified: string;
   owner: string;
   starred: boolean;
-  items?: number;
   url?: string;
+  children?: VaultItem[];
 }
 
 export function VaultPage() {
-  const defaultFiles: VaultFile[] = [
+  const defaultFiles: VaultItem[] = [
     {
-      id: 1,
+      id: '1',
       name: 'Documents',
       type: 'folder',
       size: null,
       modified: '2024-01-15',
       owner: 'John Doe',
       starred: false,
-      items: 24
+      children: [],
     },
     {
-      id: 2,
+      id: '2',
       name: 'Images',
       type: 'folder',
       size: null,
       modified: '2024-01-14',
       owner: 'John Doe',
       starred: true,
-      items: 156
+      children: [],
     },
     {
       id: 3,
@@ -86,11 +86,11 @@ export function VaultPage() {
     }
   ];
 
-  const [files, setFiles] = useState<VaultFile[]>(() => {
+  const [structure, setStructure] = useState<VaultItem[]>(() => {
     const stored = localStorage.getItem('vault_files');
     return stored ? JSON.parse(stored) : defaultFiles;
   });
-  const [previewFile, setPreviewFile] = useState<VaultFile | null>(null);
+  const [previewFile, setPreviewFile] = useState<VaultItem | null>(null);
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -116,9 +116,10 @@ export function VaultPage() {
   const [search, setSearch] = useState('');
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [selected, setSelected] = useState<VaultFile | null>(null);
+  const [selected, setSelected] = useState<VaultItem | null>(null);
   const [renameName, setRenameName] = useState('');
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [path, setPath] = useState<string[]>([]);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -155,6 +156,35 @@ export function VaultPage() {
     }
   };
 
+  const getItemsAtPath = (items: VaultItem[], p: string[]): VaultItem[] => {
+    let current = items;
+    for (const id of p) {
+      const folder = current.find((i) => i.id === id && i.type === 'folder');
+      if (!folder) return [];
+      current = folder.children || [];
+    }
+    return current;
+  };
+
+  const updateAtPath = (
+    p: string[],
+    updater: (items: VaultItem[]) => VaultItem[]
+  ) => {
+    setStructure((prev) => {
+      const update = (list: VaultItem[], pathSegs: string[]): VaultItem[] => {
+        if (pathSegs.length === 0) return updater(list);
+        return list.map((item) => {
+          if (item.id !== pathSegs[0] || item.type !== 'folder') return item;
+          return {
+            ...item,
+            children: update(item.children || [], pathSegs.slice(1)),
+          };
+        });
+      };
+      return update(prev, p);
+    });
+  };
+
   const toBase64 = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -165,7 +195,7 @@ export function VaultPage() {
 
   const handleFiles = async (fileList: FileList) => {
     const arr = Array.from(fileList);
-    const newFiles: VaultFile[] = await Promise.all(
+    const newFiles: VaultItem[] = await Promise.all(
       arr.map(async (f) => ({
         id: Date.now().toString() + Math.random().toString(36).slice(2, 8),
         name: f.name,
@@ -177,7 +207,7 @@ export function VaultPage() {
         url: await toBase64(f),
       }))
     );
-    setFiles((prev) => [...newFiles, ...prev]);
+    updateAtPath(path, (prev) => [...newFiles, ...prev]);
   };
 
   const handleUploadClick = () => fileInputRef.current?.click();
@@ -192,57 +222,62 @@ export function VaultPage() {
   };
 
   const createFolder = () => {
-    setFiles((prev) => [
-      {
-        id: Date.now().toString(),
-        name: newFolderName,
-        type: 'folder',
-        size: null,
-        modified: new Date().toISOString().slice(0, 10),
-        owner: 'You',
-        starred: false,
-        items: 0
-      },
-      ...prev
-    ]);
+    const folder: VaultItem = {
+      id: Date.now().toString(),
+      name: newFolderName,
+      type: 'folder',
+      size: null,
+      modified: new Date().toISOString().slice(0, 10),
+      owner: 'You',
+      starred: false,
+      children: [],
+    };
+    updateAtPath(path, (prev) => [folder, ...prev]);
     setNewFolderName('');
     setShowFolderModal(false);
   };
 
   const toggleStar = (id: string) =>
-    setFiles((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, starred: !f.starred } : f))
+    updateAtPath(path, (items) =>
+      items.map((f) => (f.id === id ? { ...f, starred: !f.starred } : f))
     );
 
   const deleteFile = (id: string) =>
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    updateAtPath(path, (items) => items.filter((f) => f.id !== id));
 
-  const openRename = (file: VaultFile) => {
+  const openRename = (file: VaultItem) => {
     setSelected(file);
     setRenameName(file.name);
     setShowRenameModal(true);
   };
 
-  const openPreview = (file: VaultFile) => {
-    if (file.type !== 'folder') {
+  const openPreview = (file: VaultItem) => {
+    if (file.type === 'folder') {
+      setPath((prev) => [...prev, file.id]);
+    } else {
       setPreviewFile(file);
     }
   };
 
   const renameFile = () => {
     if (selected) {
-      setFiles((prev) =>
-        prev.map((f) => (f.id === selected.id ? { ...f, name: renameName } : f))
+      updateAtPath(path, (items) =>
+        items.map((f) => (f.id === selected.id ? { ...f, name: renameName } : f))
       );
     }
     setShowRenameModal(false);
   };
 
   useEffect(() => {
-    localStorage.setItem('vault_files', JSON.stringify(files));
-  }, [files]);
+    localStorage.setItem('vault_files', JSON.stringify(structure));
+  }, [structure]);
 
-  const filteredFiles = files.filter(f =>
+  const currentFiles = useMemo(
+    () => getItemsAtPath(structure, path),
+    [structure, path]
+  );
+
+  const filteredFiles = currentFiles.filter((f) =>
     f.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -310,6 +345,31 @@ export function VaultPage() {
           </div>
         </div>
 
+        {/* Breadcrumbs */}
+        <div className="px-6 text-sm mb-2 flex items-center flex-wrap gap-1">
+          <button
+            onClick={() => setPath([])}
+            className="text-blue-600 hover:underline"
+          >
+            Root
+          </button>
+          {path.map((id, idx) => {
+            const segPath = path.slice(0, idx);
+            const folder = getItemsAtPath(structure, segPath).find((f) => f.id === id);
+            return (
+              <span key={id} className="flex items-center gap-1">
+                <span>/</span>
+                <button
+                  onClick={() => setPath(path.slice(0, idx + 1))}
+                  className="text-blue-600 hover:underline"
+                >
+                  {folder?.name || '...'}
+                </button>
+              </span>
+            );
+          })}
+        </div>
+
         {/* Drag & Drop Upload Area */}
         <div className="mx-4 mb-6">
           <div
@@ -337,7 +397,7 @@ export function VaultPage() {
                 <div className="flex flex-col items-center text-center">
                   <div className="mb-3">{getFileIcon(file.type)}</div>
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate w-full mb-1">{file.name}</h3>
-                  <p className="text-xs text-gray-500">{file.type === 'folder' ? `${file.items} items` : file.size}</p>
+                  <p className="text-xs text-gray-500">{file.type === 'folder' ? `${file.children ? file.children.length : 0} items` : file.size}</p>
                   <p className="text-xs text-gray-400 mt-1">{file.modified}</p>
                 </div>
                 <div className="mt-2 flex justify-center space-x-2">
