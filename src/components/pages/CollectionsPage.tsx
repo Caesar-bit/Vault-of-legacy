@@ -21,6 +21,7 @@ interface Collection {
   description: string;
   assetCount: number;
   isPublic: boolean;
+  password?: string;
   createdAt: string;
   thumbnail: string;
   tags: string[];
@@ -33,6 +34,7 @@ const mockCollections = [
     description: 'A curated collection of family photographs spanning three generations',
     assetCount: 45,
     isPublic: true,
+    password: '',
     createdAt: '2024-01-15',
     thumbnail: 'family_portrait_1965.jpg',
     tags: ['family', 'portraits', 'vintage']
@@ -43,6 +45,7 @@ const mockCollections = [
     description: 'Historical documents and letters from World War II',
     assetCount: 23,
     isPublic: false,
+    password: 'history',
     createdAt: '2024-01-10',
     thumbnail: 'war_letter.pdf',
     tags: ['history', 'documents', 'war']
@@ -53,6 +56,7 @@ const mockCollections = [
     description: 'Photos, videos, and documents from our wedding day',
     assetCount: 78,
     isPublic: true,
+    password: '',
     createdAt: '2024-01-08',
     thumbnail: 'wedding_ceremony.jpg',
     tags: ['wedding', 'celebration', 'memories']
@@ -63,6 +67,7 @@ const mockCollections = [
     description: 'Photos and stories from childhood adventures and milestones',
     assetCount: 156,
     isPublic: false,
+    password: 'kids',
     createdAt: '2024-01-05',
     thumbnail: 'playground.jpg',
     tags: ['childhood', 'adventures', 'growing up']
@@ -105,6 +110,15 @@ export function CollectionsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newIsPublic, setNewIsPublic] = useState(true);
+  const [newPassword, setNewPassword] = useState('');
+
+  const [authorized, setAuthorized] = useState<Record<string, boolean>>(() => {
+    const stored = localStorage.getItem('collection_authorized');
+    return stored ? JSON.parse(stored) : {};
+  });
+  const [passwordItem, setPasswordItem] = useState<Collection | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
 
   const [viewItem, setViewItem] = useState<Collection | null>(null);
   const [shareItem, setShareItem] = useState<Collection | null>(null);
@@ -116,12 +130,24 @@ export function CollectionsPage() {
   useEffect(() => {
     localStorage.setItem('collection_files', JSON.stringify(collectionFiles));
   }, [collectionFiles]);
+  useEffect(() => {
+    localStorage.setItem('collection_authorized', JSON.stringify(authorized));
+  }, [authorized]);
 
   const filteredCollections = collections.filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     collection.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     collection.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const openCollection = (collection: Collection) => {
+    if (collection.isPublic || authorized[collection.id]) {
+      setViewItem(collection);
+    } else {
+      setPasswordItem(collection);
+      setPasswordInput('');
+    }
+  };
 
   return (
     <>
@@ -266,7 +292,7 @@ export function CollectionsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => setViewItem(collection)}
+                        onClick={() => openCollection(collection)}
                         className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white"
                       >
                         <Eye className="h-4 w-4" />
@@ -337,7 +363,7 @@ export function CollectionsPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setViewItem(collection)}
+                      onClick={() => openCollection(collection)}
                       className="p-2 text-gray-400 hover:text-blue-600"
                     >
                       <Eye className="h-4 w-4" />
@@ -387,7 +413,8 @@ export function CollectionsPage() {
                   name: newName,
                   description: newDesc,
                   assetCount: 0,
-                  isPublic: false,
+                  isPublic: newIsPublic,
+                  password: newIsPublic ? '' : newPassword,
                   createdAt: new Date().toISOString().slice(0, 10),
                   thumbnail: '',
                   tags: [],
@@ -396,6 +423,8 @@ export function CollectionsPage() {
               ]);
               setNewName('');
               setNewDesc('');
+              setNewPassword('');
+              setNewIsPublic(true);
               setShowCreateModal(false);
             }}
           >
@@ -412,6 +441,34 @@ export function CollectionsPage() {
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
             />
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  checked={newIsPublic}
+                  onChange={() => setNewIsPublic(true)}
+                />
+                <span>Public</span>
+              </label>
+              <label className="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  checked={!newIsPublic}
+                  onChange={() => setNewIsPublic(false)}
+                />
+                <span>Private</span>
+              </label>
+            </div>
+            {!newIsPublic && (
+              <input
+                type="password"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            )}
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
@@ -426,6 +483,37 @@ export function CollectionsPage() {
               >
                 Create
               </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {passwordItem && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPasswordItem(null)}>
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Enter Password</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (passwordInput === (passwordItem.password || '')) {
+                setAuthorized((prev) => ({ ...prev, [passwordItem.id]: true }));
+                setPasswordItem(null);
+                setViewItem(passwordItem);
+              }
+            }}
+          >
+            <input
+              type="password"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              required
+            />
+            <div className="flex justify-end space-x-2">
+              <button type="button" onClick={() => setPasswordItem(null)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">Cancel</button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">Unlock</button>
             </div>
           </form>
         </div>
