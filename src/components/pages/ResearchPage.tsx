@@ -16,6 +16,7 @@ import {
   Download,
   Share2
 } from 'lucide-react';
+import { FileUpload } from '../FileUpload';
 
 // Mock data
 const mockResearchItems = [
@@ -30,7 +31,7 @@ const mockResearchItems = [
     notes: 'Official birth certificate obtained from county records office',
     citations: ['Springfield County Birth Records, Vol. 23, Page 156'],
     tags: ['birth', 'official', 'hospital'],
-    attachments: ['birth_certificate.pdf']
+    attachments: [{ name: 'birth_certificate.pdf', url: '' }]
   },
   {
     id: '2',
@@ -43,7 +44,10 @@ const mockResearchItems = [
     notes: 'Service record from Vietnam War era, includes commendations',
     citations: ['National Personnel Records Center, Military Personnel File'],
     tags: ['military', 'vietnam', 'service'],
-    attachments: ['service_record.pdf', 'commendations.pdf']
+    attachments: [
+      { name: 'service_record.pdf', url: '' },
+      { name: 'commendations.pdf', url: '' }
+    ]
   },
   {
     id: '3',
@@ -56,7 +60,7 @@ const mockResearchItems = [
     notes: 'Passenger manifest shows arrival from Ireland, need to verify spelling of surname',
     citations: ['Ellis Island Passenger Lists, Ship: SS Celtic'],
     tags: ['immigration', 'ireland', 'ellis island'],
-    attachments: ['passenger_manifest.jpg']
+    attachments: [{ name: 'passenger_manifest.jpg', url: '' }]
   },
   {
     id: '4',
@@ -69,7 +73,7 @@ const mockResearchItems = [
     notes: 'Original marriage license with witness signatures',
     citations: ['Springfield Marriage Records, License #ML-1972-0856'],
     tags: ['marriage', 'license', 'official'],
-    attachments: ['marriage_license.pdf']
+    attachments: [{ name: 'marriage_license.pdf', url: '' }]
   }
 ];
 
@@ -82,6 +86,11 @@ const researchSources = [
   { name: 'Personal Collection', type: 'personal', reliability: 'high', count: 156 }
 ];
 
+interface ResearchAttachment {
+  name: string;
+  url: string;
+}
+
 interface ResearchItem {
   id: string;
   title: string;
@@ -93,7 +102,7 @@ interface ResearchItem {
   notes: string;
   citations: string[];
   tags: string[];
-  attachments: string[];
+  attachments: ResearchAttachment[];
 }
 
 
@@ -106,7 +115,15 @@ export function ResearchPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [researchItems, setResearchItems] = useState<ResearchItem[]>(() => {
     const stored = localStorage.getItem('research_items');
-    return stored ? JSON.parse(stored) : mockResearchItems;
+    const items = (stored ? JSON.parse(stored) : mockResearchItems) as Array<unknown>;
+    return items.map((it) => {
+      const attachments = Array.isArray(it.attachments)
+        ? it.attachments.map((att: unknown) =>
+            typeof att === 'string' ? { name: att, url: '' } : att
+          )
+        : [];
+      return { ...it, attachments } as ResearchItem;
+    });
   });
   const [form, setForm] = useState({
     title: '',
@@ -118,7 +135,7 @@ export function ResearchPage() {
     notes: '',
     citations: '',
     tags: '',
-    attachments: ''
+    attachments: [] as File[]
   });
 
   useEffect(() => {
@@ -187,7 +204,7 @@ export function ResearchPage() {
       notes: item.notes,
       citations: item.citations.join(', '),
       tags: item.tags.join(', '),
-      attachments: item.attachments.join(', ')
+      attachments: []
     });
     setShowAddModal(true);
   };
@@ -367,11 +384,18 @@ export function ResearchPage() {
                           {item.attachments.length > 0 && (
                             <div className="flex items-center space-x-2">
                               <span className="text-sm text-gray-500">Attachments:</span>
-                              {item.attachments.map((attachment, index) => (
-                                <span key={index} className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">
+                              {item.attachments.map((att, index) => (
+                                <a
+                                  key={index}
+                                  href={att.url || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <FileText className="h-3 w-3 mr-1" />
-                                  {attachment}
-                                </span>
+                                  {att.name}
+                                </a>
                               ))}
                             </div>
                           )}
@@ -450,7 +474,11 @@ export function ResearchPage() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                const newItem: ResearchItem = {
+                const uploaded = form.attachments.map((f) => ({
+                  name: f.name,
+                  url: URL.createObjectURL(f),
+                }));
+                const baseItem = {
                   id: editingId ?? Date.now().toString(),
                   title: form.title,
                   type: form.type,
@@ -459,19 +487,24 @@ export function ResearchPage() {
                   verified: form.verified,
                   reliability: form.reliability as 'high' | 'medium' | 'low',
                   notes: form.notes,
-                  citations: form.citations
-                    ? form.citations.split(/,\s*/)
-                    : [],
+                  citations: form.citations ? form.citations.split(/,\s*/) : [],
                   tags: form.tags ? form.tags.split(/,\s*/) : [],
-                  attachments: form.attachments
-                    ? form.attachments.split(/,\s*/)
-                    : []
                 };
                 setResearchItems((prev) => {
                   if (editingId) {
-                    return prev.map((it) => (it.id === editingId ? newItem : it));
+                    return prev.map((it) =>
+                      it.id === editingId
+                        ? {
+                            ...baseItem,
+                            attachments: [...it.attachments, ...uploaded],
+                          }
+                        : it
+                    );
                   }
-                  return [newItem, ...prev];
+                  return [
+                    { ...baseItem, attachments: uploaded },
+                    ...prev,
+                  ];
                 });
                 setShowAddModal(false);
                 setEditingId(null);
@@ -485,7 +518,7 @@ export function ResearchPage() {
                   notes: '',
                   citations: '',
                   tags: '',
-                  attachments: ''
+                  attachments: []
                 });
               }}
             >
@@ -526,12 +559,14 @@ export function ResearchPage() {
                 value={form.tags}
                 onChange={(e) => setForm({ ...form, tags: e.target.value })}
               />
-              <input
-                className="w-full border border-gray-200 rounded-lg px-3 py-2"
-                placeholder="Attachments (comma separated)"
-                value={form.attachments}
-                onChange={(e) => setForm({ ...form, attachments: e.target.value })}
-              />
+              <div className="w-full">
+                <FileUpload
+                  multiple
+                  onFilesSelected={(files) =>
+                    setForm({ ...form, attachments: Array.from(files) })
+                  }
+                />
+              </div>
               <div className="flex items-center space-x-2">
                 <label className="flex items-center space-x-2 text-sm">
                   <input
