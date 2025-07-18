@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  UserPlus, 
-  Search, 
-  Filter, 
+import {
+  Users,
+  UserPlus,
+  Search,
+  Filter,
   MoreHorizontal, 
   Edit, 
   Trash2, 
@@ -20,6 +20,7 @@ import {
   Settings,
   Key
 } from 'lucide-react';
+import { fetchUsers, createUser, updateUser, removeUser } from '../../utils/users';
 
 export interface UserItem {
   id: string;
@@ -119,15 +120,28 @@ export function UsersPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showProfileModal, setShowProfileModal] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [users, setUsers] = useState<UserItem[]>(() => {
-    const stored = localStorage.getItem('users');
-    return stored ? JSON.parse(stored) : mockUsers;
-  });
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', email: '', role: 'viewer' });
 
   useEffect(() => {
-    localStorage.setItem('users', JSON.stringify(users));
-  }, [users]);
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchUsers();
+        setUsers(data.length ? data : mockUsers);
+      } catch (e) {
+        console.error(e);
+        setError('Failed to load users');
+        setUsers(mockUsers);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -185,10 +199,16 @@ export function UsersPage() {
     setShowInviteModal(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Remove this user?')) {
-      setUsers((prev) => prev.filter((u) => u.id !== id));
-      setSelectedUsers((prev) => prev.filter((uid) => uid !== id));
+      try {
+        await removeUser(id);
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        setSelectedUsers((prev) => prev.filter((uid) => uid !== id));
+      } catch (err) {
+        console.error(err);
+        alert('Failed to remove user');
+      }
     }
   };
 
@@ -196,7 +216,7 @@ export function UsersPage() {
     alert(`Password reset link sent to ${user.email}`);
   };
 
-  const handleInviteSubmit = (e: React.FormEvent) => {
+  const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const roleInfo = roles.find((r) => r.value === form.role);
     const newUser: UserItem = {
@@ -211,12 +231,18 @@ export function UsersPage() {
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(form.name)}`,
     };
 
-    setUsers((prev) => {
+    try {
       if (editingId) {
-        return prev.map((u) => (u.id === editingId ? { ...u, ...newUser } : u));
+        await updateUser(editingId, newUser);
+        setUsers((prev) => prev.map((u) => (u.id === editingId ? { ...u, ...newUser } : u)));
+      } else {
+        await createUser(newUser);
+        setUsers((prev) => [newUser, ...prev]);
       }
-      return [newUser, ...prev];
-    });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save user');
+    }
     setEditingId(null);
     setForm({ name: '', email: '', role: 'viewer' });
     setShowInviteModal(false);
@@ -227,18 +253,38 @@ export function UsersPage() {
     alert(`Message sent to: ${names}`);
   };
 
-  const bulkChangeRole = () => {
+  const bulkChangeRole = async () => {
     const role = prompt('Enter new role (admin, editor, contributor, viewer):', 'viewer');
     if (!role) return;
-    setUsers((prev) => prev.map((u) => (selectedUsers.includes(u.id) ? { ...u, role } : u)));
-  };
-
-  const bulkRemove = () => {
-    if (confirm('Remove selected users?')) {
-      setUsers((prev) => prev.filter((u) => !selectedUsers.includes(u.id)));
-      setSelectedUsers([]);
+    try {
+      await Promise.all(selectedUsers.map(id => updateUser(id, { role: role as UserItem['role'] })));
+      setUsers((prev) => prev.map((u) => (selectedUsers.includes(u.id) ? { ...u, role } : u)));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update roles');
     }
   };
+
+  const bulkRemove = async () => {
+    if (confirm('Remove selected users?')) {
+      try {
+        await Promise.all(selectedUsers.map(id => removeUser(id)));
+        setUsers((prev) => prev.filter((u) => !selectedUsers.includes(u.id)));
+        setSelectedUsers([]);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to remove users');
+      }
+    }
+  };
+
+  if (loading) {
+    return <div className="p-6 text-center">Loading users...</div>;
+  }
+
+  if (error) {
+    return <div className="p-6 text-center text-red-600">{error}</div>;
+  }
 
   return (
     <div className="relative min-h-screen pb-24">
