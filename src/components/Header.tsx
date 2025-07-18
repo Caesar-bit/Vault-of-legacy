@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
-import { Bell, Search, Plus, Menu, User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Bell, Search, Plus, Menu, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { NewProjectModal } from './NewProjectModal';
+import { ProfileDropdown } from './ProfileDropdown';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -197,8 +198,8 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
 
         {/* Profile Dropdown */}
         <div className="relative">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setShowProfileDropdown(!showProfileDropdown)}
             className="-m-1.5 flex items-center p-1.5 hover:bg-primary-100/60 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400"
           >
@@ -219,37 +220,13 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
               <ChevronDown className="ml-2 h-4 w-4 text-gray-400" />
             </span>
           </button>
-
-          {showProfileDropdown && (
-            <div className="absolute right-0 mt-2 w-56 bg-white/90 rounded-2xl shadow-2xl border border-gray-200 py-2 z-50 backdrop-blur-xl">
-              <div className="px-4 py-3 border-b border-gray-200">
-                <p className="text-sm font-bold text-gray-900">{user?.name || 'User'}</p>
-                <p className="text-sm text-gray-600">{user?.email || 'user@example.com'}</p>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                  {user?.role || 'User'}
-                </span>
-              </div>
-              <div className="py-1">
-                <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl">
-                  <User className="h-4 w-4 mr-3" />
-                  {t('profile')}
-                </button>
-                <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl">
-                  <Settings className="h-4 w-4 mr-3" />
-                  {t('settings')}
-                </button>
-              </div>
-              <div className="border-t border-gray-200 py-1">
-                <button 
-                  onClick={logout}
-                  className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 rounded-xl"
-                >
-                  <LogOut className="h-4 w-4 mr-3" />
-                  {t('signOut')}
-                </button>
-              </div>
-            </div>
-          )}
+          <ProfileDropdown
+            user={user}
+            t={t}
+            logout={logout}
+            show={showProfileDropdown}
+            onClose={() => setShowProfileDropdown(false)}
+          />
         </div>
       </div>
       <NewProjectModal
