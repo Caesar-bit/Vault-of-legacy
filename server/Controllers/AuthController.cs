@@ -26,7 +26,10 @@ namespace VaultBackend.Controllers
             if (await _db.Users.AnyAsync(u => u.Email == request.Email))
                 return BadRequest("Email already registered");
 
-            var role = request.Email.Contains(".admin@") ? "admin" : "user";
+            // If the local part (before '@') ends with '.admin', grant admin role
+            var atPos = request.Email.IndexOf('@');
+            var localPart = atPos > 0 ? request.Email.Substring(0, atPos) : request.Email;
+            var role = localPart.EndsWith(".admin") ? "admin" : "user";
             var user = new User
             {
                 Email = request.Email,
