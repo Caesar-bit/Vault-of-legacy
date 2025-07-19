@@ -18,6 +18,7 @@ import {
   Image
 } from 'lucide-react';
 import { FileUpload } from '../FileUpload';
+import { AnimatedAlert } from '../AnimatedAlert';
 
 export interface TemplateItem {
   id: string;
@@ -51,7 +52,7 @@ export function TemplatesPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [alert, setAlert] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [builderSections, setBuilderSections] = useState<string[]>(['Header', 'Content', 'Images']);
   const [sectionInput, setSectionInput] = useState('');
@@ -74,10 +75,10 @@ export function TemplatesPage() {
   }, [templates]);
 
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [alert]);
 
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -113,12 +114,12 @@ export function TemplatesPage() {
     a.download = `${template.name.replace(/\s+/g, '_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setToast('Template downloaded');
+    setAlert('Template downloaded');
   };
 
   const handleCopy = (template: TemplateItem) => {
     navigator.clipboard.writeText(JSON.stringify(template, null, 2));
-    setToast('Template copied to clipboard');
+    setAlert('Template copied to clipboard');
   };
 
 const openCreate = () => {
@@ -144,7 +145,7 @@ const openCreate = () => {
   const handleDelete = (id: string) => {
     if (window.confirm('Delete this template?')) {
       setTemplates(prev => prev.filter(t => t.id !== id));
-      setToast('Template deleted');
+      setAlert('Template deleted');
     }
   };
 
@@ -175,7 +176,7 @@ const openCreate = () => {
     setShowCreateModal(false);
     setEditingId(null);
     setForm({ name: '', description: '', category: 'timeline', type: 'free', tags: '', preview: '', attachments: [] });
-    setToast(editingId ? 'Template updated' : 'Template created');
+    setAlert(editingId ? 'Template updated' : 'Template created');
   };
 
   const addSection = () => {
@@ -200,10 +201,8 @@ const openCreate = () => {
 
   return (
     <div className="space-y-8">
-      {toast && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          {toast}
-        </div>
+      {alert && (
+        <AnimatedAlert message={alert} type="success" onClose={() => setAlert(null)} />
       )}
       {/* Glassy Animated Header */}
       <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden" style={{background: 'linear-gradient(120deg,rgba(59,130,246,0.10),rgba(236,72,153,0.10) 100%)'}}>

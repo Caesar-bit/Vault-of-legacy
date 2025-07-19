@@ -28,6 +28,7 @@ import {
   ApiUser,
 } from "../../utils/users";
 import { useAuth } from "../../contexts/AuthContext";
+import { AnimatedAlert } from "../AnimatedAlert";
 
 export interface UserItem {
   id: string;
@@ -85,6 +86,7 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", role: "viewer" });
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -199,15 +201,16 @@ export function UsersPage() {
         await removeUser(token, id);
         setUsers((prev) => prev.filter((u) => u.id !== id));
         setSelectedUsers((prev) => prev.filter((uid) => uid !== id));
+        setAlert({ message: 'User removed', type: 'success' });
       } catch (err) {
         console.error(err);
-        alert("Failed to remove user");
+        setAlert({ message: 'Failed to remove user', type: 'error' });
       }
     }
   };
 
   const resetPassword = (user: UserItem) => {
-    alert(`Password reset link sent to ${user.email}`);
+    setAlert({ message: `Password reset link sent to ${user.email}`, type: 'success' });
   };
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
@@ -250,9 +253,10 @@ export function UsersPage() {
         };
         setUsers((prev) => [newUser, ...prev]);
       }
+      setAlert({ message: editingId ? 'User updated' : 'User created', type: 'success' });
     } catch (err) {
       console.error(err);
-      alert("Failed to save user");
+      setAlert({ message: 'Failed to save user', type: 'error' });
     }
     setEditingId(null);
     setForm({ name: "", email: "", role: "viewer" });
@@ -264,7 +268,7 @@ export function UsersPage() {
       .filter((u) => selectedUsers.includes(u.id))
       .map((u) => u.name)
       .join(", ");
-    alert(`Message sent to: ${names}`);
+    setAlert({ message: `Message sent to: ${names}`, type: 'success' });
   };
 
   const bulkChangeRole = async () => {
@@ -284,7 +288,7 @@ export function UsersPage() {
       );
     } catch (err) {
       console.error(err);
-      alert("Failed to update roles");
+      setAlert({ message: 'Failed to update roles', type: 'error' });
     }
   };
 
@@ -294,9 +298,10 @@ export function UsersPage() {
         await Promise.all(selectedUsers.map((id) => removeUser(token, id)));
         setUsers((prev) => prev.filter((u) => !selectedUsers.includes(u.id)));
         setSelectedUsers([]);
+        setAlert({ message: 'Users removed', type: 'success' });
       } catch (err) {
         console.error(err);
-        alert("Failed to remove users");
+        setAlert({ message: 'Failed to remove users', type: 'error' });
       }
     }
   };
@@ -311,6 +316,13 @@ export function UsersPage() {
 
   return (
     <div className="relative min-h-screen pb-24">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Animated Glassy Hero */}
       <div
         className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden"

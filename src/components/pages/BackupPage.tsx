@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { 
+import {
   HardDrive,
   Cloud,
   Download,
@@ -15,6 +15,7 @@ import {
   Server,
   Save
 } from 'lucide-react';
+import { AnimatedAlert } from '../AnimatedAlert';
 
 
 
@@ -23,7 +24,7 @@ export function BackupPage() {
   const [name, setName] = useState('');
   const [type, setType] = useState('full');
   const [location, setLocation] = useState('cloud');
-  const [toast, setToast] = useState<string | null>(null);
+  const [alert, setAlert] = useState<string | null>(null);
 
   const [backups, setBackups] = useState(() => {
     const stored = localStorage.getItem('backups');
@@ -52,10 +53,10 @@ export function BackupPage() {
   }, [schedules]);
 
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [alert]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,10 +89,8 @@ export function BackupPage() {
   return (
     <>
     <div className="space-y-6">
-      {toast && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          {toast}
-        </div>
+      {alert && (
+        <AnimatedAlert message={alert} type="success" onClose={() => setAlert(null)} />
       )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -101,7 +100,7 @@ export function BackupPage() {
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
           <button
-            onClick={() => setToast('Sync started')}
+            onClick={() => setAlert('Sync started')}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -254,13 +253,13 @@ export function BackupPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setToast('Downloading...')}
+                      onClick={() => setAlert('Downloading...')}
                       className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
                     >
                       <Download className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => setToast('Restoring...')}
+                      onClick={() => setAlert('Restoring...')}
                       className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
                     >
                       <RefreshCw className="h-4 w-4" />
@@ -408,7 +407,7 @@ export function BackupPage() {
               setType('full');
               setLocation('cloud');
               setShowCreateModal(false);
-              setToast('Backup scheduled');
+              setAlert('Backup scheduled');
             }}
           >
             <input
