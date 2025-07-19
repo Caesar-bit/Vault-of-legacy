@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -19,6 +19,7 @@ import {
   Tablet
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { fetchAnalytics } from '../../utils/api';
 
 const mockAnalyticsData = {
   overview: {
@@ -66,6 +67,27 @@ const mockAnalyticsData = {
 export function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('7d');
   const [selectedMetric, setSelectedMetric] = useState('views');
+  const [analyticsData, setAnalyticsData] = useState(mockAnalyticsData);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('vault_jwt') || '';
+        if (token) {
+          const data = await fetchAnalytics(token);
+          setAnalyticsData(data);
+        }
+      } catch (e: any) {
+        setError(e.message || 'Failed to load analytics');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const getDeviceIcon = (device: string) => {
     switch (device) {
@@ -112,26 +134,32 @@ export function AnalyticsPage() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="p-6 text-gray-500">Loading...</div>
+      ) : error ? (
+        <div className="p-6 text-red-500">{error}</div>
+      ) : (
+
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Views</p>
-              <p className="text-2xl font-bold text-gray-900">{formatNumber(mockAnalyticsData.overview.totalViews)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatNumber(analyticsData.overview.totalViews)}</p>
             </div>
             <div className="p-2 bg-blue-100 rounded-lg">
               <Eye className="h-6 w-6 text-blue-600" />
             </div>
           </div>
           <div className="mt-4 flex items-center">
-            {mockAnalyticsData.overview.trends.views > 0 ? (
+            {analyticsData.overview.trends.views > 0 ? (
               <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
             ) : (
               <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
             )}
-            <span className={`text-sm font-medium ${mockAnalyticsData.overview.trends.views > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {Math.abs(mockAnalyticsData.overview.trends.views)}%
+            <span className={`text-sm font-medium ${analyticsData.overview.trends.views > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {Math.abs(analyticsData.overview.trends.views)}%
             </span>
             <span className="text-sm text-gray-500 ml-1">vs last period</span>
           </div>
@@ -141,7 +169,7 @@ export function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Unique Visitors</p>
-              <p className="text-2xl font-bold text-gray-900">{formatNumber(mockAnalyticsData.overview.uniqueVisitors)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatNumber(analyticsData.overview.uniqueVisitors)}</p>
             </div>
             <div className="p-2 bg-green-100 rounded-lg">
               <Users className="h-6 w-6 text-green-600" />
@@ -150,7 +178,7 @@ export function AnalyticsPage() {
           <div className="mt-4 flex items-center">
             <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
             <span className="text-sm font-medium text-green-600">
-              {mockAnalyticsData.overview.trends.visitors}%
+              {analyticsData.overview.trends.visitors}%
             </span>
             <span className="text-sm text-gray-500 ml-1">vs last period</span>
           </div>
@@ -160,7 +188,7 @@ export function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Avg Session Duration</p>
-              <p className="text-2xl font-bold text-gray-900">{mockAnalyticsData.overview.avgSessionDuration}</p>
+              <p className="text-2xl font-bold text-gray-900">{analyticsData.overview.avgSessionDuration}</p>
             </div>
             <div className="p-2 bg-purple-100 rounded-lg">
               <Clock className="h-6 w-6 text-purple-600" />
@@ -169,7 +197,7 @@ export function AnalyticsPage() {
           <div className="mt-4 flex items-center">
             <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
             <span className="text-sm font-medium text-red-600">
-              {Math.abs(mockAnalyticsData.overview.trends.duration)}%
+              {Math.abs(analyticsData.overview.trends.duration)}%
             </span>
             <span className="text-sm text-gray-500 ml-1">vs last period</span>
           </div>
@@ -179,7 +207,7 @@ export function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Bounce Rate</p>
-              <p className="text-2xl font-bold text-gray-900">{mockAnalyticsData.overview.bounceRate}</p>
+              <p className="text-2xl font-bold text-gray-900">{analyticsData.overview.bounceRate}</p>
             </div>
             <div className="p-2 bg-orange-100 rounded-lg">
               <TrendingDown className="h-6 w-6 text-orange-600" />
@@ -188,7 +216,7 @@ export function AnalyticsPage() {
           <div className="mt-4 flex items-center">
             <ArrowDownRight className="h-4 w-4 text-green-600 mr-1" />
             <span className="text-sm font-medium text-green-600">
-              {Math.abs(mockAnalyticsData.overview.trends.bounce)}%
+              {Math.abs(analyticsData.overview.trends.bounce)}%
             </span>
             <span className="text-sm text-gray-500 ml-1">improvement</span>
           </div>
@@ -212,7 +240,7 @@ export function AnalyticsPage() {
             </select>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={mockAnalyticsData.timeSeriesData}>
+            <AreaChart data={analyticsData.timeSeriesData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -235,7 +263,7 @@ export function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={mockAnalyticsData.deviceData}
+                  data={analyticsData.deviceData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -243,7 +271,7 @@ export function AnalyticsPage() {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {mockAnalyticsData.deviceData.map((entry, index) => (
+                  {analyticsData.deviceData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -252,7 +280,7 @@ export function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
           <div className="mt-4 space-y-2">
-            {mockAnalyticsData.deviceData.map((device) => {
+            {analyticsData.deviceData.map((device) => {
               const DeviceIcon = getDeviceIcon(device.name);
               return (
                 <div key={device.name} className="flex items-center justify-between">
@@ -276,7 +304,7 @@ export function AnalyticsPage() {
             <h3 className="text-lg font-semibold text-gray-900">Top Performing Content</h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {mockAnalyticsData.topContent.map((content, index) => (
+            {analyticsData.topContent.map((content, index) => (
               <div key={content.title} className="p-6 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div>
@@ -302,7 +330,7 @@ export function AnalyticsPage() {
             <h3 className="text-lg font-semibold text-gray-900">Geographic Distribution</h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {mockAnalyticsData.geographicData.map((location) => (
+            {analyticsData.geographicData.map((location) => (
               <div key={location.country} className="p-6 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -353,5 +381,6 @@ export function AnalyticsPage() {
         </div>
       </div>
     </div>
+    )}
   );
 }

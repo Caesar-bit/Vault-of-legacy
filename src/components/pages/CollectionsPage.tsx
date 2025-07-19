@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -14,6 +14,7 @@ import {
   Lock,
   Globe
 } from 'lucide-react';
+import { fetchCollections } from '../../utils/api';
 
 const mockCollections = [
   {
@@ -62,8 +63,29 @@ export function CollectionsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [collections, setCollections] = useState(mockCollections);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredCollections = mockCollections.filter(collection =>
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('vault_jwt') || '';
+        if (token) {
+          const data = await fetchCollections(token);
+          setCollections(data);
+        }
+      } catch (e: any) {
+        setError(e.message || 'Failed to load collections');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const filteredCollections = collections.filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     collection.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     collection.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -95,7 +117,7 @@ export function CollectionsPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Collections</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{mockCollections.length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{collections.length}</p>
             </div>
           </div>
         </div>
@@ -107,7 +129,7 @@ export function CollectionsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Assets</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {mockCollections.reduce((sum, col) => sum + col.assetCount, 0)}
+                {collections.reduce((sum, col) => sum + (col.assetCount || 0), 0)}
               </p>
             </div>
           </div>
@@ -120,7 +142,7 @@ export function CollectionsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Public</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {mockCollections.filter(col => col.isPublic).length}
+                {collections.filter(col => col.isPublic).length}
               </p>
             </div>
           </div>
@@ -133,7 +155,7 @@ export function CollectionsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Private</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockCollections.filter(col => !col.isPublic).length}
+                {collections.filter(col => !col.isPublic).length}
               </p>
             </div>
           </div>
@@ -176,7 +198,11 @@ export function CollectionsPage() {
 
       {/* Collections Grid/List */}
       <div className="bg-white rounded-xl border border-gray-200">
-        {viewMode === 'grid' ? (
+        {loading ? (
+          <div className="p-6 text-gray-500">Loading...</div>
+        ) : error ? (
+          <div className="p-6 text-red-500">{error}</div>
+        ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
             {filteredCollections.map((collection) => (
               <div key={collection.id} className="group bg-gray-50 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200">
