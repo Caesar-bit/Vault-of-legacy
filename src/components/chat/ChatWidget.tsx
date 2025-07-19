@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage } from '../../types';
+import { fetchChatHistory } from '../../utils/api';
+import { X, Minus, MessageCircle } from 'lucide-react';
 
 export function ChatWidget() {
   const { token, user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -21,10 +25,17 @@ export function ChatWidget() {
     });
     connection.start();
     connectionRef.current = connection;
+    fetchChatHistory(token).then(setMessages).catch(() => {});
     return () => {
       connection.stop();
     };
   }, [token]);
+
+  useEffect(() => {
+    if (minimized) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, minimized]);
 
   const sendMessage = async () => {
     const text = message.trim();
@@ -33,49 +44,63 @@ export function ChatWidget() {
     setMessage('');
   };
 
+  const close = () => {
+    setOpen(false);
+    setMinimized(false);
+  };
+
+  const header = (
+    <div className="flex items-center justify-between bg-blue-600 text-white px-3 py-2 rounded-t">
+      <span className="font-semibold">BOT</span>
+      <div className="flex gap-1">
+        <button onClick={() => setMinimized(!minimized)} className="hover:text-gray-200">
+          <Minus size={14} />
+        </button>
+        <button onClick={close} className="hover:text-gray-200">
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 right-4 z-50 text-sm">
       {open ? (
-        <div className="bg-white rounded shadow-lg w-64 h-80 flex flex-col relative">
-          <div className="flex-grow overflow-y-auto p-2 text-sm">
-            {messages.map((m) => (
-              <div key={m.id} className="mb-1">
-                <strong>
-                  {m.userId === user?.id
-                    ? 'Me'
-                    : m.userId === 'bot'
-                      ? 'Bot'
-                      : 'Agent'}
-                  :
-                </strong>{' '}
-                {m.content}
+        <div className="w-72 bg-white shadow-xl rounded-lg overflow-hidden">
+          {header}
+          {!minimized && (
+            <>
+              <div ref={scrollRef} className="h-64 overflow-y-auto p-3 space-y-2">
+                {messages.map((m) => (
+                  <div key={m.id} className={m.userId === user?.id ? 'text-right' : ''}>
+                    <span className="font-bold mr-1">{m.userId === user?.id ? 'Me' : m.userId === 'bot' ? 'Bot' : 'Agent'}:</span>
+                    <span>{m.content}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="p-2 border-t flex">
-            <input
-              className="flex-grow border rounded mr-2 p-1 text-sm"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            />
-            <button className="px-2 text-sm bg-blue-500 text-white rounded" onClick={sendMessage}>
-              Send
-            </button>
-          </div>
-          <button
-            className="absolute top-1 right-1 text-gray-500 hover:text-black"
-            onClick={() => setOpen(false)}
-          >
-            ×
-          </button>
+              <div className="flex border-t p-2 gap-2">
+                <input
+                  className="flex-grow border rounded p-1"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                />
+                <button
+                  className="bg-blue-600 text-white px-3 rounded"
+                  onClick={sendMessage}
+                >
+                  Send
+                </button>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <button
-          className="bg-blue-500 rounded-full w-12 h-12 text-white"
+          className="bg-blue-600 rounded-full w-12 h-12 text-white flex items-center justify-center shadow-lg"
           onClick={() => setOpen(true)}
         >
-          Chat
+          <MessageCircle />
         </button>
       )}
     </div>
