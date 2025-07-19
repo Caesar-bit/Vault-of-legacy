@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
 import { User as UserType } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileDropdownProps {
   user: UserType | null;
@@ -8,11 +9,11 @@ interface ProfileDropdownProps {
   logout: () => void;
   show: boolean;
   onClose: () => void;
-  onNavigate?: (page: string) => void;
 }
 
-export function ProfileDropdown({ user, t, logout, show, onClose, onNavigate }: ProfileDropdownProps) {
+export function ProfileDropdown({ user, t, logout, show, onClose }: ProfileDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -52,7 +53,7 @@ export function ProfileDropdown({ user, t, logout, show, onClose, onNavigate }: 
         <button
           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl"
           onClick={() => {
-            onNavigate?.('profile');
+            navigate('/profile');
             onClose();
           }}
         >
@@ -62,7 +63,7 @@ export function ProfileDropdown({ user, t, logout, show, onClose, onNavigate }: 
         <button
           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl"
           onClick={() => {
-            onNavigate?.('settings');
+            navigate('/settings');
             onClose();
           }}
         >

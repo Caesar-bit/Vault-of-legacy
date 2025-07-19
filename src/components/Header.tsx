@@ -5,15 +5,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { NewProjectModal } from './NewProjectModal';
 import { ProfileDropdown } from './ProfileDropdown';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
-  onNavigate?: (page: string) => void;
 }
 
-export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
+export function Header({ onToggleSidebar }: HeaderProps) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -60,7 +61,7 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
   const handleSelect = (page: string) => {
     setSearchTerm('');
     setShowSuggestions(false);
-    onNavigate?.(page);
+    navigate(`/${page}`);
   };
 
   const markAsRead = (id: number) => {
@@ -226,7 +227,6 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
             logout={logout}
             show={showProfileDropdown}
             onClose={() => setShowProfileDropdown(false)}
-            onNavigate={onNavigate}
           />
         </div>
       </div>

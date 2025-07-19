@@ -22,34 +22,34 @@ import {
   Info
 } from 'lucide-react';
 
+import { NavLink } from 'react-router-dom';
+
 interface NavigationProps {
-  currentPage: string;
-  onPageChange: (page: string) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-export function Navigation({ currentPage, onPageChange, collapsed, onToggleCollapse }: NavigationProps) {
+export function Navigation({ collapsed, onToggleCollapse }: NavigationProps) {
   const { logout, user } = useAuth();
   const { t, currentLanguage, languages, changeLanguage } = useLanguage();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   const navigation = [
-    { name: t('dashboard'), page: 'dashboard', icon: LayoutDashboard },
-    { name: t('vault'), page: 'vault', icon: Vault },
-    { name: t('timeline'), page: 'timeline', icon: Clock },
-    { name: t('collections'), page: 'collections', icon: FolderOpen },
-    { name: t('archive'), page: 'archive', icon: Archive },
-    { name: t('gallery'), page: 'gallery', icon: ImageIcon },
-    { name: t('research'), page: 'research', icon: Search },
-    ...(user?.role === 'admin' ? [{ name: t('users'), page: 'users', icon: Users }] : []),
-    { name: t('analytics'), page: 'analytics', icon: BarChart3 },
-    { name: 'API', page: 'api', icon: Key },
-    { name: 'Blockchain', page: 'blockchain', icon: Vault },
-    { name: t('settings'), page: 'settings', icon: Settings },
-    { name: t('templates'), page: 'templates', icon: FileText },
-    { name: t('export'), page: 'export', icon: Download },
-    { name: t('about'), page: 'about', icon: Info },
+    { name: t('dashboard'), to: '/', icon: LayoutDashboard },
+    { name: t('vault'), to: '/vault', icon: Vault },
+    { name: t('timeline'), to: '/timeline', icon: Clock },
+    { name: t('collections'), to: '/collections', icon: FolderOpen },
+    { name: t('archive'), to: '/archive', icon: Archive },
+    { name: t('gallery'), to: '/gallery', icon: ImageIcon },
+    { name: t('research'), to: '/research', icon: Search },
+    ...(user?.role === 'admin' ? [{ name: t('users'), to: '/users', icon: Users }] : []),
+    { name: t('analytics'), to: '/analytics', icon: BarChart3 },
+    { name: 'API', to: '/api', icon: Key },
+    { name: 'Blockchain', to: '/blockchain', icon: Vault },
+    { name: t('settings'), to: '/settings', icon: Settings },
+    { name: t('templates'), to: '/templates', icon: FileText },
+    { name: t('export'), to: '/export', icon: Download },
+    { name: t('about'), to: '/about', icon: Info },
   ];
 
 function classNames(...classes: string[]) {
@@ -88,26 +88,32 @@ function classNames(...classes: string[]) {
               <ul role="list" className="-mx-2 space-y-1">
                 {navigation.map((item) => (
                   <li key={item.name}>
-                    <button
-                      onClick={() => onPageChange(item.page)}
-                      className={classNames(
-                        currentPage === item.page
-                          ? 'bg-white/20 text-white border-r-4 border-orange-400 shadow-lg'
-                          : 'text-white/80 hover:text-white hover:bg-white/10',
-                        `group flex gap-x-3 rounded-l-xl p-3 text-sm leading-6 font-medium transition-all duration-300 w-full text-left hover:shadow-lg ${collapsed ? 'justify-center' : ''}`
-                      )}
+                    <NavLink
+                      to={item.to}
+                      className={({ isActive }) =>
+                        classNames(
+                          isActive
+                            ? 'bg-white/20 text-white border-r-4 border-orange-400 shadow-lg'
+                            : 'text-white/80 hover:text-white hover:bg-white/10',
+                          `group flex gap-x-3 rounded-l-xl p-3 text-sm leading-6 font-medium transition-all duration-300 w-full text-left hover:shadow-lg ${collapsed ? 'justify-center' : ''}`
+                        )
+                      }
                     >
-                      <item.icon
-                        className={classNames(
-                          currentPage === item.page ? 'text-orange-400' : 'text-white/60 group-hover:text-white',
-                          'h-5 w-5 shrink-0'
-                        )}
-                        aria-hidden="true"
-                      />
-                      {!collapsed && (
-                        <span className="transition-opacity duration-300">{item.name}</span>
+                      {({ isActive }) => (
+                        <>
+                          <item.icon
+                            className={classNames(
+                              isActive ? 'text-orange-400' : 'text-white/60 group-hover:text-white',
+                              'h-5 w-5 shrink-0'
+                            )}
+                            aria-hidden="true"
+                          />
+                          {!collapsed && (
+                            <span className="transition-opacity duration-300">{item.name}</span>
+                          )}
+                        </>
                       )}
-                    </button>
+                    </NavLink>
                   </li>
                 ))}
               </ul>
