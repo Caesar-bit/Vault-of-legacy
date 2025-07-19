@@ -90,3 +90,11 @@ export async function changePassword(token: string, currentPassword: string, new
   });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export async function getRecentActivity(token: string) {
+  const res = await fetch(`${API_BASE}/api/activity/recent`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

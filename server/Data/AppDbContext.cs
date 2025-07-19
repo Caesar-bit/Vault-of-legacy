@@ -15,5 +15,6 @@ namespace VaultBackend.Data
         public DbSet<FingerprintCredential> FingerprintCredentials => Set<FingerprintCredential>();
         public DbSet<FileStructure> FileStructures => Set<FileStructure>();
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+        public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     }
 }

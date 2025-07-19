@@ -12,11 +12,12 @@ namespace VaultBackend.Hubs
     {
         private readonly AppDbContext _db;
         private readonly FaqService _faq;
-
-        public ChatHub(AppDbContext db, FaqService faq)
+        private readonly ActivityLogger _logger;
+        public ChatHub(AppDbContext db, FaqService faq, ActivityLogger logger)
         {
             _db = db;
             _faq = faq;
+            _logger = logger;
         }
 
         public async Task SendMessage(string message)
@@ -33,6 +34,7 @@ namespace VaultBackend.Hubs
 
             _db.ChatMessages.Add(chatMessage);
             await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Sent chat message", message);
 
             await Clients.All.SendAsync("ReceiveMessage", new
             {

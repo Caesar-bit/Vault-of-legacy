@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using VaultBackend.Data;
 using VaultBackend.Models;
 using System.Text.Json;
+using VaultBackend.Services;
+using System.Security.Claims;
 
 namespace VaultBackend.Controllers
 {
@@ -14,11 +16,13 @@ namespace VaultBackend.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IWebHostEnvironment _env;
+        private readonly ActivityLogger _logger;
 
-        public FilesController(AppDbContext db, IWebHostEnvironment env)
+        public FilesController(AppDbContext db, IWebHostEnvironment env, ActivityLogger logger)
         {
             _db = db;
             _env = env;
+            _logger = logger;
         }
 
         [HttpPost("upload")]
@@ -41,6 +45,8 @@ namespace VaultBackend.Controllers
             var uploaded = new UploadedFile { Path = filePath, OriginalName = file.FileName };
             _db.UploadedFiles.Add(uploaded);
             await _db.SaveChangesAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+            await _logger.LogAsync(userId, "Uploaded file", file.FileName);
 
             return Ok(new { uploaded.Path, uploaded.OriginalName });
         }
@@ -74,6 +80,8 @@ namespace VaultBackend.Controllers
                 s.Data = data.GetRawText();
             }
             await _db.SaveChangesAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+            await _logger.LogAsync(userId, "Updated vault structure", "");
             return NoContent();
         }
     }

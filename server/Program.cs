@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<FaqService>();
+builder.Services.AddSingleton<ActivityLogger>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -163,6 +164,19 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Ensure ActivityLogs table exists
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='ActivityLogs';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE ActivityLogs (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Action TEXT NOT NULL, Item TEXT NOT NULL, Timestamp TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 
@@ -172,5 +186,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<ActivityHub>("/hubs/activity");
 
 app.Run();

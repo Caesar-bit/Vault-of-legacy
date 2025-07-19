@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VaultBackend.Data;
 using VaultBackend.Models;
+using VaultBackend.Services;
 
 namespace VaultBackend.Controllers
 {
@@ -14,10 +15,12 @@ namespace VaultBackend.Controllers
     public class AccountController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly ActivityLogger _logger;
 
-        public AccountController(AppDbContext db)
+        public AccountController(AppDbContext db, ActivityLogger logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         [HttpGet("me")]
@@ -49,6 +52,7 @@ namespace VaultBackend.Controllers
                 user.Name = request.Name;
             }
             await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Updated profile", user.Email);
             return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin });
         }
 
@@ -63,6 +67,7 @@ namespace VaultBackend.Controllers
                 return BadRequest("Invalid current password");
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Changed password", user.Email);
             return NoContent();
         }
     }
