@@ -37,7 +37,7 @@ export async function createUser(
 export async function updateUser(
   token: string,
   id: string,
-  data: Partial<{ name: string; role: string; status: string }>,
+  data: Partial<{ role: string; status: string }>,
 ): Promise<ApiUser> {
   const res = await fetch(`${API_BASE}/api/user/${id}`, {
     method: "PATCH",

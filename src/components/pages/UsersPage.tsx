@@ -85,7 +85,12 @@ export function UsersPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", role: "viewer" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    role: "viewer" as UserItem["role"],
+    status: "active" as UserItem["status"],
+  });
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
@@ -191,7 +196,12 @@ export function UsersPage() {
 
   const openEdit = (user: UserItem) => {
     setEditingId(user.id);
-    setForm({ name: user.name, email: user.email, role: user.role });
+    setForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    });
     setShowInviteModal(true);
   };
 
@@ -220,16 +230,16 @@ export function UsersPage() {
     try {
       if (editingId) {
         const updated = await updateUser(token, editingId, {
-          name: form.name,
           role: form.role,
+          status: form.status,
         });
         setUsers((prev) =>
           prev.map((u) =>
             u.id === editingId
               ? {
                   ...u,
-                  name: updated.name,
                   role: updated.role,
+                  status: updated.status,
                 }
               : u,
           ),
@@ -259,7 +269,7 @@ export function UsersPage() {
       setAlert({ message: 'Failed to save user', type: 'error' });
     }
     setEditingId(null);
-    setForm({ name: "", email: "", role: "viewer" });
+    setForm({ name: "", email: "", role: "viewer", status: "active" });
     setShowInviteModal(false);
   };
 
@@ -641,6 +651,7 @@ export function UsersPage() {
                 placeholder="Name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                disabled={!!editingId}
                 required
               />
               <input
@@ -649,6 +660,7 @@ export function UsersPage() {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
+                disabled={!!editingId}
                 required
               />
               <select
@@ -662,6 +674,20 @@ export function UsersPage() {
                   </option>
                 ))}
               </select>
+              {editingId && (
+                <select
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm({ ...form, status: e.target.value as UserItem["status"] })
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              )}
               <div className="flex space-x-2">
                 <button
                   type="button"
