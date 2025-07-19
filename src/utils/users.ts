@@ -2,7 +2,7 @@ export interface ApiUser {
   id: string;
   email: string;
   name: string;
-  role: "admin" | "editor" | "contributor" | "viewer";
+  role: "admin" | "user" | "contributor" | "viewer";
   status: "active" | "pending" | "inactive" | "suspended";
   createdAt: string;
   lastLogin: string | null;
@@ -37,7 +37,7 @@ export async function createUser(
 export async function updateUser(
   token: string,
   id: string,
-  data: Partial<{ role: string; status: string }>,
+  data: Partial<{ name: string; email: string; role: string; status: string }>,
 ): Promise<ApiUser> {
   const res = await fetch(`${API_BASE}/api/user/${id}`, {
     method: "PATCH",
