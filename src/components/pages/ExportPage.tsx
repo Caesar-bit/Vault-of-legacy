@@ -89,56 +89,6 @@ const exportFormats = [
   }
 ];
 
-const defaultExports = [
-  {
-    id: '1',
-    name: 'Family Heritage Complete Export',
-    format: 'ZIP',
-    size: '2.4 GB',
-    status: 'completed',
-    created: '2024-01-20T10:30:00Z',
-    expires: '2024-02-20T10:30:00Z',
-    downloadCount: 3,
-    includes: ['photos', 'documents', 'timeline', 'collections'],
-    attachments: []
-  },
-  {
-    id: '2',
-    name: 'Wedding Memories PDF',
-    format: 'PDF',
-    size: '156 MB',
-    status: 'processing',
-    created: '2024-01-19T15:45:00Z',
-    expires: '2024-02-19T15:45:00Z',
-    downloadCount: 0,
-    includes: ['photos', 'timeline'],
-    attachments: []
-  },
-  {
-    id: '3',
-    name: 'Research Documentation',
-    format: 'HTML',
-    size: '89 MB',
-    status: 'completed',
-    created: '2024-01-18T09:20:00Z',
-    expires: '2024-02-18T09:20:00Z',
-    downloadCount: 1,
-    includes: ['documents', 'research', 'citations'],
-    attachments: []
-  },
-  {
-    id: '4',
-    name: 'Photo Archive Backup',
-    format: 'ZIP',
-    size: '1.8 GB',
-    status: 'failed',
-    created: '2024-01-17T14:15:00Z',
-    expires: null,
-    downloadCount: 0,
-    includes: ['photos', 'videos'],
-    attachments: []
-  }
-];
 
 const contentTypes = [
   { id: 'photos', name: 'Photos', icon: Image, count: 1247 },
@@ -160,12 +110,12 @@ export function ExportPage() {
   const [format, setFormat] = useState('zip');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [toast, setToast] = useState<string | null>(null);
-  const [detailsExport, setDetailsExport] = useState<typeof defaultExports[number] | null>(null);
+  const [detailsExport, setDetailsExport] = useState<any | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const [exportsList, setExportsList] = useState(() => {
     const stored = localStorage.getItem('exports');
-    return stored ? JSON.parse(stored) : defaultExports;
+    return stored ? JSON.parse(stored) : [];
   });
 
   useEffect(() => {
@@ -211,7 +161,7 @@ export function ExportPage() {
     URL.revokeObjectURL(url);
   };
 
-  const shareExport = async (item: typeof defaultExports[number]) => {
+  const shareExport = async (item: any) => {
     const url = `${window.location.origin}?export=${item.id}`;
     try {
       if (navigator.share) {

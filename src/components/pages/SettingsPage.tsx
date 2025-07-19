@@ -34,48 +34,17 @@ export function SettingsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [apiKeys, setApiKeys] = useState(() => {
+  const [apiKeys, setApiKeys] = useState(() => {
     const stored = localStorage.getItem('vault_api_keys');
-    return stored ? JSON.parse(stored) : [{ id: '1', key: 'sk-1234-5678-ABCD' }];
+    return stored ? JSON.parse(stored) : [];
   });
   const defaultSettings = {
-      profile: {
-        name: 'John Smith',
-        email: 'john.smith@email.com',
-        bio: 'Digital heritage enthusiast preserving family history for future generations.',
-        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=100'
-      },
-    security: {
-      twoFactorEnabled: true,
-      passwordLastChanged: '2024-01-15',
-      sessionTimeout: 30,
-      loginNotifications: true
-    },
-    notifications: {
-      emailNotifications: true,
-      pushNotifications: false,
-      weeklyDigest: true,
-      securityAlerts: true,
-      collaborationUpdates: true
-    },
-    appearance: {
-      theme: 'light',
-      language: 'en',
-      timezone: 'America/New_York',
-      dateFormat: 'MM/DD/YYYY'
-    },
-    data: {
-      storageUsed: 18.5,
-      storageLimit: 100,
-      autoBackup: true,
-      compressionEnabled: true,
-      retentionPeriod: 25
-    },
-    privacy: {
-      profileVisibility: 'private',
-      searchEngineIndexing: false,
-      analyticsTracking: true,
-      dataSharing: false
-    }
+    profile: { name: "", email: "", bio: "", avatar: "" },
+    security: { twoFactorEnabled: false, passwordLastChanged: "", sessionTimeout: 30, loginNotifications: false },
+    notifications: { emailNotifications: false, pushNotifications: false, weeklyDigest: false, securityAlerts: false, collaborationUpdates: false },
+    appearance: { theme: "light", language: "en", timezone: "UTC", dateFormat: "MM/DD/YYYY" },
+    data: { storageUsed: 0, storageLimit: 100, autoBackup: false, compressionEnabled: false, retentionPeriod: 0 },
+    privacy: { profileVisibility: "private", searchEngineIndexing: false, analyticsTracking: false, dataSharing: false }
   };
   const [settings, setSettings] = useState(() => {
     const stored = localStorage.getItem('vault_settings');

@@ -27,83 +27,13 @@ interface Collection {
   tags: string[];
 }
 
-const mockCollections = [
-  {
-    id: '1',
-    name: 'Family Portraits',
-    description: 'A curated collection of family photographs spanning three generations',
-    assetCount: 45,
-    isPublic: true,
-    password: '',
-    createdAt: '2024-01-15',
-    thumbnail: 'family_portrait_1965.jpg',
-    tags: ['family', 'portraits', 'vintage']
-  },
-  {
-    id: '2',
-    name: 'WWII Documents',
-    description: 'Historical documents and letters from World War II',
-    assetCount: 23,
-    isPublic: false,
-    password: 'history',
-    createdAt: '2024-01-10',
-    thumbnail: 'war_letter.pdf',
-    tags: ['history', 'documents', 'war']
-  },
-  {
-    id: '3',
-    name: 'Wedding Memories',
-    description: 'Photos, videos, and documents from our wedding day',
-    assetCount: 78,
-    isPublic: true,
-    password: '',
-    createdAt: '2024-01-08',
-    thumbnail: 'wedding_ceremony.jpg',
-    tags: ['wedding', 'celebration', 'memories']
-  },
-  {
-    id: '4',
-    name: 'Childhood Adventures',
-    description: 'Photos and stories from childhood adventures and milestones',
-    assetCount: 156,
-    isPublic: false,
-    password: 'kids',
-    createdAt: '2024-01-05',
-    thumbnail: 'playground.jpg',
-    tags: ['childhood', 'adventures', 'growing up']
-  }
-];
 
-const defaultCollectionFiles: Record<string, VaultItem[]> = {
-  '1': [
-    {
-      id: 'p1',
-      name: 'portrait1.jpg',
-      type: 'image',
-      size: '2 MB',
-      modified: '2024-01-15',
-      owner: 'You',
-      starred: false,
-    },
-  ],
-  '2': [
-    {
-      id: 'd1',
-      name: 'letter.pdf',
-      type: 'pdf',
-      size: '1 MB',
-      modified: '2024-01-10',
-      owner: 'You',
-      starred: false,
-    },
-  ],
-};
 
 export function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>([...mockCollections]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionFiles, setCollectionFiles] = useState<Record<string, VaultItem[]>>(() => {
     const stored = localStorage.getItem('collection_files');
-    return stored ? JSON.parse(stored) : defaultCollectionFiles;
+    return stored ? JSON.parse(stored) : {};
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');

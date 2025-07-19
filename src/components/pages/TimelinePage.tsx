@@ -17,68 +17,16 @@ interface EventAsset {
   url: string;
 }
 
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Birth of John Smith',
-    description: 'Born in Springfield Hospital',
-    date: '1950-03-15',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'birth_certificate.pdf', url: '#' },
-      { name: 'hospital_photo.jpg', url: '#' }
-    ]
-  },
-  {
-    id: '2',
-    title: 'First Day of School',
-    description: 'Started kindergarten at Lincoln Elementary',
-    date: '1955-09-01',
-    type: 'event',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'school_photo.jpg', url: '#' }
-    ]
-  },
-  {
-    id: '3',
-    title: 'High School Graduation',
-    description: 'Graduated valedictorian from Springfield High',
-    date: '1968-06-15',
-    type: 'achievement',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'diploma.pdf', url: '#' },
-      { name: 'graduation_photo.jpg', url: '#' },
-      { name: 'speech.mp3', url: '#' }
-    ]
-  },
-  {
-    id: '4',
-    title: 'Wedding Day',
-    description: 'Married Mary Johnson at St. Mary\'s Church',
-    date: '1972-08-20',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'wedding_photos.zip', url: '#' },
-      { name: 'marriage_certificate.pdf', url: '#' }
-    ]
-  },
-  {
-    id: '5',
-    title: 'First Child Born',
-    description: 'Sarah Smith was born',
-    date: '1975-04-10',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'baby_photos.jpg', url: '#' },
-      { name: 'birth_announcement.pdf', url: '#' }
-    ]
-  }
-];
+interface TimelineEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  type: string;
+  location: string;
+  assets: EventAsset[];
+}
+
 
 const getEventTypeColor = (type: string) => {
   switch (type) {
@@ -100,7 +48,7 @@ const getEventTypeIcon = (type: string) => {
 
 
 export function TimelinePage() {
-  const [events, setEvents] = useState(mockEvents);
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);

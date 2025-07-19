@@ -3,68 +3,11 @@ import { FolderPlus, Upload } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
 
 export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
-  const defaultFiles: VaultItem[] = [
-    {
-      id: '1',
-      name: 'Documents',
-      type: 'folder',
-      size: null,
-      modified: '2024-01-15',
-      owner: 'John Doe',
-      starred: false,
-      children: [],
-    },
-    {
-      id: '2',
-      name: 'Images',
-      type: 'folder',
-      size: null,
-      modified: '2024-01-14',
-      owner: 'John Doe',
-      starred: true,
-      children: [],
-    },
-    {
-      id: '3',
-      name: 'Project Proposal.pdf',
-      type: 'pdf',
-      size: '2.4 MB',
-      modified: '2024-01-13',
-      owner: 'Jane Smith',
-      starred: false,
-    },
-    {
-      id: '4',
-      name: 'Presentation.pptx',
-      type: 'presentation',
-      size: '5.1 MB',
-      modified: '2024-01-12',
-      owner: 'Mike Johnson',
-      starred: true,
-    },
-    {
-      id: '5',
-      name: 'Budget_2024.xlsx',
-      type: 'spreadsheet',
-      size: '1.8 MB',
-      modified: '2024-01-11',
-      owner: 'Sarah Wilson',
-      starred: false,
-    },
-    {
-      id: '6',
-      name: 'Team_Photo.jpg',
-      type: 'image',
-      size: '3.2 MB',
-      modified: '2024-01-10',
-      owner: 'John Doe',
-      starred: false,
-    },
-  ];
 
   const [structure, setStructure] = useState<VaultItem[]>(() => {
     const stored = localStorage.getItem('vault_files');
-    return stored ? JSON.parse(stored) : defaultFiles;
+    return stored ? JSON.parse(stored) : [];
+  });
   });
 
   useEffect(() => {

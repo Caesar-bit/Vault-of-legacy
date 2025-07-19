@@ -19,38 +19,6 @@ import {
   BarChart3
 } from 'lucide-react';
 
-const demoApiKeys = [
-  {
-    id: '1',
-    name: 'Production API Key',
-    key: 'vl_prod_1234567890abcdef',
-    permissions: ['read', 'write', 'delete'],
-    lastUsed: '2024-01-20T10:30:00Z',
-    created: '2024-01-01',
-    status: 'active',
-    requests: 15420
-  },
-  {
-    id: '2',
-    name: 'Development API Key',
-    key: 'vl_dev_abcdef1234567890',
-    permissions: ['read', 'write'],
-    lastUsed: '2024-01-19T15:45:00Z',
-    created: '2024-01-10',
-    status: 'active',
-    requests: 3240
-  },
-  {
-    id: '3',
-    name: 'Analytics Integration',
-    key: 'vl_analytics_fedcba0987654321',
-    permissions: ['read'],
-    lastUsed: '2024-01-18T09:20:00Z',
-    created: '2024-01-15',
-    status: 'inactive',
-    requests: 890
-  }
-];
 
 const apiEndpoints = [
   { method: 'GET', endpoint: '/api/v1/assets', description: 'Retrieve all assets' },
@@ -188,7 +156,7 @@ export function APIPage() {
     }
   };
 
-  const filteredKeys = (apiKeys.length ? apiKeys : demoApiKeys).filter((k) =>
+  const filteredKeys = apiKeys.filter((k) =>
     k.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -238,7 +206,7 @@ export function APIPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Keys</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {(apiKeys.length ? apiKeys : demoApiKeys).filter(k => k.status === 'active').length}
+                {apiKeys.filter(k => k.status === 'active').length}
               </p>
             </div>
           </div>
@@ -251,7 +219,7 @@ export function APIPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Requests</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {(apiKeys.length ? apiKeys : demoApiKeys).reduce((sum, key) => sum + (key.requests || 0), 0).toLocaleString()}
+                {apiKeys.reduce((sum, key) => sum + (key.requests || 0), 0).toLocaleString()}
               </p>
             </div>
           </div>

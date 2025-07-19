@@ -36,92 +36,6 @@ export interface TemplateItem {
   tags: string[];
 }
 
-const defaultTemplates: TemplateItem[] = [
-  {
-    id: '1',
-    name: 'Family Heritage Timeline',
-    description: 'A comprehensive timeline template for documenting family history across generations',
-    category: 'timeline',
-    type: 'premium',
-    preview: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?w=400',
-    author: 'Vault Team',
-    downloads: 1247,
-    rating: 4.8,
-    lastUpdated: '2024-01-15',
-    featured: true,
-    tags: ['family', 'timeline', 'heritage']
-  },
-  {
-    id: '2',
-    name: 'Wedding Memory Book',
-    description: 'Beautiful template for creating wedding photo albums and memory collections',
-    category: 'gallery',
-    type: 'free',
-    preview: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?w=400',
-    author: 'Sarah Johnson',
-    downloads: 856,
-    rating: 4.6,
-    lastUpdated: '2024-01-10',
-    featured: false,
-    tags: ['wedding', 'photos', 'memories']
-  },
-  {
-    id: '3',
-    name: 'Military Service Archive',
-    description: 'Specialized template for documenting military service records and achievements',
-    category: 'archive',
-    type: 'premium',
-    preview: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=400',
-    author: 'Robert Wilson',
-    downloads: 432,
-    rating: 4.9,
-    lastUpdated: '2024-01-08',
-    featured: true,
-    tags: ['military', 'service', 'documents']
-  },
-  {
-    id: '4',
-    name: 'Childhood Memories',
-    description: 'Playful template perfect for organizing childhood photos and stories',
-    category: 'collection',
-    type: 'free',
-    preview: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg?w=400',
-    author: 'Mary Davis',
-    downloads: 623,
-    rating: 4.4,
-    lastUpdated: '2024-01-05',
-    featured: false,
-    tags: ['childhood', 'photos', 'stories']
-  },
-  {
-    id: '5',
-    name: 'Research Documentation',
-    description: 'Professional template for organizing research notes and citations',
-    category: 'research',
-    type: 'premium',
-    preview: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?w=400',
-    author: 'Dr. James Smith',
-    downloads: 289,
-    rating: 4.7,
-    lastUpdated: '2024-01-03',
-    featured: false,
-    tags: ['research', 'documentation', 'academic']
-  },
-  {
-    id: '6',
-    name: 'Travel Adventures',
-    description: 'Dynamic template for documenting travel experiences and adventures',
-    category: 'gallery',
-    type: 'free',
-    preview: 'https://images.pexels.com/photos/346885/pexels-photo-346885.jpeg?w=400',
-    author: 'Lisa Chen',
-    downloads: 734,
-    rating: 4.5,
-    lastUpdated: '2023-12-28',
-    featured: false,
-    tags: ['travel', 'adventure', 'photos']
-  }
-];
 
 const categories = [
   { id: 'all', name: 'All Templates', icon: Grid3X3 },
@@ -154,7 +68,7 @@ export function TemplatesPage() {
   });
   const [templates, setTemplates] = useState<TemplateItem[]>(() => {
     const stored = localStorage.getItem('vault_templates');
-    return stored ? JSON.parse(stored) : defaultTemplates;
+    return stored ? JSON.parse(stored) : [];
   });
 
   useEffect(() => {

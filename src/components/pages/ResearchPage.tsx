@@ -19,63 +19,6 @@ import {
 import { FileUpload } from '../FileUpload';
 
 // Mock data
-const mockResearchItems = [
-  {
-    id: '1',
-    title: 'Birth Records - Springfield Hospital 1950',
-    type: 'document',
-    source: 'Springfield County Archives',
-    date: '1950-03-15',
-    verified: true,
-    reliability: 'high',
-    notes: 'Official birth certificate obtained from county records office',
-    citations: ['Springfield County Birth Records, Vol. 23, Page 156'],
-    tags: ['birth', 'official', 'hospital'],
-    attachments: [{ name: 'birth_certificate.pdf', url: '' }]
-  },
-  {
-    id: '2',
-    title: 'Military Service Record - John Smith',
-    type: 'military',
-    source: 'National Archives',
-    date: '1968-1970',
-    verified: true,
-    reliability: 'high',
-    notes: 'Service record from Vietnam War era, includes commendations',
-    citations: ['National Personnel Records Center, Military Personnel File'],
-    tags: ['military', 'vietnam', 'service'],
-    attachments: [
-      { name: 'service_record.pdf', url: '' },
-      { name: 'commendations.pdf', url: '' }
-    ]
-  },
-  {
-    id: '3',
-    title: 'Immigration Records - Ellis Island',
-    type: 'immigration',
-    source: 'Ellis Island Foundation',
-    date: '1923-04-12',
-    verified: false,
-    reliability: 'medium',
-    notes: 'Passenger manifest shows arrival from Ireland, need to verify spelling of surname',
-    citations: ['Ellis Island Passenger Lists, Ship: SS Celtic'],
-    tags: ['immigration', 'ireland', 'ellis island'],
-    attachments: [{ name: 'passenger_manifest.jpg', url: '' }]
-  },
-  {
-    id: '4',
-    title: 'Marriage License - Smith & Johnson',
-    type: 'vital',
-    source: 'Springfield City Hall',
-    date: '1972-08-20',
-    verified: true,
-    reliability: 'high',
-    notes: 'Original marriage license with witness signatures',
-    citations: ['Springfield Marriage Records, License #ML-1972-0856'],
-    tags: ['marriage', 'license', 'official'],
-    attachments: [{ name: 'marriage_license.pdf', url: '' }]
-  }
-];
 
 const researchSources = [
   { name: 'National Archives', type: 'government', reliability: 'high', count: 23 },
@@ -115,9 +58,16 @@ export function ResearchPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [researchItems, setResearchItems] = useState<ResearchItem[]>(() => {
     const stored = localStorage.getItem('research_items');
-    const items = (stored ? JSON.parse(stored) : mockResearchItems) as Array<unknown>;
-    return items.map((it) => {
+    const items = stored ? JSON.parse(stored) : [];
+    return items.map((it: any) => {
       const attachments = Array.isArray(it.attachments)
+        ? it.attachments.map((att: any) =>
+            typeof att === 'string' ? { name: att, url: '' } : att
+          )
+        : [];
+      return { ...it, attachments } as ResearchItem;
+    });
+  });
         ? it.attachments.map((att: unknown) =>
             typeof att === 'string' ? { name: att, url: '' } : att
           )

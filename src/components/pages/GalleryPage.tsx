@@ -36,108 +36,10 @@ interface GalleryItem {
   featured: boolean;
   duration?: string;
 }
+const exhibitions: Array<{id: string; title: string; description: string; itemCount: number; featured: boolean; thumbnail: string;}> = [];
 
-const mockGalleryItems = [
-  {
-    id: '1',
-    title: 'Family Reunion 2023',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?w=300',
-    date: '2023-07-15',
-    location: 'Central Park, NY',
-    views: 245,
-    likes: 18,
-    tags: ['family', 'reunion', 'celebration'],
-    featured: true
-  },
-  {
-    id: '2',
-    title: 'Grandpa\'s Stories',
-    type: 'video',
-    url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=300',
-    date: '2023-06-20',
-    location: 'Home',
-    views: 89,
-    likes: 12,
-    tags: ['stories', 'oral history', 'heritage'],
-    featured: false,
-    duration: '15:32'
-  },
-  {
-    id: '3',
-    title: 'Wedding Day Memories',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?w=300',
-    date: '1972-08-20',
-    location: 'St. Mary\'s Church',
-    views: 156,
-    likes: 24,
-    tags: ['wedding', 'vintage', 'love'],
-    featured: true
-  },
-  {
-    id: '4',
-    title: 'Childhood Adventures',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg?w=300',
-    date: '1965-05-10',
-    location: 'Backyard',
-    views: 78,
-    likes: 9,
-    tags: ['childhood', 'play', 'memories'],
-    featured: false
-  },
-  {
-    id: '5',
-    title: 'Holiday Traditions',
-    type: 'video',
-    url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?w=300',
-    date: '2022-12-25',
-    location: 'Family Home',
-    views: 134,
-    likes: 21,
-    tags: ['holidays', 'traditions', 'family'],
-    featured: true,
-    duration: '8:45'
-  },
-  {
-    id: '6',
-    title: 'School Days',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1720186/pexels-photo-1720186.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1720186/pexels-photo-1720186.jpeg?w=300',
-    date: '1968-09-01',
-    location: 'Lincoln Elementary',
-    views: 92,
-    likes: 7,
-    tags: ['school', 'education', 'childhood'],
-    featured: false
-  }
-];
 
-const exhibitions = [
-  {
-    id: '1',
-    title: 'Three Generations',
-    description: 'A journey through family history spanning 75 years',
-    itemCount: 45,
-    featured: true,
-    thumbnail: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?w=300'
-  },
-  {
-    id: '2',
-    title: 'Milestone Moments',
-    description: 'Celebrating life\'s most important achievements',
-    itemCount: 28,
-    featured: false,
-    thumbnail: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?w=300'
-  }
-];
+
 
 
 // Lightbox Modal for viewing images/videos
@@ -188,7 +90,7 @@ export function GalleryPage() {
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
     const stored = localStorage.getItem('gallery_items');
-    return stored ? JSON.parse(stored) : mockGalleryItems;
+    return stored ? JSON.parse(stored) : [];
   });
   const [showUploadModal, setShowUploadModal] = useState(false);
 

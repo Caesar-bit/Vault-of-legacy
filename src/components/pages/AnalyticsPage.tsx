@@ -61,21 +61,7 @@ const generateDeviceData = (): AnalyticsData['deviceData'] => {
   ];
 };
 
-const defaultTopContent = [
-  { title: 'Family Heritage Collection', views: 2847, engagement: '85%', type: 'collection' },
-  { title: 'Wedding Day Memories', views: 2156, engagement: '78%', type: 'gallery' },
-  { title: 'Timeline: Three Generations', views: 1923, engagement: '82%', type: 'timeline' },
-  { title: 'WWII Documents Archive', views: 1654, engagement: '71%', type: 'archive' },
-  { title: 'Childhood Adventures', views: 1432, engagement: '76%', type: 'gallery' },
-];
 
-const defaultGeographic = [
-  { country: 'United States', visitors: 5847, percentage: 45.5 },
-  { country: 'Canada', visitors: 1923, percentage: 15.0 },
-  { country: 'United Kingdom', visitors: 1456, percentage: 11.3 },
-  { country: 'Australia', visitors: 987, percentage: 7.7 },
-  { country: 'Germany', visitors: 654, percentage: 5.1 },
-];
 
 const randomTrend = () => Number((Math.random() * 20 - 10).toFixed(1));
 
@@ -90,35 +76,19 @@ const getDaysForRange = (range: string) => {
     default:
       return 7;
   }
-};
-
-const generateAnalyticsData = (days: number): AnalyticsData => {
-  const timeSeriesData = generateTimeSeriesData(days);
-  const totalViews = timeSeriesData.reduce((s, d) => s + d.views, 0);
-  const uniqueVisitors = Math.floor(totalViews * 0.4);
-  const avgSessionDuration = `${Math.floor(Math.random() * 3) + 3}:${Math.floor(Math.random() * 60)
-    .toString()
-    .padStart(2, '0')}`;
-  const bounceRate = `${(Math.random() * 50).toFixed(1)}%`;
-  return {
-    overview: {
-      totalViews,
-      uniqueVisitors,
-      avgSessionDuration,
-      bounceRate,
-      trends: {
-        views: randomTrend(),
-        visitors: randomTrend(),
-        duration: randomTrend(),
-        bounce: randomTrend(),
-      },
-    },
-    timeSeriesData,
-    deviceData: generateDeviceData(),
-    topContent: defaultTopContent,
-    geographicData: defaultGeographic,
-  };
-};
+const generateAnalyticsData = (_days: number): AnalyticsData => ({
+  overview: {
+    totalViews: 0,
+    uniqueVisitors: 0,
+    avgSessionDuration: "0:00",
+    bounceRate: "0%",
+    trends: { views: 0, visitors: 0, duration: 0, bounce: 0 },
+  },
+  timeSeriesData: [],
+  deviceData: [],
+  topContent: [],
+  geographicData: [],
+});
 
 export function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('7d');

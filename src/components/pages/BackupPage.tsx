@@ -16,47 +16,7 @@ import {
   Save
 } from 'lucide-react';
 
-const defaultBackups = [
-  {
-    id: '1',
-    name: 'Full System Backup',
-    type: 'full',
-    size: '2.4 GB',
-    created: '2024-01-20T10:30:00Z',
-    status: 'completed',
-    location: 'cloud',
-    retention: '1 year',
-    encrypted: true
-  },
-  {
-    id: '2',
-    name: 'Incremental Backup',
-    type: 'incremental',
-    size: '156 MB',
-    created: '2024-01-19T15:45:00Z',
-    status: 'completed',
-    location: 'local',
-    retention: '30 days',
-    encrypted: true
-  },
-  {
-    id: '3',
-    name: 'Media Files Backup',
-    type: 'selective',
-    size: '1.8 GB',
-    created: '2024-01-18T09:20:00Z',
-    status: 'in_progress',
-    location: 'cloud',
-    retention: '6 months',
-    encrypted: true
-  }
-];
 
-const defaultSchedules = [
-  { name: 'Daily Incremental', frequency: 'daily', time: '02:00', enabled: true },
-  { name: 'Weekly Full', frequency: 'weekly', time: 'Sunday 03:00', enabled: true },
-  { name: 'Monthly Archive', frequency: 'monthly', time: '1st 04:00', enabled: false }
-];
 
 export function BackupPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -67,15 +27,13 @@ export function BackupPage() {
 
   const [backups, setBackups] = useState(() => {
     const stored = localStorage.getItem('backups');
-    return stored ? JSON.parse(stored) : defaultBackups;
+    return stored ? JSON.parse(stored) : [];
   });
 
   const [schedules, setSchedules] = useState(() => {
     const stored = localStorage.getItem('backup_schedules');
-    return stored ? JSON.parse(stored) : defaultSchedules;
+    return stored ? JSON.parse(stored) : [];
   });
-
-  const [backupSettings, setBackupSettings] = useState({
     autoBackup: true,
     cloudSync: true,
     encryption: true,
@@ -212,7 +170,7 @@ export function BackupPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Backup Schedules</h3>
         <div className="space-y-4">
-          {schedules.map((schedule: typeof defaultSchedules[number], index: number) => (
+          {schedules.map((schedule: (typeof schedules)[0], index: number) => (
             <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
               <div className="flex items-center space-x-4">
                 <div className="p-2 bg-blue-100 rounded-lg">

@@ -17,47 +17,6 @@ import {
 } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
 
-const initialArchives: Archive[] = [
-  {
-    id: '1',
-    name: 'Family Heritage Collection 2020-2024',
-    type: 'collection',
-    size: '2.4 GB',
-    items: 1247,
-    created: '2024-01-15',
-    lastBackup: '2024-01-20',
-    status: 'active',
-    retention: '25 Years',
-    format: 'ZIP',
-    checksum: 'SHA-256'
-  },
-  {
-    id: '2',
-    name: 'Historical Documents Archive',
-    type: 'documents',
-    size: '856 MB',
-    items: 342,
-    created: '2023-12-10',
-    lastBackup: '2024-01-19',
-    status: 'archived',
-    retention: 'Permanent',
-    format: 'TAR.GZ',
-    checksum: 'SHA-256'
-  },
-  {
-    id: '3',
-    name: 'Media Vault Backup Q4 2023',
-    type: 'media',
-    size: '15.2 GB',
-    items: 2156,
-    created: '2023-12-31',
-    lastBackup: '2024-01-18',
-    status: 'verified',
-    retention: '50 Years',
-    format: 'ZIP',
-    checksum: 'SHA-256'
-  }
-];
 
 const retentionPolicies = [
   { name: '1 Year', value: '1y', description: 'Standard retention for temporary content' },
@@ -80,39 +39,24 @@ interface Archive {
   checksum: string;
 }
 
-const defaultArchiveFiles: Record<string, VaultItem[]> = {
-  '1': [
-    {
-      id: 'a1',
-      name: 'readme.txt',
-      type: 'document',
-      size: '1 KB',
-      modified: '2024-01-15',
-      owner: 'You',
-      starred: false,
-    },
-  ],
-  '2': [],
-  '3': [],
-};
 
 export function ArchivePage() {
   const [archives, setArchives] = useState<Archive[]>(() => {
     const stored = localStorage.getItem('archives');
-    return stored ? JSON.parse(stored) : initialArchives;
+    return stored ? JSON.parse(stored) : [];
   });
   const [selectedArchives, setSelectedArchives] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [viewArchive, setViewArchive] = useState<typeof initialArchives[0] | null>(null);
-  const [deleteArchive, setDeleteArchive] = useState<typeof initialArchives[0] | null>(null);
+  const [viewArchive, setViewArchive] = useState<Archive | null>(null);
+  const [deleteArchive, setDeleteArchive] = useState<Archive | null>(null);
   const [name, setName] = useState('');
   const [type, setType] = useState('collection');
   const [retention, setRetention] = useState('25 Years');
   const [archiveFiles, setArchiveFiles] = useState<Record<string, VaultItem[]>>(() => {
     const stored = localStorage.getItem('archive_files');
-    return stored ? JSON.parse(stored) : defaultArchiveFiles;
+    return stored ? JSON.parse(stored) : {};
   });
 
   useEffect(() => {
