@@ -48,6 +48,33 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+
+    // Ensure the Users table has the LastLogin column when upgrading from
+    // older database versions where the column might be missing.
+    var conn = db.Database.GetDbConnection();
+    conn.Open();
+    using (var cmd = conn.CreateCommand())
+    {
+        cmd.CommandText = "PRAGMA table_info('Users');";
+        using var reader = cmd.ExecuteReader();
+        var hasLastLogin = false;
+        while (reader.Read())
+        {
+            if (reader.GetString(1) == "LastLogin")
+            {
+                hasLastLogin = true;
+                break;
+            }
+        }
+
+        if (!hasLastLogin)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Users ADD COLUMN LastLogin TEXT;";
+            alter.ExecuteNonQuery();
+        }
+    }
+    conn.Close();
 }
 
 app.UseCors();
