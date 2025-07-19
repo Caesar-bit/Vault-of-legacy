@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, Vault, Shield, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Vault, Shield, Loader2, Fingerprint } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginFormProps {
@@ -11,7 +11,7 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading, error } = useAuth();
+  const { login, loginWithFingerprint, isLoading, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +120,16 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
               Forgot password?
             </button>
           </div>
+
+          {localStorage.getItem('vault_fp_last') && (
+            <button
+              type="button"
+              onClick={loginWithFingerprint}
+              className="group relative w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl text-sm font-semibold text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 transition-all duration-300"
+            >
+              <Fingerprint className="h-5 w-5 mr-2" /> Sign in with Fingerprint
+            </button>
+          )}
 
           <button
             type="submit"

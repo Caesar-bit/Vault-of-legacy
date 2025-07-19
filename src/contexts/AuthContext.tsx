@@ -8,9 +8,11 @@ import React, {
 import { User, AuthState } from "../types";
 import { EncryptionService } from "../utils/encryption";
 import { blockchain } from "../utils/blockchain";
+import { authenticateFingerprint } from "../utils/fingerprint";
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  loginWithFingerprint: () => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
@@ -170,6 +172,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const loginWithFingerprint = async (): Promise<void> => {
+    const userId = localStorage.getItem('vault_fp_last');
+    if (!userId) {
+      setAuthState(prev => ({ ...prev, error: 'No fingerprint registered' }));
+      return;
+    }
+    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const result = await authenticateFingerprint<User>(userId);
+      if (!result) throw new Error('failed');
+      const { user, token } = result;
+      localStorage.setItem('vault_token', token);
+      const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
+      localStorage.setItem('vault_user', encryptedUser);
+      setAuthState({ user, isAuthenticated: true, isLoading: false, error: null, token });
+    } catch (err) {
+      console.error(err);
+      setAuthState(prev => ({ ...prev, isLoading: false, error: 'Fingerprint authentication failed' }));
+    }
+  };
+
   const signup = async (
     email: string,
     password: string,
@@ -314,6 +337,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         ...authState,
         login,
+        loginWithFingerprint,
         signup,
         logout,
         forgotPassword,

@@ -14,8 +14,10 @@ import {
   Save,
   Eye,
   EyeOff,
-  Check
+  Check,
+  Fingerprint
 } from 'lucide-react';
+import { enrollFingerprint, removeFingerprint } from '../../utils/fingerprint';
 
 
 const settingsSections = [
@@ -30,7 +32,7 @@ const settingsSections = [
 ];
 
 export function SettingsPage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -55,7 +57,7 @@ export function SettingsPage() {
       bio: '',
       avatar: user?.avatar || '',
     },
-    security: { twoFactorEnabled: false, passwordLastChanged: "", sessionTimeout: 30, loginNotifications: false },
+    security: { twoFactorEnabled: false, passwordLastChanged: "", sessionTimeout: 30, loginNotifications: false, fingerprintEnabled: false },
     notifications: { emailNotifications: false, pushNotifications: false, weeklyDigest: false, securityAlerts: false, collaborationUpdates: false },
     appearance: { theme: "light", language: "en", timezone: "UTC", dateFormat: "MM/DD/YYYY" },
     data: { storageUsed: 0, storageLimit: 100, autoBackup: false, compressionEnabled: false, retentionPeriod: 0 },
@@ -66,17 +68,22 @@ export function SettingsPage() {
   useEffect(() => {
     if (!user) return;
     const stored = localStorage.getItem(`vault_settings_${user.id}`);
-    setSettings(
-      stored ? JSON.parse(stored) : {
-        ...defaultSettings,
-        profile: {
-          ...defaultSettings.profile,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar || defaultSettings.profile.avatar,
-        },
+    const base = stored ? JSON.parse(stored) : {
+      ...defaultSettings,
+      profile: {
+        ...defaultSettings.profile,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || defaultSettings.profile.avatar,
       },
-    );
+    };
+    try {
+      const enabled = localStorage.getItem(`vault_fingerprint_${user.id}`) !== null;
+      base.security = { ...base.security, fingerprintEnabled: enabled };
+    } catch {
+      /* ignore */
+    }
+    setSettings(base);
   }, [user]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -207,6 +214,32 @@ export function SettingsPage() {
     }));
     setTwoFactorLoading(false);
     setAlert({ message: `Two-factor ${!settings.security.twoFactorEnabled ? 'enabled' : 'disabled'}`, type: 'success' });
+  };
+
+  const handleEnrollFingerprint = async () => {
+    if (!user) return;
+    setTwoFactorLoading(true);
+    try {
+      await enrollFingerprint(user, token || '');
+      setSettings(prev => ({
+        ...prev,
+        security: { ...prev.security, fingerprintEnabled: true },
+      }));
+      setAlert({ message: 'Fingerprint enrolled', type: 'success' });
+    } catch {
+      setAlert({ message: 'Fingerprint enrollment failed', type: 'error' });
+    }
+    setTwoFactorLoading(false);
+  };
+
+  const handleRemoveFingerprint = () => {
+    if (!user) return;
+    removeFingerprint(user.id);
+    setSettings(prev => ({
+      ...prev,
+      security: { ...prev.security, fingerprintEnabled: false },
+    }));
+    setAlert({ message: 'Fingerprint removed', type: 'success' });
   };
 
   const revokeSession = async (id: string) => {
@@ -352,6 +385,29 @@ export function SettingsPage() {
               placeholder="Tell us about yourself..."
             />
           </div>
+        </div>
+
+        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div>
+            <h4 className="font-medium text-gray-900">Fingerprint Sign-In</h4>
+            <p className="text-sm text-gray-600">Use your device biometrics for quick login</p>
+          </div>
+          {settings.security.fingerprintEnabled ? (
+            <button
+              onClick={handleRemoveFingerprint}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Remove
+            </button>
+          ) : (
+            <button
+              onClick={handleEnrollFingerprint}
+              disabled={twoFactorLoading}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-60"
+            >
+              <Fingerprint className="h-4 w-4 mr-1" /> Enroll
+            </button>
+          )}
         </div>
       </div>
     </div>
