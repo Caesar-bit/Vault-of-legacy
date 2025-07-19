@@ -18,6 +18,26 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
+  const [avatar, setAvatar] = useState<string>(user?.avatar || '');
+
+  useEffect(() => {
+    try {
+      const settings = JSON.parse(localStorage.getItem('vault_settings') || '{}');
+      setAvatar(settings.profile?.avatar || user?.avatar || '');
+    } catch {
+      setAvatar(user?.avatar || '');
+    }
+    const handler = () => {
+      try {
+        const settings = JSON.parse(localStorage.getItem('vault_settings') || '{}');
+        setAvatar(settings.profile?.avatar || user?.avatar || '');
+      } catch {
+        setAvatar(user?.avatar || '');
+      }
+    };
+    window.addEventListener('vault_settings_updated', handler);
+    return () => window.removeEventListener('vault_settings_updated', handler);
+  }, [user]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [notifications, setNotifications] = useState(() => {
@@ -206,8 +226,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           >
             <span className="sr-only">Open user menu</span>
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-lg border-2 border-white/60">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-10 w-10 rounded-full object-cover" />
+              {avatar ? (
+                <img src={avatar} alt={user?.name} className="h-10 w-10 rounded-full object-cover" />
               ) : (
                 <span className="text-sm font-bold text-white">
                   {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}

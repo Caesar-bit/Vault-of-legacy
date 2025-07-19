@@ -97,6 +97,7 @@ export function SettingsPage() {
     setTimeout(() => {
       localStorage.setItem('vault_settings', JSON.stringify(settings));
       localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));
+      window.dispatchEvent(new Event('vault_settings_updated'));
       setIsSaving(false);
       setAlert({ message: 'Settings saved', type: 'success' });
     }, 800);
@@ -195,7 +196,7 @@ export function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enable: !settings.security.twoFactorEnabled }),
       });
-    } catch (e) {
+    } catch {
       // ignore network errors in offline demo
     }
     setSettings(prev => ({
@@ -210,7 +211,7 @@ export function SettingsPage() {
     setSessionLoading(id);
     try {
       await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
-    } catch (e) {
+    } catch {
       // ignore network errors
     }
     setSessions(prev => prev.filter(s => s.id !== id));
@@ -222,7 +223,9 @@ export function SettingsPage() {
     setSessionLoading('all');
     try {
       await fetch('/api/sessions', { method: 'DELETE' });
-    } catch (e) {}
+    } catch {
+      // ignore errors
+    }
     setSessions([{ id: 'current', device: 'This Device', ip: '127.0.0.1', lastActive: new Date().toISOString() }]);
     setSessionLoading(null);
     setAlert({ message: 'Other sessions revoked', type: 'success' });
@@ -236,7 +239,9 @@ export function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [key]: !settings.notifications[key as keyof typeof settings.notifications] }),
       });
-    } catch (e) {}
+    } catch {
+      // ignore errors
+    }
     setSettings(prev => ({
       ...prev,
       notifications: {

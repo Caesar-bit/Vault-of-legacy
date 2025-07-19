@@ -50,7 +50,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const decrypted = JSON.parse(
             EncryptionService.decrypt(encryptedUser),
           );
-          const userData = { status: "active", ...decrypted } as User;
+          let avatar: string | undefined;
+          try {
+            const settings = JSON.parse(localStorage.getItem("vault_settings") || "{}");
+            avatar = settings.profile?.avatar;
+          } catch {
+            avatar = undefined;
+          }
+          const userData = { status: "active", avatar, ...decrypted } as User;
           setAuthState({
             user: userData,
             isAuthenticated: true,
@@ -105,6 +112,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: (() => {
+          try {
+            const settings = JSON.parse(localStorage.getItem("vault_settings") || "{}");
+            return settings.profile?.avatar;
+          } catch {
+            return undefined;
+          }
+        })(),
       };
 
       localStorage.setItem("vault_token", data.token);
@@ -170,6 +185,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: (() => {
+          try {
+            const settings = JSON.parse(localStorage.getItem("vault_settings") || "{}");
+            return settings.profile?.avatar;
+          } catch {
+            return undefined;
+          }
+        })(),
       };
 
       localStorage.setItem("vault_token", data.token);
