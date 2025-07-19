@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   Download, 
   FileText, 
@@ -109,7 +110,7 @@ export function ExportPage() {
   const [newName, setNewName] = useState('');
   const [format, setFormat] = useState('zip');
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [toast, setToast] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [detailsExport, setDetailsExport] = useState<any | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -119,10 +120,10 @@ export function ExportPage() {
   });
 
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [alert]);
 
   useEffect(() => {
     localStorage.setItem('exports', JSON.stringify(exportsList));
@@ -141,7 +142,7 @@ export function ExportPage() {
             : ex
         )
       );
-      setToast('Export completed');
+      setAlert({ message: 'Export completed', type: 'success' });
     }, 3000);
   };
 
@@ -168,25 +169,25 @@ export function ExportPage() {
         await navigator.share({ title: item.name, url });
       } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(url);
-        setToast('Link copied to clipboard');
+        setAlert({ message: 'Link copied to clipboard', type: 'success' });
       }
     } catch (err) {
       console.error(err);
-      setToast('Unable to share');
+      setAlert({ message: 'Unable to share', type: 'error' });
     }
   };
 
   const deleteExport = (id: string) => {
     setExportsList((prev) => prev.filter((e) => e.id !== id));
     setDeleteId(null);
-    setToast('Export deleted');
+    setAlert({ message: 'Export deleted', type: 'success' });
   };
 
   const refreshStatuses = () => {
     exportsList.forEach((e) => {
       if (e.status === 'processing') simulateProcessing(e.id);
     });
-    setToast('Refreshing exports');
+    setAlert({ message: 'Refreshing exports', type: 'success' });
   };
 
   const totalSize = formatSize(
@@ -228,10 +229,12 @@ export function ExportPage() {
   return (
     <>
     <div className="space-y-6">
-      {toast && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          {toast}
-        </div>
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
       )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -482,7 +485,7 @@ export function ExportPage() {
                               : ex
                           )
                         );
-                        setToast('Download started');
+                        setAlert({ message: 'Download started', type: 'success' });
                       }}
                       className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
                     >
@@ -537,7 +540,7 @@ export function ExportPage() {
               };
               setExportsList(prev => [newExport, ...prev]);
               simulateProcessing(newExport.id);
-              setToast('Export queued');
+              setAlert({ message: 'Export queued', type: 'success' });
               setNewName('');
               setFormat('zip');
               setAttachments([]);

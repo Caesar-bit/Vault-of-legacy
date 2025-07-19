@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { APIKeyModal } from './APIKeyModal';
 import { fetchApiKeys, createApiKey, deleteApiKey, regenerateApiKey } from '../../utils/apikeys';
 import { useAuth } from '../../contexts/AuthContext';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   Key, 
   Plus, 
@@ -48,14 +49,14 @@ export function APIPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // auto hide toast
+  // auto hide alert
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [alert]);
   const [search, setSearch] = useState('');
 
   const toggleKeyVisibility = (keyId: string) => {
@@ -92,16 +93,16 @@ export function APIPage() {
       if (!token) throw new Error('Not authenticated');
       const newKey = await createApiKey(token, name, permissions);
       setApiKeys(prev => [newKey, ...prev]);
-      setToast('API key created!');
+      setAlert({ message: 'API key created!', type: 'success' });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to create API key';
-      setToast(message);
+      setAlert({ message, type: 'error' });
     }
   };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    setToast('Copied to clipboard!');
+    setAlert({ message: 'Copied to clipboard!', type: 'success' });
   };
 
   const handleRefresh = async (id: string) => {
@@ -110,10 +111,10 @@ export function APIPage() {
       if (!token) throw new Error('Not authenticated');
       const updated = await regenerateApiKey(token, id);
       setApiKeys(prev => prev.map(k => k.id === id ? updated : k));
-      setToast('API key regenerated!');
+      setAlert({ message: 'API key regenerated!', type: 'success' });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to regenerate API key';
-      setToast(message);
+      setAlert({ message, type: 'error' });
     }
   };
 
@@ -124,10 +125,10 @@ export function APIPage() {
         if (!token) throw new Error('Not authenticated');
         await deleteApiKey(token, id);
         setApiKeys(prev => prev.filter(k => k.id !== id));
-        setToast('API key revoked!');
+        setAlert({ message: 'API key revoked!', type: 'success' });
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Failed to revoke API key';
-        setToast(message);
+        setAlert({ message, type: 'error' });
       }
     }
   };
@@ -167,10 +168,12 @@ export function APIPage() {
         onClose={() => setShowCreateModal(false)}
         onCreate={handleCreateKey}
       />
-      {toast && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          {toast}
-        </div>
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
       )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

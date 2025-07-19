@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import {
   Shield,
   Lock,
@@ -25,15 +26,15 @@ export function PrivacyPage() {
     accessLogging: true
   });
 
-  const [toast, setToast] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showDataExport, setShowDataExport] = useState(false);
   const [showDataDeletion, setShowDataDeletion] = useState(false);
 
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [alert]);
 
   const handleSettingChange = (key: string, value: boolean | string) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -41,7 +42,7 @@ export function PrivacyPage() {
 
   const saveChanges = () => {
     localStorage.setItem('privacy_settings', JSON.stringify(settings));
-    setToast('Settings saved');
+    setAlert({ message: 'Settings saved', type: 'success' });
   };
 
   const exportData = () => {
@@ -53,20 +54,22 @@ export function PrivacyPage() {
     a.download = 'vault-export.json';
     a.click();
     URL.revokeObjectURL(url);
-    setToast('Export started');
+    setAlert({ message: 'Export started', type: 'success' });
   };
 
   const deleteAccount = () => {
     localStorage.clear();
-    setToast('Account deleted');
+    setAlert({ message: 'Account deleted', type: 'success' });
   };
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          {toast}
-        </div>
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
       )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

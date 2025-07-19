@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   User,
   Shield,
@@ -30,7 +31,7 @@ const settingsSections = [
 export function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [apiKeys, setApiKeys] = useState(() => {
     const stored = localStorage.getItem('vault_api_keys');
@@ -53,10 +54,10 @@ export function SettingsPage() {
   const [passwordInputs, setPasswordInputs] = useState({ current: '', new: '', confirm: '' });
 
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [alert]);
 
   const saveSettings = () => {
     setIsSaving(true);
@@ -64,7 +65,7 @@ export function SettingsPage() {
       localStorage.setItem('vault_settings', JSON.stringify(settings));
       localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));
       setIsSaving(false);
-      setToast('Settings saved');
+      setAlert({ message: 'Settings saved', type: 'success' });
     }, 800);
   };
 
@@ -80,8 +81,7 @@ export function SettingsPage() {
 
   const handleBackup = () => {
     downloadFile(JSON.stringify(settings, null, 2), 'vault-backup.json', 'application/json');
-    setToast('Backup downloaded');
-    setTimeout(() => setToast(null), 3000);
+    setAlert({ message: 'Backup downloaded', type: 'success' });
   };
 
   const handleExport = (format: 'csv' | 'json') => {
@@ -93,13 +93,12 @@ export function SettingsPage() {
         .join('\n');
       downloadFile(csv, 'vault-export.csv', 'text/csv');
     }
-    setToast(`Exported ${format.toUpperCase()}`);
-    setTimeout(() => setToast(null), 3000);
+    setAlert({ message: `Exported ${format.toUpperCase()}`, type: 'success' });
   };
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
-    setToast('Key copied');
+    setAlert({ message: 'Key copied', type: 'success' });
   };
 
   const revokeKey = (id: string) => {
@@ -108,7 +107,7 @@ export function SettingsPage() {
       localStorage.setItem('vault_api_keys', JSON.stringify(updated));
       return updated;
     });
-    setToast('Key revoked');
+    setAlert({ message: 'Key revoked', type: 'success' });
   };
 
   const generateKey = () => {
@@ -118,7 +117,7 @@ export function SettingsPage() {
       localStorage.setItem('vault_api_keys', JSON.stringify(updated));
       return updated;
     });
-    setToast('Key generated');
+    setAlert({ message: 'Key generated', type: 'success' });
   };
 
   const handlePhotoClick = () => fileInputRef.current?.click();
@@ -137,7 +136,7 @@ export function SettingsPage() {
 
   const handlePasswordUpdate = () => {
     if (!passwordInputs.new || passwordInputs.new !== passwordInputs.confirm) {
-      setToast('Passwords do not match');
+      setAlert({ message: 'Passwords do not match', type: 'error' });
       return;
     }
     setIsSaving(true);
@@ -151,7 +150,7 @@ export function SettingsPage() {
       }));
       setPasswordInputs({ current: '', new: '', confirm: '' });
       setIsSaving(false);
-      setToast('Password updated');
+      setAlert({ message: 'Password updated', type: 'success' });
     }, 800);
   };
 
@@ -648,10 +647,12 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      {toast && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          {toast}
-        </div>
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
       )}
       {/* Glassy Animated Header */}
       <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden" style={{background: 'linear-gradient(120deg,rgba(59,130,246,0.10),rgba(236,72,153,0.10) 100%)'}}>

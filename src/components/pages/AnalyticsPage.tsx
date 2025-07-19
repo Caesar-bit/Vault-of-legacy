@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import {
   TrendingDown,
   Eye,
@@ -99,6 +100,7 @@ export function AnalyticsPage() {
     const stored = localStorage.getItem('analytics-7d');
     return stored ? JSON.parse(stored) : generateAnalyticsData(7);
   });
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     const key = `analytics-${dateRange}`;
@@ -111,6 +113,12 @@ export function AnalyticsPage() {
       localStorage.setItem(key, JSON.stringify(data));
     }
   }, [dateRange]);
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
 
   const handleRefresh = () => {
     const data = generateAnalyticsData(getDaysForRange(dateRange));
@@ -142,7 +150,7 @@ export function AnalyticsPage() {
       }
     } else {
       await navigator.clipboard.writeText(text);
-      alert('Summary copied to clipboard');
+      setAlert({ message: 'Summary copied to clipboard', type: 'success' });
     }
   };
 
@@ -163,6 +171,13 @@ export function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>

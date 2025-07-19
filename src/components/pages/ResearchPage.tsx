@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   Search, 
   BookOpen, 
@@ -80,10 +81,17 @@ export function ResearchPage() {
     tags: '',
     attachments: [] as File[]
   });
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     localStorage.setItem('research_items', JSON.stringify(researchItems));
   }, [researchItems]);
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
 
   // Glassy color helpers
   const getReliabilityColor = (reliability: string) => {
@@ -131,7 +139,7 @@ export function ResearchPage() {
         await navigator.share({ title: item.title, text: item.notes });
       } else {
         await navigator.clipboard.writeText(`${item.title}\n${item.notes}`);
-        alert('Info copied to clipboard');
+        setAlert({ message: 'Info copied to clipboard', type: 'success' });
       }
     } catch (err) {
       console.error(err);
@@ -163,6 +171,13 @@ export function ResearchPage() {
 
   return (
     <div className="relative min-h-screen pb-24">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Animated Glassy Hero */}
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden" style={{background: 'linear-gradient(120deg,rgba(59,130,246,0.08),rgba(236,72,153,0.08) 100%)'}}>
         <div>

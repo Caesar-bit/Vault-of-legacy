@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   Image, 
   Video, 
@@ -93,10 +94,17 @@ export function GalleryPage() {
     return stored ? JSON.parse(stored) : [];
   });
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     localStorage.setItem('gallery_items', JSON.stringify(galleryItems));
   }, [galleryItems]);
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
 
   const handleUpload = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -138,7 +146,7 @@ export function GalleryPage() {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(item.url);
-        alert('Link copied to clipboard');
+        setAlert({ message: 'Link copied to clipboard', type: 'success' });
       }
     } catch (err) {
       console.error(err);
@@ -154,6 +162,13 @@ export function GalleryPage() {
 
   return (
     <div className="relative min-h-screen pb-20">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Animated Glassy Hero Header */}
       <div className="backdrop-blur-md bg-white/70 border border-gray-200 rounded-2xl shadow-lg px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 animate-fade-in">
         <div>
