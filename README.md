@@ -13,3 +13,7 @@ cd server
 ```
 
 The API provides in-memory endpoints for user authentication, API key management and file uploads which the React frontend can call using the `/api` path.
+
+### Configuration
+
+The backend issues JWT tokens for authenticated users. Configure the signing key through the `JwtKey` setting in `appsettings.json` or via environment variables.
