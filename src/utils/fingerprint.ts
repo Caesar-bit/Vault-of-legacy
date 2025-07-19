@@ -1,13 +1,24 @@
-export interface FingerprintRecord<T> {
-  user: T;
-  token: string;
+import { User } from '../types';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+function bufToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let str = '';
+  for (const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function hasFingerprint(userId: string): boolean {
-  return localStorage.getItem(`vault_fingerprint_${userId}`) !== null;
+export async function hasFingerprint(token: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/api/fingerprint/status`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  return !!data.enabled;
 }
 
-export async function enrollFingerprint<T extends { id: string }>(user: T, token: string): Promise<void> {
+export async function enrollFingerprint(user: User, token: string): Promise<void> {
   if (!('credentials' in navigator)) throw new Error('WebAuthn unsupported');
   const challenge = new Uint8Array(32);
   crypto.getRandomValues(challenge);
@@ -16,41 +27,56 @@ export async function enrollFingerprint<T extends { id: string }>(user: T, token
     rp: { name: 'Vault of Legacy' },
     user: {
       id: new TextEncoder().encode(user.id),
-      name: 'user',
-      displayName: 'user',
+      name: user.email,
+      displayName: user.name,
     },
     pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
     timeout: 60000,
     authenticatorSelection: { userVerification: 'required' },
     attestation: 'none',
   };
-  await navigator.credentials.create({ publicKey });
-  const record: FingerprintRecord<T> = { user, token };
-  localStorage.setItem(`vault_fingerprint_${user.id}`, JSON.stringify(record));
-  localStorage.setItem('vault_fp_last', user.id);
+  const cred = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential;
+  if (!cred) throw new Error('Enrollment cancelled');
+  const credentialId = bufToBase64(cred.rawId);
+  const res = await fetch(`${API_BASE}/api/fingerprint/enroll`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ credentialId }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  localStorage.setItem('vault_fp_user', user.id);
 }
 
-export function removeFingerprint(userId: string): void {
-  localStorage.removeItem(`vault_fingerprint_${userId}`);
-  const last = localStorage.getItem('vault_fp_last');
-  if (last === userId) localStorage.removeItem('vault_fp_last');
+export async function removeFingerprint(token: string): Promise<void> {
+  await fetch(`${API_BASE}/api/fingerprint`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  localStorage.removeItem('vault_fp_user');
 }
 
-export async function authenticateFingerprint<T>(userId: string): Promise<FingerprintRecord<T> | null> {
-  const stored = localStorage.getItem(`vault_fingerprint_${userId}`);
-  if (!stored) return null;
+export async function authenticateFingerprint<T = User>(): Promise<{ user: T; token: string } | null> {
+  const userId = localStorage.getItem('vault_fp_user');
+  if (!userId) return null;
   if (!('credentials' in navigator)) return null;
-  try {
-    const challenge = new Uint8Array(32);
-    crypto.getRandomValues(challenge);
-    const publicKey: PublicKeyCredentialRequestOptions = {
-      challenge,
-      timeout: 60000,
-      userVerification: 'required',
-    };
-    await navigator.credentials.get({ publicKey });
-    return JSON.parse(stored);
-  } catch {
-    return null;
-  }
+  const challenge = new Uint8Array(32);
+  crypto.getRandomValues(challenge);
+  const publicKey: PublicKeyCredentialRequestOptions = {
+    challenge,
+    timeout: 60000,
+    userVerification: 'required',
+  };
+  const cred = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential;
+  if (!cred) return null;
+  const credentialId = bufToBase64(cred.rawId);
+  const res = await fetch(`${API_BASE}/api/fingerprint/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, credentialId }),
+  });
+  if (!res.ok) return null;
+  return res.json();
 }

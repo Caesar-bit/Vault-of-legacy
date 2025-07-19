@@ -121,7 +121,7 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
             </button>
           </div>
 
-          {localStorage.getItem('vault_fp_last') && (
+          {localStorage.getItem('vault_fp_user') && (
             <button
               type="button"
               onClick={loginWithFingerprint}

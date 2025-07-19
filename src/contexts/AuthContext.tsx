@@ -173,14 +173,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const loginWithFingerprint = async (): Promise<void> => {
-    const userId = localStorage.getItem('vault_fp_last');
-    if (!userId) {
-      setAuthState(prev => ({ ...prev, error: 'No fingerprint registered' }));
-      return;
-    }
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const result = await authenticateFingerprint<User>(userId);
+      const result = await authenticateFingerprint<User>();
       if (!result) throw new Error('failed');
       const { user, token } = result;
       localStorage.setItem('vault_token', token);

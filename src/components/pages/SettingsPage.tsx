@@ -17,7 +17,7 @@ import {
   Check,
   Fingerprint
 } from 'lucide-react';
-import { enrollFingerprint, removeFingerprint } from '../../utils/fingerprint';
+import { enrollFingerprint, removeFingerprint, hasFingerprint } from '../../utils/fingerprint';
 
 
 const settingsSections = [
@@ -77,14 +77,16 @@ export function SettingsPage() {
         avatar: user.avatar || defaultSettings.profile.avatar,
       },
     };
-    try {
-      const enabled = localStorage.getItem(`vault_fingerprint_${user.id}`) !== null;
-      base.security = { ...base.security, fingerprintEnabled: enabled };
-    } catch {
-      /* ignore */
-    }
-    setSettings(base);
-  }, [user]);
+    (async () => {
+      try {
+        const enabled = token ? await hasFingerprint(token) : false;
+        base.security = { ...base.security, fingerprintEnabled: enabled };
+      } catch {
+        base.security = { ...base.security, fingerprintEnabled: false };
+      }
+      setSettings(base);
+    })();
+  }, [user, token]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [passwordInputs, setPasswordInputs] = useState({ current: '', new: '', confirm: '' });
@@ -234,7 +236,7 @@ export function SettingsPage() {
 
   const handleRemoveFingerprint = () => {
     if (!user) return;
-    removeFingerprint(user.id);
+    removeFingerprint(token || '');
     setSettings(prev => ({
       ...prev,
       security: { ...prev.security, fingerprintEnabled: false },
@@ -409,6 +411,7 @@ export function SettingsPage() {
             </button>
           )}
         </div>
+
       </div>
     </div>
   );

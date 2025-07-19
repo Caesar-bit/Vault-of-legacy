@@ -12,5 +12,6 @@ namespace VaultBackend.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
         public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
+        public DbSet<FingerprintCredential> FingerprintCredentials => Set<FingerprintCredential>();
     }
 }
