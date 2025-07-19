@@ -16,5 +16,11 @@ namespace VaultBackend.Models
 
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
+
+        public string Role { get; set; } = "user";
+
+        public string Status { get; set; } = "active";
+
+        public DateTime? LastLogin { get; set; }
     }
 }

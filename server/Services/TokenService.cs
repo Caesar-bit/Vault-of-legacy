@@ -23,7 +23,8 @@ namespace VaultBackend.Services
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                     new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                    new Claim("name", user.Name)
+                    new Claim("name", user.Name),
+                    new Claim(ClaimTypes.Role, user.Role)
                 },
                 expires: DateTime.UtcNow.AddHours(1),
                 signingCredentials: creds

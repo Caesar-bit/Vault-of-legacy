@@ -30,13 +30,16 @@ namespace VaultBackend.Controllers
             {
                 Email = request.Email,
                 Name = request.Name,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Role = "user",
+                Status = "active",
+                LastLogin = DateTime.UtcNow
             };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, token });
         }
 
         [HttpPost("login")]
@@ -46,8 +49,11 @@ namespace VaultBackend.Controllers
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return BadRequest("Invalid credentials");
 
+            user.LastLogin = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, token });
         }
     }
 
