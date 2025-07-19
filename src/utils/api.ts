@@ -37,3 +37,23 @@ export async function uploadFile(file: File, token: string): Promise<UploadedInf
   }
   return response.json();
 }
+
+export async function fetchVaultStructure(token: string) {
+  const res = await fetch(`${API_BASE}/api/file/structure`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function saveVaultStructure(token: string, data: unknown) {
+  const res = await fetch(`${API_BASE}/api/file/structure`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

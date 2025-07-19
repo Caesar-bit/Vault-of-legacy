@@ -130,6 +130,23 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Ensure FileStructures table exists for storing vault files
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='FileStructures';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE FileStructures (Id TEXT PRIMARY KEY, Data TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+
+            using var insert = conn.CreateCommand();
+            insert.CommandText = "INSERT INTO FileStructures (Id, Data) VALUES ('main', '[]');";
+            insert.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 

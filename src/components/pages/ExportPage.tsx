@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatedAlert } from '../AnimatedAlert';
 import { VaultItem } from '../FileManager';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchVaultStructure } from '../../utils/api';
 import { 
   Download, 
   FileText, 
@@ -110,10 +112,20 @@ export function ExportPage() {
   const [newName, setNewName] = useState('');
   const [format, setFormat] = useState('zip');
   const [source, setSource] = useState<'vault' | 'gallery'>('vault');
-  const [vaultStructure] = useState<VaultItem[]>(() => {
-    const stored = localStorage.getItem('vault_files');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const { isAuthenticated, token } = useAuth();
+  const [vaultStructure, setVaultStructure] = useState<VaultItem[]>([]);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const load = async () => {
+      try {
+        const data = await fetchVaultStructure(token);
+        setVaultStructure(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [isAuthenticated, token]);
   const [vaultPath, setVaultPath] = useState<string[]>([]);
   const [vaultSelected, setVaultSelected] = useState<string[]>([]);
   interface GalleryItem {

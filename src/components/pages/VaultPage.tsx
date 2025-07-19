@@ -1,17 +1,31 @@
 import { useEffect, useState } from 'react';
 import { FolderPlus, Upload } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchVaultStructure, saveVaultStructure } from '../../utils/api';
 
 export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
+  const { isAuthenticated, token } = useAuth();
 
-  const [structure, setStructure] = useState<VaultItem[]>(() => {
-    const stored = localStorage.getItem('vault_files');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [structure, setStructure] = useState<VaultItem[]>([]);
 
   useEffect(() => {
-    localStorage.setItem('vault_files', JSON.stringify(structure));
-  }, [structure]);
+    if (!isAuthenticated) return;
+    const load = async () => {
+      try {
+        const data = await fetchVaultStructure(token);
+        setStructure(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [isAuthenticated, token]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    saveVaultStructure(token, structure).catch(console.error);
+  }, [structure, isAuthenticated, token]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-purple-50 to-orange-50">

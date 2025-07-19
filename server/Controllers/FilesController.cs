@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VaultBackend.Data;
 using VaultBackend.Models;
+using System.Text.Json;
 
 namespace VaultBackend.Controllers
 {
@@ -49,6 +50,31 @@ namespace VaultBackend.Controllers
         {
             var files = await _db.UploadedFiles.Select(f => new { f.Path, f.OriginalName }).ToListAsync();
             return Ok(files);
+        }
+
+        [HttpGet("structure")]
+        public async Task<IActionResult> GetStructure()
+        {
+            var s = await _db.FileStructures.FirstOrDefaultAsync();
+            if (s == null) return Ok("[]");
+            return Ok(JsonDocument.Parse(s.Data).RootElement);
+        }
+
+        [HttpPost("structure")]
+        public async Task<IActionResult> SaveStructure([FromBody] JsonElement data)
+        {
+            var s = await _db.FileStructures.FirstOrDefaultAsync();
+            if (s == null)
+            {
+                s = new FileStructure { Id = "main", Data = data.GetRawText() };
+                _db.FileStructures.Add(s);
+            }
+            else
+            {
+                s.Data = data.GetRawText();
+            }
+            await _db.SaveChangesAsync();
+            return NoContent();
         }
     }
 }
