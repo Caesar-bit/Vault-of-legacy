@@ -59,6 +59,7 @@ using (var scope = app.Services.CreateScope())
         using var reader = cmd.ExecuteReader();
         var hasLastLogin = false;
         var hasCreatedAt = false;
+        var hasRole = false;
         while (reader.Read())
         {
             var column = reader.GetString(1);
@@ -69,6 +70,10 @@ using (var scope = app.Services.CreateScope())
             if (column == "CreatedAt")
             {
                 hasCreatedAt = true;
+            }
+            if (column == "Role")
+            {
+                hasRole = true;
             }
         }
 
@@ -83,6 +88,13 @@ using (var scope = app.Services.CreateScope())
         {
             using var alter = conn.CreateCommand();
             alter.CommandText = "ALTER TABLE Users ADD COLUMN CreatedAt TEXT;";
+            alter.ExecuteNonQuery();
+        }
+
+        if (!hasRole)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Users ADD COLUMN Role TEXT DEFAULT 'user';";
             alter.ExecuteNonQuery();
         }
     }
