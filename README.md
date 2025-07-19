@@ -19,3 +19,7 @@ During development the React dev server proxies `/api` requests to the ASP.NET b
 ### Configuration
 
 The backend issues JWT tokens for authenticated users. Configure the signing key through the `JwtKey` setting in `appsettings.json` or via environment variables. A connection string is also provided for the SQLite database in `ConnectionStrings:Default`.
+
+### Translations endpoint
+
+Localization files live under `server/Resources/Translations`. Each language is a JSON file (e.g. `en.json`). The API exposes `/api/translations/{lang}` to fetch the key/value pairs for a given language.
