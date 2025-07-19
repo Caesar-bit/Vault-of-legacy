@@ -60,6 +60,7 @@ using (var scope = app.Services.CreateScope())
         var hasLastLogin = false;
         var hasCreatedAt = false;
         var hasRole = false;
+        var hasStatus = false;
         while (reader.Read())
         {
             var column = reader.GetString(1);
@@ -74,6 +75,10 @@ using (var scope = app.Services.CreateScope())
             if (column == "Role")
             {
                 hasRole = true;
+            }
+            if (column == "Status")
+            {
+                hasStatus = true;
             }
         }
 
@@ -95,6 +100,13 @@ using (var scope = app.Services.CreateScope())
         {
             using var alter = conn.CreateCommand();
             alter.CommandText = "ALTER TABLE Users ADD COLUMN Role TEXT DEFAULT 'user';";
+            alter.ExecuteNonQuery();
+        }
+
+        if (!hasStatus)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Users ADD COLUMN Status TEXT DEFAULT 'active';";
             alter.ExecuteNonQuery();
         }
     }
