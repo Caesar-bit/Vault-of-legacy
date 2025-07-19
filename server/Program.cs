@@ -116,6 +116,20 @@ using (var scope = app.Services.CreateScope())
             alter.ExecuteNonQuery();
         }
     }
+
+    // Ensure FingerprintCredentials table exists for new fingerprint login feature
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='FingerprintCredentials';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE FingerprintCredentials (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, CredentialId TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 
