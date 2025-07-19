@@ -37,6 +37,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: false,
     isLoading: true,
     error: null,
+    token: null,
   });
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isAuthenticated: true,
             isLoading: false,
             error: null,
+            token,
           });
         } else {
           setAuthState((prev) => ({ ...prev, isLoading: false }));
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        token: data.token,
       });
     } catch (err) {
       console.error(err);
@@ -185,6 +188,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        token: data.token,
       });
     } catch (err) {
       console.error(err);
@@ -204,6 +208,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      token: null,
     });
   };
 

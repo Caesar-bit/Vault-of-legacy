@@ -73,8 +73,7 @@ const roles = [
 ];
 
 export function UsersPage() {
-  const { isAuthenticated } = useAuth();
-  const token = localStorage.getItem("vault_token") || "";
+  const { isAuthenticated, token } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
