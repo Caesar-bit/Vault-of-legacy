@@ -34,7 +34,6 @@ export function SettingsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [apiKeys, setApiKeys] = useState(() => {
-  const [apiKeys, setApiKeys] = useState(() => {
     const stored = localStorage.getItem('vault_api_keys');
     return stored ? JSON.parse(stored) : [];
   });

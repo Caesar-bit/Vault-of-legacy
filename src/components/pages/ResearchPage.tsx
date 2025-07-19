@@ -68,13 +68,6 @@ export function ResearchPage() {
       return { ...it, attachments } as ResearchItem;
     });
   });
-        ? it.attachments.map((att: unknown) =>
-            typeof att === 'string' ? { name: att, url: '' } : att
-          )
-        : [];
-      return { ...it, attachments } as ResearchItem;
-    });
-  });
   const [form, setForm] = useState({
     title: '',
     type: 'document',

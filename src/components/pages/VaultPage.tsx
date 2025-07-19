@@ -8,7 +8,6 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
     const stored = localStorage.getItem('vault_files');
     return stored ? JSON.parse(stored) : [];
   });
-  });
 
   useEffect(() => {
     localStorage.setItem('vault_files', JSON.stringify(structure));

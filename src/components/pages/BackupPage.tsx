@@ -34,12 +34,13 @@ export function BackupPage() {
     const stored = localStorage.getItem('backup_schedules');
     return stored ? JSON.parse(stored) : [];
   });
+  const [backupSettings, setBackupSettings] = useState({
     autoBackup: true,
     cloudSync: true,
     encryption: true,
     compression: true,
     retentionDays: 365,
-    maxBackups: 10
+    maxBackups: 10,
   });
 
   useEffect(() => {

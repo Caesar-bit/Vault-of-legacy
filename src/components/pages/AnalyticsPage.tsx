@@ -76,6 +76,8 @@ const getDaysForRange = (range: string) => {
     default:
       return 7;
   }
+};
+
 const generateAnalyticsData = (_days: number): AnalyticsData => ({
   overview: {
     totalViews: 0,
