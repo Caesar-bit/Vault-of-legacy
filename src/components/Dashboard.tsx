@@ -57,14 +57,13 @@ function getActivityIcon(type: string) {
   }
 }
 
-interface DashboardProps {
-  onPageChange: (page: string) => void;
-}
+import { useNavigate } from 'react-router-dom';
 
-export function Dashboard({ onPageChange }: DashboardProps) {
+export function Dashboard() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const navigate = useNavigate();
 
   const handleQuickAction = (actionName: string) => {
     switch (actionName) {
@@ -72,13 +71,13 @@ export function Dashboard({ onPageChange }: DashboardProps) {
         setShowUploadModal(true);
         break;
       case 'Create Timeline':
-        onPageChange('timeline');
+        navigate('/timeline');
         break;
       case 'New Collection':
-        onPageChange('collections');
+        navigate('/collections');
         break;
       case 'Archive Content':
-        onPageChange('archive');
+        navigate('/archive');
         break;
       default:
         break;
