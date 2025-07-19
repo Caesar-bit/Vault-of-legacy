@@ -14,7 +14,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Vault API", Version = "v1" });
 });
 
-var jwtKey = builder.Configuration["JwtKey"] ?? "very_secret_key";
+var jwtKey = builder.Configuration["JwtKey"] ?? "0123456789ABCDEF0123456789ABCDEF";
 var tokenService = new TokenService(jwtKey);
 builder.Services.AddSingleton(tokenService);
 

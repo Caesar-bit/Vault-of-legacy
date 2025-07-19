@@ -18,7 +18,7 @@ During development the React dev server proxies `/api` requests to the ASP.NET b
 
 ### Configuration
 
-The backend issues JWT tokens for authenticated users. Configure the signing key through the `JwtKey` setting in `appsettings.json` or via environment variables. A connection string is also provided for the SQLite database in `ConnectionStrings:Default`.
+The backend issues JWT tokens for authenticated users. Configure the signing key through the `JwtKey` setting in `appsettings.json` (or via environment variables). **The value must be at least 32 characters long** to satisfy the security requirements of the token library. A connection string is also provided for the SQLite database in `ConnectionStrings:Default`.
 
 ### Translations endpoint
 
