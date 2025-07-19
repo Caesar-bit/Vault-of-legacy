@@ -40,7 +40,15 @@ export function ChatWidget() {
           <div className="flex-grow overflow-y-auto p-2 text-sm">
             {messages.map((m) => (
               <div key={m.id} className="mb-1">
-                <strong>{m.userId === user?.id ? 'Me' : 'Agent'}:</strong> {m.content}
+                <strong>
+                  {m.userId === user?.id
+                    ? 'Me'
+                    : m.userId === 'bot'
+                      ? 'Bot'
+                      : 'Agent'}
+                  :
+                </strong>{' '}
+                {m.content}
               </div>
             ))}
           </div>

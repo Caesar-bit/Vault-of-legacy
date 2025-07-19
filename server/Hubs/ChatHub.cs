@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using VaultBackend.Data;
 using VaultBackend.Models;
+using VaultBackend.Services;
 
 namespace VaultBackend.Hubs
 {
@@ -10,10 +11,12 @@ namespace VaultBackend.Hubs
     public class ChatHub : Hub
     {
         private readonly AppDbContext _db;
+        private readonly FaqService _faq;
 
-        public ChatHub(AppDbContext db)
+        public ChatHub(AppDbContext db, FaqService faq)
         {
             _db = db;
+            _faq = faq;
         }
 
         public async Task SendMessage(string message)
@@ -38,6 +41,26 @@ namespace VaultBackend.Hubs
                 chatMessage.Content,
                 chatMessage.Timestamp
             });
+
+            var answer = _faq.GetAnswer(message);
+            if (!string.IsNullOrEmpty(answer))
+            {
+                var botMessage = new ChatMessage
+                {
+                    UserId = "bot",
+                    Content = answer,
+                    Timestamp = DateTime.UtcNow
+                };
+                _db.ChatMessages.Add(botMessage);
+                await _db.SaveChangesAsync();
+                await Clients.Caller.SendAsync("ReceiveMessage", new
+                {
+                    botMessage.Id,
+                    botMessage.UserId,
+                    botMessage.Content,
+                    botMessage.Timestamp
+                });
+            }
         }
     }
 }
