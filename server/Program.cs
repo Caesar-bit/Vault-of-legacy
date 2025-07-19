@@ -49,8 +49,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 
-    // Ensure the Users table has the LastLogin column when upgrading from
-    // older database versions where the column might be missing.
+    // Ensure the Users table has the LastLogin and CreatedAt columns when
+    // upgrading from older database versions where the columns might be missing.
     var conn = db.Database.GetDbConnection();
     conn.Open();
     using (var cmd = conn.CreateCommand())
@@ -58,12 +58,17 @@ using (var scope = app.Services.CreateScope())
         cmd.CommandText = "PRAGMA table_info('Users');";
         using var reader = cmd.ExecuteReader();
         var hasLastLogin = false;
+        var hasCreatedAt = false;
         while (reader.Read())
         {
-            if (reader.GetString(1) == "LastLogin")
+            var column = reader.GetString(1);
+            if (column == "LastLogin")
             {
                 hasLastLogin = true;
-                break;
+            }
+            if (column == "CreatedAt")
+            {
+                hasCreatedAt = true;
             }
         }
 
@@ -71,6 +76,13 @@ using (var scope = app.Services.CreateScope())
         {
             using var alter = conn.CreateCommand();
             alter.CommandText = "ALTER TABLE Users ADD COLUMN LastLogin TEXT;";
+            alter.ExecuteNonQuery();
+        }
+
+        if (!hasCreatedAt)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Users ADD COLUMN CreatedAt TEXT;";
             alter.ExecuteNonQuery();
         }
     }
