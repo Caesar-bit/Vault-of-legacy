@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using VaultBackend.Data;
 using VaultBackend.Services;
+using VaultBackend.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -147,6 +149,19 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Ensure ChatMessages table exists for chat history
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='ChatMessages';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE ChatMessages (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Content TEXT NOT NULL, Timestamp TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 
@@ -155,5 +170,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
