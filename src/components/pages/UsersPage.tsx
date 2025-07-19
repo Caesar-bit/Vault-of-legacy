@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -20,6 +20,7 @@ import {
   Settings,
   Key
 } from 'lucide-react';
+import { fetchUsers } from '../../utils/api';
 
 const mockUsers = [
   {
@@ -106,6 +107,27 @@ export function UsersPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showProfileModal, setShowProfileModal] = useState<string | null>(null);
+  const [users, setUsers] = useState(mockUsers);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('vault_jwt') || '';
+        if (token) {
+          const data = await fetchUsers(token);
+          setUsers(data);
+        }
+      } catch (e: any) {
+        setError(e.message || 'Failed to load users');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -177,10 +199,10 @@ export function UsersPage() {
       {/* Animated Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         {[
-          { icon: <Users className="h-7 w-7 text-blue-600" />, label: 'Total Users', value: mockUsers.length, color: 'from-blue-100 to-blue-50' },
-          { icon: <CheckCircle className="h-7 w-7 text-green-600" />, label: 'Active', value: mockUsers.filter(u => u.status === 'active').length, color: 'from-green-100 to-green-50' },
-          { icon: <Clock className="h-7 w-7 text-yellow-600" />, label: 'Pending', value: mockUsers.filter(u => u.status === 'pending').length, color: 'from-yellow-100 to-yellow-50' },
-          { icon: <Crown className="h-7 w-7 text-red-600" />, label: 'Admins', value: mockUsers.filter(u => u.role === 'admin').length, color: 'from-red-100 to-red-50' },
+          { icon: <Users className="h-7 w-7 text-blue-600" />, label: 'Total Users', value: users.length, color: 'from-blue-100 to-blue-50' },
+          { icon: <CheckCircle className="h-7 w-7 text-green-600" />, label: 'Active', value: users.filter(u => u.status === 'active').length, color: 'from-green-100 to-green-50' },
+          { icon: <Clock className="h-7 w-7 text-yellow-600" />, label: 'Pending', value: users.filter(u => u.status === 'pending').length, color: 'from-yellow-100 to-yellow-50' },
+          { icon: <Crown className="h-7 w-7 text-red-600" />, label: 'Admins', value: users.filter(u => u.role === 'admin').length, color: 'from-red-100 to-red-50' },
         ].map((stat, i) => (
           <div key={stat.label} className={`bg-gradient-to-br ${stat.color} p-6 rounded-2xl border border-white/40 shadow flex items-center space-x-4 glassy-card animate-fade-in`} style={{animationDelay: `${i * 80}ms`}}>
             <div className="p-3 bg-white/60 rounded-xl shadow">
@@ -223,6 +245,7 @@ export function UsersPage() {
           })}
         </div>
       </div>
+      )}
 
       {/* Search and Filters */}
       <div className="bg-white/70 p-6 rounded-3xl border border-white/30 shadow-xl mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 backdrop-blur-lg">
@@ -271,8 +294,13 @@ export function UsersPage() {
         <div className="px-6 py-4 border-b border-white/30">
           <h3 className="text-lg font-bold text-gray-900">Users</h3>
         </div>
+        {loading ? (
+          <div className="p-6 text-gray-500">Loading...</div>
+        ) : error ? (
+          <div className="p-6 text-red-500">{error}</div>
+        ) : (
         <div className="divide-y divide-white/30">
-          {mockUsers.map((user) => {
+          {users.map((user) => {
             const StatusIcon = getStatusIcon(user.status);
             const RoleIcon = getRoleIcon(user.role);
             return (
@@ -383,7 +411,7 @@ export function UsersPage() {
 
       {/* User Profile Quick View Modal (UI only) */}
       {showProfileModal && (() => {
-        const user = mockUsers.find(u => u.id === showProfileModal);
+        const user = users.find(u => u.id === showProfileModal);
         if (!user) return null;
         const StatusIcon = getStatusIcon(user.status);
         const RoleIcon = getRoleIcon(user.role);
