@@ -56,6 +56,8 @@ namespace VaultBackend.Controllers
             var user = await _db.Users.FindAsync(id);
             if (user == null) return NotFound();
 
+            if (!string.IsNullOrEmpty(request.Name)) user.Name = request.Name;
+            if (!string.IsNullOrEmpty(request.Email)) user.Email = request.Email;
             if (!string.IsNullOrEmpty(request.Role)) user.Role = request.Role;
             if (!string.IsNullOrEmpty(request.Status)) user.Status = request.Status;
 
@@ -74,6 +76,6 @@ namespace VaultBackend.Controllers
         }
     }
 
-    public record UpdateUserRequest(string? Role, string? Status);
+    public record UpdateUserRequest(string? Name, string? Email, string? Role, string? Status);
     public record InviteUserRequest(string Email, string Name, string Role);
 }

@@ -59,14 +59,15 @@ export function ResearchPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [researchItems, setResearchItems] = useState<ResearchItem[]>(() => {
     const stored = localStorage.getItem('research_items');
-    const items = stored ? JSON.parse(stored) : [];
-    return items.map((it: any) => {
-      const attachments = Array.isArray(it.attachments)
-        ? it.attachments.map((att: any) =>
-            typeof att === 'string' ? { name: att, url: '' } : att
+    const items: unknown[] = stored ? JSON.parse(stored) : [];
+    return items.map((raw) => {
+      const it = raw as Partial<ResearchItem> & { attachments?: unknown[] };
+      const attachments: ResearchAttachment[] = Array.isArray(it.attachments)
+        ? it.attachments.map((att) =>
+            typeof att === 'string' ? { name: att, url: '' } : (att as ResearchAttachment)
           )
         : [];
-      return { ...it, attachments } as ResearchItem;
+      return { ...(it as ResearchItem), attachments };
     });
   });
   const [form, setForm] = useState({
