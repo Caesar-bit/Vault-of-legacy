@@ -33,13 +33,14 @@ namespace VaultBackend.Controllers
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 Role = "user",
                 Status = "active",
-                LastLogin = DateTime.UtcNow
+                LastLogin = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
             };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.LastLogin, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, token });
         }
 
         [HttpPost("login")]
@@ -53,7 +54,7 @@ namespace VaultBackend.Controllers
             await _db.SaveChangesAsync();
 
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.LastLogin, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, token });
         }
     }
 

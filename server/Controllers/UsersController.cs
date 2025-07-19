@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using BCrypt.Net;
 using VaultBackend.Data;
 using VaultBackend.Models;
 
@@ -22,9 +23,31 @@ namespace VaultBackend.Controllers
         public async Task<IActionResult> GetUsers()
         {
             var users = await _db.Users
-                .Select(u => new { u.Id, u.Email, u.Name, u.Role, u.Status, u.LastLogin })
+                .Select(u => new { u.Id, u.Email, u.Name, u.Role, u.Status, u.CreatedAt, u.LastLogin })
                 .ToListAsync();
             return Ok(users);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateUser(InviteUserRequest request)
+        {
+            if (await _db.Users.AnyAsync(u => u.Email == request.Email))
+                return BadRequest("Email already registered");
+
+            var user = new User
+            {
+                Email = request.Email,
+                Name = request.Name,
+                Role = request.Role,
+                Status = "pending",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin });
         }
 
         [HttpPatch("{id}")]
@@ -38,7 +61,7 @@ namespace VaultBackend.Controllers
             if (!string.IsNullOrEmpty(request.Status)) user.Status = request.Status;
 
             await _db.SaveChangesAsync();
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.LastLogin });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin });
         }
 
         [HttpDelete("{id}")]
@@ -53,4 +76,5 @@ namespace VaultBackend.Controllers
     }
 
     public record UpdateUserRequest(string? Name, string? Role, string? Status);
+    public record InviteUserRequest(string Email, string Name, string Role);
 }

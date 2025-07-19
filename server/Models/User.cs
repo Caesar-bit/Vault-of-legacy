@@ -22,5 +22,7 @@ namespace VaultBackend.Models
         public string Status { get; set; } = "active";
 
         public DateTime? LastLogin { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
