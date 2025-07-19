@@ -25,7 +25,7 @@ import { BlockchainPage } from './components/pages/BlockchainPage';
 import { AboutPage } from './components/pages/AboutPage';
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [currentPage, setCurrentPage] = useState('dashboard');
 
@@ -64,7 +64,11 @@ function AppContent() {
       case 'research':
         return <ResearchPage />;
       case 'users':
-        return <UsersPage />;
+        return user?.role === 'admin' ? (
+          <UsersPage />
+        ) : (
+          <div className="p-6">Access denied</div>
+        );
       case 'analytics':
         return <AnalyticsPage />;
       case 'settings':

@@ -30,7 +30,7 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentPage, onPageChange, collapsed, onToggleCollapse }: NavigationProps) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { t, currentLanguage, languages, changeLanguage } = useLanguage();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
@@ -42,7 +42,7 @@ export function Navigation({ currentPage, onPageChange, collapsed, onToggleColla
     { name: t('archive'), page: 'archive', icon: Archive },
     { name: t('gallery'), page: 'gallery', icon: ImageIcon },
     { name: t('research'), page: 'research', icon: Search },
-    { name: t('users'), page: 'users', icon: Users },
+    ...(user?.role === 'admin' ? [{ name: t('users'), page: 'users', icon: Users }] : []),
     { name: t('analytics'), page: 'analytics', icon: BarChart3 },
     { name: 'API', page: 'api', icon: Key },
     { name: 'Blockchain', page: 'blockchain', icon: Vault },

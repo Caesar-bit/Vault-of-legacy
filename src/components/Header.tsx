@@ -43,7 +43,7 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
     { name: t('archive'), page: 'archive' },
     { name: t('gallery'), page: 'gallery' },
     { name: t('research'), page: 'research' },
-    { name: t('users'), page: 'users' },
+    ...(user?.role === 'admin' ? [{ name: t('users'), page: 'users' }] : []),
     { name: t('analytics'), page: 'analytics' },
     { name: t('settings'), page: 'settings' },
     { name: t('templates'), page: 'templates' },
