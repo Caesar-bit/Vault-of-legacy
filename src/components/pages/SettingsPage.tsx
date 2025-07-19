@@ -18,6 +18,7 @@ import {
   Fingerprint
 } from 'lucide-react';
 import { enrollFingerprint, removeFingerprint, hasFingerprint } from '../../utils/fingerprint';
+import { changePassword, updateProfile } from '../../utils/api';
 
 
 const settingsSections = [
@@ -32,7 +33,7 @@ const settingsSections = [
 ];
 
 export function SettingsPage() {
-  const { user, token } = useAuth();
+  const { user, token, refreshProfile } = useAuth();
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -101,17 +102,22 @@ export function SettingsPage() {
     localStorage.setItem('vault_sessions', JSON.stringify(sessions));
   }, [sessions]);
 
-  const saveSettings = () => {
+  const saveSettings = async () => {
+    if (!token || !user) return;
     setIsSaving(true);
-    setTimeout(() => {
-      if (user) {
-        localStorage.setItem(`vault_settings_${user.id}`, JSON.stringify(settings));
-      }
+    try {
+      await updateProfile(token, { name: settings.profile.name, email: settings.profile.email });
+      await refreshProfile();
+      localStorage.setItem(`vault_settings_${user.id}`, JSON.stringify(settings));
       localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));
       window.dispatchEvent(new Event('vault_settings_updated'));
-      setIsSaving(false);
       setAlert({ message: 'Settings saved', type: 'success' });
-    }, 800);
+    } catch (e) {
+      console.error(e);
+      setAlert({ message: 'Failed to save settings', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const downloadFile = (data: string, name: string, type: string) => {
@@ -179,13 +185,14 @@ export function SettingsPage() {
     }
   };
 
-  const handlePasswordUpdate = () => {
-    if (!passwordInputs.new || passwordInputs.new !== passwordInputs.confirm) {
+  const handlePasswordUpdate = async () => {
+    if (!token || !passwordInputs.new || passwordInputs.new !== passwordInputs.confirm) {
       setAlert({ message: 'Passwords do not match', type: 'error' });
       return;
     }
     setIsSaving(true);
-    setTimeout(() => {
+    try {
+      await changePassword(token, passwordInputs.current, passwordInputs.new);
       setSettings(prev => ({
         ...prev,
         security: {
@@ -194,9 +201,13 @@ export function SettingsPage() {
         },
       }));
       setPasswordInputs({ current: '', new: '', confirm: '' });
-      setIsSaving(false);
       setAlert({ message: 'Password updated', type: 'success' });
-    }, 800);
+    } catch (e) {
+      console.error(e);
+      setAlert({ message: 'Failed to update password', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggleTwoFactor = async () => {

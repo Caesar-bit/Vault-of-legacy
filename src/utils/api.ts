@@ -57,3 +57,36 @@ export async function saveVaultStructure(token: string, data: unknown) {
   });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export async function getProfile(token: string) {
+  const res = await fetch(`${API_BASE}/api/account/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateProfile(token: string, data: { name?: string; email?: string; }) {
+  const res = await fetch(`${API_BASE}/api/account/me`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function changePassword(token: string, currentPassword: string, newPassword: string) {
+  const res = await fetch(`${API_BASE}/api/account/password`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

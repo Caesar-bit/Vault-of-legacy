@@ -17,6 +17,7 @@ interface AuthContextType extends AuthState {
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -327,6 +328,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const refreshProfile = async (): Promise<void> => {
+    if (!authState.token) return;
+    try {
+      const res = await fetch('/api/account/me', {
+        headers: { Authorization: `Bearer ${authState.token}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      const updated: User = {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role as User['role'],
+        status: data.status as User['status'],
+        createdAt: new Date(data.createdAt),
+        lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: authState.user?.avatar,
+      };
+      const encrypted = EncryptionService.encrypt(JSON.stringify(updated));
+      localStorage.setItem('vault_user', encrypted);
+      setAuthState(prev => ({ ...prev, user: updated }));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -337,6 +364,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         logout,
         forgotPassword,
         resetPassword,
+        refreshProfile,
       }}
     >
       {children}
