@@ -52,7 +52,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           );
           let avatar: string | undefined;
           try {
-            const settings = JSON.parse(localStorage.getItem("vault_settings") || "{}");
+            const key = `vault_settings_${decrypted.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
             avatar = settings.profile?.avatar;
           } catch {
             avatar = undefined;
@@ -80,6 +81,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (!authState.user) return;
+    const handler = () => {
+      try {
+        const key = `vault_settings_${authState.user?.id}`;
+        const settings = JSON.parse(localStorage.getItem(key) || '{}');
+        setAuthState(prev => ({
+          ...prev,
+          user: prev.user ? { ...prev.user, avatar: settings.profile?.avatar } : null,
+        }));
+      } catch {
+        // ignore parse errors
+      }
+    };
+    window.addEventListener('vault_settings_updated', handler);
+    return () => window.removeEventListener('vault_settings_updated', handler);
+  }, [authState.user]);
 
   const login = async (email: string, password: string): Promise<void> => {
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
@@ -114,7 +133,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
         avatar: (() => {
           try {
-            const settings = JSON.parse(localStorage.getItem("vault_settings") || "{}");
+            const key = `vault_settings_${data.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
             return settings.profile?.avatar;
           } catch {
             return undefined;
@@ -187,7 +207,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
         avatar: (() => {
           try {
-            const settings = JSON.parse(localStorage.getItem("vault_settings") || "{}");
+            const key = `vault_settings_${data.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
             return settings.profile?.avatar;
           } catch {
             return undefined;

@@ -22,14 +22,16 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
   useEffect(() => {
     try {
-      const settings = JSON.parse(localStorage.getItem('vault_settings') || '{}');
+      const key = user ? `vault_settings_${user.id}` : 'vault_settings';
+      const settings = JSON.parse(localStorage.getItem(key) || '{}');
       setAvatar(settings.profile?.avatar || user?.avatar || '');
     } catch {
       setAvatar(user?.avatar || '');
     }
     const handler = () => {
       try {
-        const settings = JSON.parse(localStorage.getItem('vault_settings') || '{}');
+        const key = user ? `vault_settings_${user.id}` : 'vault_settings';
+        const settings = JSON.parse(localStorage.getItem(key) || '{}');
         setAvatar(settings.profile?.avatar || user?.avatar || '');
       } catch {
         setAvatar(user?.avatar || '');

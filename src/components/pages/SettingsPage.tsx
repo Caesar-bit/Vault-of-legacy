@@ -61,22 +61,22 @@ export function SettingsPage() {
     data: { storageUsed: 0, storageLimit: 100, autoBackup: false, compressionEnabled: false, retentionPeriod: 0 },
     privacy: { profileVisibility: "private", searchEngineIndexing: false, analyticsTracking: false, dataSharing: false }
   };
-  const [settings, setSettings] = useState(() => {
-    const stored = localStorage.getItem('vault_settings');
-    return stored ? JSON.parse(stored) : defaultSettings;
-  });
+  const [settings, setSettings] = useState(() => defaultSettings);
 
   useEffect(() => {
     if (!user) return;
-    setSettings((prev) => ({
-      ...prev,
-      profile: {
-        ...prev.profile,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar || prev.profile.avatar,
+    const stored = localStorage.getItem(`vault_settings_${user.id}`);
+    setSettings(
+      stored ? JSON.parse(stored) : {
+        ...defaultSettings,
+        profile: {
+          ...defaultSettings.profile,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar || defaultSettings.profile.avatar,
+        },
       },
-    }));
+    );
   }, [user]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +95,9 @@ export function SettingsPage() {
   const saveSettings = () => {
     setIsSaving(true);
     setTimeout(() => {
-      localStorage.setItem('vault_settings', JSON.stringify(settings));
+      if (user) {
+        localStorage.setItem(`vault_settings_${user.id}`, JSON.stringify(settings));
+      }
       localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));
       window.dispatchEvent(new Event('vault_settings_updated'));
       setIsSaving(false);
