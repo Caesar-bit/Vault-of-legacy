@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { FileUpload } from '../FileUpload';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Calendar,
@@ -17,68 +16,8 @@ interface EventAsset {
   url: string;
 }
 
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Birth of John Smith',
-    description: 'Born in Springfield Hospital',
-    date: '1950-03-15',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'birth_certificate.pdf', url: '#' },
-      { name: 'hospital_photo.jpg', url: '#' }
-    ]
-  },
-  {
-    id: '2',
-    title: 'First Day of School',
-    description: 'Started kindergarten at Lincoln Elementary',
-    date: '1955-09-01',
-    type: 'event',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'school_photo.jpg', url: '#' }
-    ]
-  },
-  {
-    id: '3',
-    title: 'High School Graduation',
-    description: 'Graduated valedictorian from Springfield High',
-    date: '1968-06-15',
-    type: 'achievement',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'diploma.pdf', url: '#' },
-      { name: 'graduation_photo.jpg', url: '#' },
-      { name: 'speech.mp3', url: '#' }
-    ]
-  },
-  {
-    id: '4',
-    title: 'Wedding Day',
-    description: 'Married Mary Johnson at St. Mary\'s Church',
-    date: '1972-08-20',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'wedding_photos.zip', url: '#' },
-      { name: 'marriage_certificate.pdf', url: '#' }
-    ]
-  },
-  {
-    id: '5',
-    title: 'First Child Born',
-    description: 'Sarah Smith was born',
-    date: '1975-04-10',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: [
-      { name: 'baby_photos.jpg', url: '#' },
-      { name: 'birth_announcement.pdf', url: '#' }
-    ]
-  }
-];
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchEvents, createEvent, updateEvent, removeEvent, TimelineEvent } from '../../utils/timeline';
 
 const getEventTypeColor = (type: string) => {
   switch (type) {
@@ -100,7 +39,7 @@ const getEventTypeIcon = (type: string) => {
 
 
 export function TimelinePage() {
-  const [events, setEvents] = useState(mockEvents);
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
@@ -110,9 +49,22 @@ export function TimelinePage() {
     description: '',
     date: '',
     type: 'milestone',
-    location: '',
-    assets: [] as File[]
+    location: ''
   });
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (!token) return;
+    const load = async () => {
+      try {
+        const data = await fetchEvents(token);
+        setEvents(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    load();
+  }, [token]);
 
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +88,7 @@ export function TimelinePage() {
         <button
           onClick={() => {
             setEditingId(null);
-            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '' });
             setShowForm(true);
           }}
           className="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -255,25 +207,6 @@ export function TimelinePage() {
                           </div>
                         )}
                       </div>
-                      {event.assets.length > 0 && (
-                        <div className="flex items-center space-x-2 mt-2">
-                          <span className="text-sm text-gray-500">Assets:</span>
-                          <div className="flex flex-wrap gap-2">
-                            {event.assets.map((asset: EventAsset, assetIndex: number) => (
-                              <a
-                                key={assetIndex}
-                                href={asset.url || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 shadow"
-                              >
-                                <FileText className="h-3 w-3 mr-1" />
-                                {asset.name ?? asset}
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                     <div className="flex flex-col items-end space-y-2 ml-6">
                       <button
@@ -285,8 +218,7 @@ export function TimelinePage() {
                             description: event.description,
                             date: event.date,
                             type: event.type,
-                            location: event.location,
-                            assets: []
+                            location: event.location
                           });
                           setShowForm(true);
                         }}
@@ -295,7 +227,11 @@ export function TimelinePage() {
                       </button>
                       <button
                         className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white/70 transition-colors"
-                        onClick={() => setEvents((prev) => prev.filter((ev) => ev.id !== event.id))}
+                        onClick={async () => {
+                          if (!token) return;
+                          await removeEvent(token, event.id);
+                          setEvents(prev => prev.filter(ev => ev.id !== event.id));
+                        }}
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -311,7 +247,7 @@ export function TimelinePage() {
         <button
           onClick={() => {
             setEditingId(null);
-            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '' });
             setShowForm(true);
           }}
           className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400 animate-bounce"
@@ -329,7 +265,7 @@ export function TimelinePage() {
               className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
               onClick={() => {
                 setShowForm(false);
-                setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+                setForm({ title: '', description: '', date: '', type: 'milestone', location: '' });
               }}
             >
               &times;
@@ -337,32 +273,29 @@ export function TimelinePage() {
             <h2 className="text-xl font-bold mb-4 text-gray-900">{editingId ? 'Edit Event' : 'Add New Event'}</h2>
             <form
               className="space-y-4"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                const uploaded = form.assets.map((f) => ({
-                  name: f.name,
-                  url: URL.createObjectURL(f),
-                }));
-                if (editingId) {
-                  setEvents((prev) =>
-                    prev.map((ev) =>
-                      ev.id === editingId
-                        ? { ...ev, ...form, assets: [...ev.assets, ...uploaded] }
-                        : ev
-                    )
-                  );
-                } else {
-                  setEvents((prev) => [
-                    ...prev,
-                    {
-                      id: Date.now().toString(),
-                      ...form,
-                      assets: uploaded,
-                    },
-                  ]);
+                if (!token) return;
+                const payload = {
+                  title: form.title,
+                  description: form.description,
+                  date: form.date,
+                  type: form.type,
+                  location: form.location
+                };
+                try {
+                  if (editingId) {
+                    await updateEvent(token, parseInt(editingId), payload);
+                    setEvents((prev) => prev.map(ev => ev.id === parseInt(editingId) ? { id: parseInt(editingId), ...payload } : ev));
+                  } else {
+                    const created = await createEvent(token, payload);
+                    setEvents((prev) => [...prev, created]);
+                  }
+                } catch (err) {
+                  console.error(err);
                 }
                 setShowForm(false);
-                setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+                setForm({ title: '', description: '', date: '', type: 'milestone', location: '' });
               }}
             >
               <input
@@ -401,20 +334,12 @@ export function TimelinePage() {
                 <option value="event">Event</option>
                 <option value="achievement">Achievement</option>
               </select>
-              <div className="w-full">
-                <FileUpload
-                  multiple
-                  onFilesSelected={(files) =>
-                    setForm({ ...form, assets: Array.from(files) })
-                  }
-                />
-              </div>
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={() => {
                     setShowForm(false);
-                    setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+                    setForm({ title: '', description: '', date: '', type: 'milestone', location: '' });
                   }}
                   className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
                 >

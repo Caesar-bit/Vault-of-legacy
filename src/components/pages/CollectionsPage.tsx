@@ -14,97 +14,15 @@ import {
   Globe
 } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchCollections, createCollection, updateCollection, removeCollection, Collection as ApiCollection } from '../../utils/collections';
 
-interface Collection {
-  id: string;
-  name: string;
-  description: string;
-  assetCount: number;
-  isPublic: boolean;
-  password?: string;
-  createdAt: string;
-  thumbnail: string;
-  tags: string[];
-}
+interface Collection extends ApiCollection {}
 
-const mockCollections = [
-  {
-    id: '1',
-    name: 'Family Portraits',
-    description: 'A curated collection of family photographs spanning three generations',
-    assetCount: 45,
-    isPublic: true,
-    password: '',
-    createdAt: '2024-01-15',
-    thumbnail: 'family_portrait_1965.jpg',
-    tags: ['family', 'portraits', 'vintage']
-  },
-  {
-    id: '2',
-    name: 'WWII Documents',
-    description: 'Historical documents and letters from World War II',
-    assetCount: 23,
-    isPublic: false,
-    password: 'history',
-    createdAt: '2024-01-10',
-    thumbnail: 'war_letter.pdf',
-    tags: ['history', 'documents', 'war']
-  },
-  {
-    id: '3',
-    name: 'Wedding Memories',
-    description: 'Photos, videos, and documents from our wedding day',
-    assetCount: 78,
-    isPublic: true,
-    password: '',
-    createdAt: '2024-01-08',
-    thumbnail: 'wedding_ceremony.jpg',
-    tags: ['wedding', 'celebration', 'memories']
-  },
-  {
-    id: '4',
-    name: 'Childhood Adventures',
-    description: 'Photos and stories from childhood adventures and milestones',
-    assetCount: 156,
-    isPublic: false,
-    password: 'kids',
-    createdAt: '2024-01-05',
-    thumbnail: 'playground.jpg',
-    tags: ['childhood', 'adventures', 'growing up']
-  }
-];
-
-const defaultCollectionFiles: Record<string, VaultItem[]> = {
-  '1': [
-    {
-      id: 'p1',
-      name: 'portrait1.jpg',
-      type: 'image',
-      size: '2 MB',
-      modified: '2024-01-15',
-      owner: 'You',
-      starred: false,
-    },
-  ],
-  '2': [
-    {
-      id: 'd1',
-      name: 'letter.pdf',
-      type: 'pdf',
-      size: '1 MB',
-      modified: '2024-01-10',
-      owner: 'You',
-      starred: false,
-    },
-  ],
-};
 
 export function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>([...mockCollections]);
-  const [collectionFiles, setCollectionFiles] = useState<Record<string, VaultItem[]>>(() => {
-    const stored = localStorage.getItem('collection_files');
-    return stored ? JSON.parse(stored) : defaultCollectionFiles;
-  });
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [collectionFiles, setCollectionFiles] = useState<Record<string, VaultItem[]>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -113,10 +31,7 @@ export function CollectionsPage() {
   const [newIsPublic, setNewIsPublic] = useState(true);
   const [newPassword, setNewPassword] = useState('');
 
-  const [authorized, setAuthorized] = useState<Record<string, boolean>>(() => {
-    const stored = localStorage.getItem('collection_authorized');
-    return stored ? JSON.parse(stored) : {};
-  });
+  const [authorized, setAuthorized] = useState<Record<string, boolean>>({});
   const [passwordItem, setPasswordItem] = useState<Collection | null>(null);
   const [passwordInput, setPasswordInput] = useState('');
 
@@ -127,12 +42,20 @@ export function CollectionsPage() {
   const [editDesc, setEditDesc] = useState('');
   const [deleteItem, setDeleteItem] = useState<Collection | null>(null);
 
+  const { token } = useAuth();
+
   useEffect(() => {
-    localStorage.setItem('collection_files', JSON.stringify(collectionFiles));
-  }, [collectionFiles]);
-  useEffect(() => {
-    localStorage.setItem('collection_authorized', JSON.stringify(authorized));
-  }, [authorized]);
+    if (!token) return;
+    const load = async () => {
+      try {
+        const data = await fetchCollections(token);
+        setCollections(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    load();
+  }, [token]);
 
   const filteredCollections = collections.filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -405,22 +328,24 @@ export function CollectionsPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">New Collection</h3>
           <form
             className="space-y-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              setCollections((prev) => [
-                {
-                  id: Date.now().toString(),
+              if (!token) return;
+              try {
+                const created = await createCollection(token, {
                   name: newName,
                   description: newDesc,
                   assetCount: 0,
                   isPublic: newIsPublic,
                   password: newIsPublic ? '' : newPassword,
-                  createdAt: new Date().toISOString().slice(0, 10),
+                  createdAt: new Date().toISOString().slice(0,10),
                   thumbnail: '',
-                  tags: [],
-                },
-                ...prev,
-              ]);
+                  tags: ''
+                });
+                setCollections(prev => [created, ...prev]);
+              } catch (err) {
+                console.error(err);
+              }
               setNewName('');
               setNewDesc('');
               setNewPassword('');
@@ -568,9 +493,15 @@ export function CollectionsPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Collection</h3>
           <form
             className="space-y-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              setCollections((prev) => prev.map(c => c.id === editItem.id ? { ...c, name: editName, description: editDesc } : c));
+              if (!token || !editItem) return;
+              try {
+                await updateCollection(token, editItem.id as any, { ...editItem, name: editName, description: editDesc });
+                setCollections(prev => prev.map(c => c.id === editItem.id ? { ...c, name: editName, description: editDesc } : c));
+              } catch (err) {
+                console.error(err);
+              }
               setEditItem(null);
             }}
           >
@@ -602,8 +533,14 @@ export function CollectionsPage() {
             <button className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700" onClick={() => setDeleteItem(null)}>Cancel</button>
             <button
               className="px-4 py-2 rounded-lg bg-red-600 text-white"
-              onClick={() => {
-                setCollections((prev) => prev.filter(c => c.id !== deleteItem.id));
+              onClick={async () => {
+                if (!token || !deleteItem) return;
+                try {
+                  await removeCollection(token, deleteItem.id as any);
+                  setCollections(prev => prev.filter(c => c.id !== deleteItem.id));
+                } catch (err) {
+                  console.error(err);
+                }
                 setDeleteItem(null);
               }}
             >

@@ -17,65 +17,10 @@ import {
   Share2
 } from 'lucide-react';
 import { FileUpload } from '../FileUpload';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchResearch, createResearch, updateResearch, removeResearch, ResearchItem as ApiResearchItem } from '../../utils/research';
 
-// Mock data
-const mockResearchItems = [
-  {
-    id: '1',
-    title: 'Birth Records - Springfield Hospital 1950',
-    type: 'document',
-    source: 'Springfield County Archives',
-    date: '1950-03-15',
-    verified: true,
-    reliability: 'high',
-    notes: 'Official birth certificate obtained from county records office',
-    citations: ['Springfield County Birth Records, Vol. 23, Page 156'],
-    tags: ['birth', 'official', 'hospital'],
-    attachments: [{ name: 'birth_certificate.pdf', url: '' }]
-  },
-  {
-    id: '2',
-    title: 'Military Service Record - John Smith',
-    type: 'military',
-    source: 'National Archives',
-    date: '1968-1970',
-    verified: true,
-    reliability: 'high',
-    notes: 'Service record from Vietnam War era, includes commendations',
-    citations: ['National Personnel Records Center, Military Personnel File'],
-    tags: ['military', 'vietnam', 'service'],
-    attachments: [
-      { name: 'service_record.pdf', url: '' },
-      { name: 'commendations.pdf', url: '' }
-    ]
-  },
-  {
-    id: '3',
-    title: 'Immigration Records - Ellis Island',
-    type: 'immigration',
-    source: 'Ellis Island Foundation',
-    date: '1923-04-12',
-    verified: false,
-    reliability: 'medium',
-    notes: 'Passenger manifest shows arrival from Ireland, need to verify spelling of surname',
-    citations: ['Ellis Island Passenger Lists, Ship: SS Celtic'],
-    tags: ['immigration', 'ireland', 'ellis island'],
-    attachments: [{ name: 'passenger_manifest.jpg', url: '' }]
-  },
-  {
-    id: '4',
-    title: 'Marriage License - Smith & Johnson',
-    type: 'vital',
-    source: 'Springfield City Hall',
-    date: '1972-08-20',
-    verified: true,
-    reliability: 'high',
-    notes: 'Original marriage license with witness signatures',
-    citations: ['Springfield Marriage Records, License #ML-1972-0856'],
-    tags: ['marriage', 'license', 'official'],
-    attachments: [{ name: 'marriage_license.pdf', url: '' }]
-  }
-];
+interface ResearchItem extends ApiResearchItem {}
 
 const researchSources = [
   { name: 'National Archives', type: 'government', reliability: 'high', count: 23 },
@@ -113,18 +58,21 @@ export function ResearchPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [researchItems, setResearchItems] = useState<ResearchItem[]>(() => {
-    const stored = localStorage.getItem('research_items');
-    const items = (stored ? JSON.parse(stored) : mockResearchItems) as Array<unknown>;
-    return items.map((it) => {
-      const attachments = Array.isArray(it.attachments)
-        ? it.attachments.map((att: unknown) =>
-            typeof att === 'string' ? { name: att, url: '' } : att
-          )
-        : [];
-      return { ...it, attachments } as ResearchItem;
-    });
-  });
+  const [researchItems, setResearchItems] = useState<ResearchItem[]>([]);
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (!token) return;
+    const load = async () => {
+      try {
+        const data = await fetchResearch(token);
+        setResearchItems(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    load();
+  }, [token]);
   const [form, setForm] = useState({
     title: '',
     type: 'document',
@@ -138,9 +86,6 @@ export function ResearchPage() {
     attachments: [] as File[]
   });
 
-  useEffect(() => {
-    localStorage.setItem('research_items', JSON.stringify(researchItems));
-  }, [researchItems]);
 
   // Glassy color helpers
   const getReliabilityColor = (reliability: string) => {
@@ -195,9 +140,15 @@ export function ResearchPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
+    if (!token) return;
     if (confirm('Delete this research item?')) {
-      setResearchItems(prev => prev.filter(r => r.id !== id));
+      try {
+        await removeResearch(token, id);
+        setResearchItems(prev => prev.filter(r => r.id !== id));
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -481,57 +432,52 @@ export function ResearchPage() {
             </h2>
             <form
               className="space-y-4"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const uploaded = await Promise.all(
-                  form.attachments.map(async (f) => ({
-                    name: f.name,
-                    url: await readFileAsDataURL(f),
-                  }))
-                );
-                const baseItem = {
-                  id: editingId ?? Date.now().toString(),
-                  title: form.title,
-                  type: form.type,
-                  source: form.source,
-                  date: form.date,
-                  verified: form.verified,
-                  reliability: form.reliability as 'high' | 'medium' | 'low',
-                  notes: form.notes,
-                  citations: form.citations ? form.citations.split(/,\s*/) : [],
-                  tags: form.tags ? form.tags.split(/,\s*/) : [],
-                };
-                setResearchItems((prev) => {
-                  if (editingId) {
-                    return prev.map((it) =>
-                      it.id === editingId
-                        ? {
-                            ...baseItem,
-                            attachments: [...it.attachments, ...uploaded],
-                          }
-                        : it
-                    );
-                  }
-                  return [
-                    { ...baseItem, attachments: uploaded },
-                    ...prev,
-                  ];
-                });
-                setShowAddModal(false);
-                setEditingId(null);
-                setForm({
-                  title: '',
-                  type: 'document',
-                  source: '',
-                  date: '',
-                  verified: false,
-                  reliability: 'high',
-                  notes: '',
-                  citations: '',
-                  tags: '',
-                  attachments: []
-                });
-              }}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!token) return;
+              const uploaded = await Promise.all(
+                form.attachments.map(async (f) => ({
+                  name: f.name,
+                  url: await readFileAsDataURL(f),
+                }))
+              );
+              const payload = {
+                title: form.title,
+                type: form.type,
+                source: form.source,
+                date: form.date,
+                verified: form.verified,
+                reliability: form.reliability,
+                notes: form.notes,
+                citations: form.citations,
+                tags: form.tags
+              };
+              try {
+                if (editingId) {
+                  await updateResearch(token, parseInt(editingId), payload);
+                  setResearchItems(prev => prev.map(it => it.id === parseInt(editingId) ? { ...payload, id: parseInt(editingId) } : it));
+                } else {
+                  const created = await createResearch(token, payload);
+                  setResearchItems(prev => [created, ...prev]);
+                }
+              } catch (err) {
+                console.error(err);
+              }
+              setShowAddModal(false);
+              setEditingId(null);
+              setForm({
+                title: '',
+                type: 'document',
+                source: '',
+                date: '',
+                verified: false,
+                reliability: 'high',
+                notes: '',
+                citations: '',
+                tags: '',
+                attachments: []
+              });
+            }}
             >
               <input
                 className="w-full border border-gray-200 rounded-lg px-3 py-2"

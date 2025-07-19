@@ -21,123 +21,12 @@ import {
   Tag
 } from 'lucide-react';
 import { UploadMediaModal } from '../UploadMediaModal';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchGallery, createGalleryItem, updateGalleryItem, removeGalleryItem, GalleryItem as ApiGalleryItem } from '../../utils/gallery';
 
-interface GalleryItem {
-  id: string;
-  title: string;
-  type: 'image' | 'video';
-  url: string;
-  thumbnail: string;
-  date: string;
-  location: string;
-  views: number;
-  likes: number;
-  tags: string[];
-  featured: boolean;
-  duration?: string;
-}
+interface GalleryItem extends ApiGalleryItem {}
 
-const mockGalleryItems = [
-  {
-    id: '1',
-    title: 'Family Reunion 2023',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?w=300',
-    date: '2023-07-15',
-    location: 'Central Park, NY',
-    views: 245,
-    likes: 18,
-    tags: ['family', 'reunion', 'celebration'],
-    featured: true
-  },
-  {
-    id: '2',
-    title: 'Grandpa\'s Stories',
-    type: 'video',
-    url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=300',
-    date: '2023-06-20',
-    location: 'Home',
-    views: 89,
-    likes: 12,
-    tags: ['stories', 'oral history', 'heritage'],
-    featured: false,
-    duration: '15:32'
-  },
-  {
-    id: '3',
-    title: 'Wedding Day Memories',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?w=300',
-    date: '1972-08-20',
-    location: 'St. Mary\'s Church',
-    views: 156,
-    likes: 24,
-    tags: ['wedding', 'vintage', 'love'],
-    featured: true
-  },
-  {
-    id: '4',
-    title: 'Childhood Adventures',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg?w=300',
-    date: '1965-05-10',
-    location: 'Backyard',
-    views: 78,
-    likes: 9,
-    tags: ['childhood', 'play', 'memories'],
-    featured: false
-  },
-  {
-    id: '5',
-    title: 'Holiday Traditions',
-    type: 'video',
-    url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?w=300',
-    date: '2022-12-25',
-    location: 'Family Home',
-    views: 134,
-    likes: 21,
-    tags: ['holidays', 'traditions', 'family'],
-    featured: true,
-    duration: '8:45'
-  },
-  {
-    id: '6',
-    title: 'School Days',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1720186/pexels-photo-1720186.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1720186/pexels-photo-1720186.jpeg?w=300',
-    date: '1968-09-01',
-    location: 'Lincoln Elementary',
-    views: 92,
-    likes: 7,
-    tags: ['school', 'education', 'childhood'],
-    featured: false
-  }
-];
 
-const exhibitions = [
-  {
-    id: '1',
-    title: 'Three Generations',
-    description: 'A journey through family history spanning 75 years',
-    itemCount: 45,
-    featured: true,
-    thumbnail: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?w=300'
-  },
-  {
-    id: '2',
-    title: 'Milestone Moments',
-    description: 'Celebrating life\'s most important achievements',
-    itemCount: 28,
-    featured: false,
-    thumbnail: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?w=300'
-  }
-];
 
 
 // Lightbox Modal for viewing images/videos
@@ -184,23 +73,29 @@ export function GalleryPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [showExhibitions, setShowExhibitions] = useState(false);
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
-    const stored = localStorage.getItem('gallery_items');
-    return stored ? JSON.parse(stored) : mockGalleryItems;
-  });
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
-    localStorage.setItem('gallery_items', JSON.stringify(galleryItems));
-  }, [galleryItems]);
+    if (!token) return;
+    const load = async () => {
+      try {
+        const items = await fetchGallery(token);
+        setGalleryItems(items);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    load();
+  }, [token]);
 
-  const handleUpload = (file: File) => {
+  const handleUpload = async (file: File) => {
+    if (!token) return;
     const url = URL.createObjectURL(file);
     const type = file.type.startsWith('video') ? 'video' : 'image';
-    const newItem: GalleryItem = {
-      id: Date.now().toString(),
+    const payload = {
       title: file.name,
       type,
       url,
@@ -209,17 +104,28 @@ export function GalleryPage() {
       location: 'Unknown',
       views: 0,
       likes: 0,
-      tags: [],
+      tags: '',
       featured: false,
       duration: type === 'video' ? '' : undefined,
     };
-    setGalleryItems((prev) => [newItem, ...prev]);
+    try {
+      const created = await createGalleryItem(token, payload);
+      setGalleryItems((prev) => [created, ...prev]);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleLike = (id: string) => {
-    setGalleryItems((items) =>
-      items.map((it) => (it.id === id ? { ...it, likes: it.likes + 1 } : it))
-    );
+  const handleLike = async (id: number) => {
+    if (!token) return;
+    const item = galleryItems.find((g) => g.id === id);
+    if (!item) return;
+    try {
+      await updateGalleryItem(token, id, { ...item, likes: item.likes + 1 });
+      setGalleryItems((items) => items.map((it) => (it.id === id ? { ...it, likes: it.likes + 1 } : it)));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleDownload = (item: GalleryItem) => {
@@ -262,13 +168,6 @@ export function GalleryPage() {
           <p className="mt-2 text-lg text-gray-600">Visual showcase of your digital heritage</p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
-          <button 
-            onClick={() => setShowExhibitions(!showExhibitions)}
-            className="inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-blue-700 bg-gradient-to-r from-blue-100 to-purple-100 shadow hover:scale-105 transition-transform border border-blue-200"
-          >
-            <Palette className="h-5 w-5 mr-2" />
-            Exhibitions
-          </button>
           <button onClick={() => setShowUploadModal(true)} className="inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform">
             <Plus className="h-5 w-5 mr-2" />
             Add Media
@@ -316,44 +215,6 @@ export function GalleryPage() {
         </div>
       </div>
 
-      {/* Exhibitions Section */}
-      {showExhibitions && (
-        <div className="glass-card p-8 animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Palette className="h-5 w-5 text-purple-500" /> Featured Exhibitions
-            </h3>
-            <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-              <Plus className="h-4 w-4 mr-1" />Create Exhibition
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {exhibitions.map((exhibition) => (
-              <div key={exhibition.id} className={`rounded-2xl overflow-hidden shadow-xl border-2 ${exhibition.featured ? 'border-yellow-300' : 'border-gray-200'} bg-gradient-to-br from-white/90 to-blue-50/80 hover:scale-[1.02] transition-transform`}>
-                <div className="aspect-w-16 aspect-h-9">
-                  <img 
-                    src={exhibition.thumbnail} 
-                    alt={exhibition.title}
-                    className="w-full h-48 object-cover"
-                  />
-                </div>
-                <div className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-lg">{exhibition.title}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{exhibition.description}</p>
-                      <p className="text-xs text-gray-500 mt-2">{exhibition.itemCount} items</p>
-                    </div>
-                    {exhibition.featured && (
-                      <Star className="h-5 w-5 text-yellow-400 fill-current animate-pulse" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Search and Filters */}
       <div className="glass-card p-6 mb-8 animate-fade-in">
