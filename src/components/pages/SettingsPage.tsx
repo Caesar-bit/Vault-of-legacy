@@ -35,6 +35,15 @@ export function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [sessions, setSessions] = useState<Array<{ id: string; device: string; ip: string; lastActive: string }>>(() => {
+    const stored = localStorage.getItem('vault_sessions');
+    return (
+      stored ? JSON.parse(stored) : [{ id: 'current', device: 'This Device', ip: '127.0.0.1', lastActive: new Date().toISOString() }]
+    );
+  });
+  const [sessionLoading, setSessionLoading] = useState<string | null>(null);
+  const [notificationLoading, setNotificationLoading] = useState<Record<string, boolean>>({});
   const [apiKeys, setApiKeys] = useState(() => {
     const stored = localStorage.getItem('vault_api_keys');
     return stored ? JSON.parse(stored) : [];
@@ -78,6 +87,10 @@ export function SettingsPage() {
     const t = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(t);
   }, [alert]);
+
+  useEffect(() => {
+    localStorage.setItem('vault_sessions', JSON.stringify(sessions));
+  }, [sessions]);
 
   const saveSettings = () => {
     setIsSaving(true);
@@ -172,6 +185,67 @@ export function SettingsPage() {
       setIsSaving(false);
       setAlert({ message: 'Password updated', type: 'success' });
     }, 800);
+  };
+
+  const handleToggleTwoFactor = async () => {
+    setTwoFactorLoading(true);
+    try {
+      await fetch('/api/twofactor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enable: !settings.security.twoFactorEnabled }),
+      });
+    } catch (e) {
+      // ignore network errors in offline demo
+    }
+    setSettings(prev => ({
+      ...prev,
+      security: { ...prev.security, twoFactorEnabled: !prev.security.twoFactorEnabled },
+    }));
+    setTwoFactorLoading(false);
+    setAlert({ message: `Two-factor ${!settings.security.twoFactorEnabled ? 'enabled' : 'disabled'}`, type: 'success' });
+  };
+
+  const revokeSession = async (id: string) => {
+    setSessionLoading(id);
+    try {
+      await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      // ignore network errors
+    }
+    setSessions(prev => prev.filter(s => s.id !== id));
+    setSessionLoading(null);
+    setAlert({ message: 'Session revoked', type: 'success' });
+  };
+
+  const revokeAllSessions = async () => {
+    setSessionLoading('all');
+    try {
+      await fetch('/api/sessions', { method: 'DELETE' });
+    } catch (e) {}
+    setSessions([{ id: 'current', device: 'This Device', ip: '127.0.0.1', lastActive: new Date().toISOString() }]);
+    setSessionLoading(null);
+    setAlert({ message: 'Other sessions revoked', type: 'success' });
+  };
+
+  const toggleNotification = async (key: string) => {
+    setNotificationLoading(prev => ({ ...prev, [key]: true }));
+    try {
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: !settings.notifications[key as keyof typeof settings.notifications] }),
+      });
+    } catch (e) {}
+    setSettings(prev => ({
+      ...prev,
+      notifications: {
+        ...prev.notifications,
+        [key]: !prev.notifications[key as keyof typeof prev.notifications],
+      },
+    }));
+    setNotificationLoading(prev => ({ ...prev, [key]: false }));
+    setAlert({ message: 'Notification preferences updated', type: 'success' });
   };
 
   const renderProfileSettings = () => (
@@ -287,17 +361,13 @@ export function SettingsPage() {
               <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
             </div>
             <div className="flex items-center space-x-2">
-              {settings.security.twoFactorEnabled && (
-                <Check className="h-5 w-5 text-green-600" />
-              )}
+              {settings.security.twoFactorEnabled && <Check className="h-5 w-5 text-green-600" />}
               <button
-                onClick={() => setSettings(prev => ({
-                  ...prev,
-                  security: { ...prev.security, twoFactorEnabled: !prev.security.twoFactorEnabled }
-                }))}
+                onClick={handleToggleTwoFactor}
+                disabled={twoFactorLoading}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   settings.security.twoFactorEnabled ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
+                } ${twoFactorLoading ? 'opacity-60' : ''}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -370,10 +440,12 @@ export function SettingsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Session Timeout (minutes)</label>
                 <select
                   value={settings.security.sessionTimeout}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    security: { ...prev.security, sessionTimeout: parseInt(e.target.value) }
-                  }))}
+                  onChange={(e) =>
+                    setSettings(prev => ({
+                      ...prev,
+                      security: { ...prev.security, sessionTimeout: parseInt(e.target.value) },
+                    }))
+                  }
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value={15}>15 minutes</option>
@@ -381,6 +453,36 @@ export function SettingsPage() {
                   <option value={60}>1 hour</option>
                   <option value={120}>2 hours</option>
                 </select>
+              </div>
+              <div>
+                <h5 className="font-medium text-gray-900 mt-4 mb-2">Active Sessions</h5>
+                <ul className="space-y-1 text-sm">
+                  {sessions.map((s) => (
+                    <li key={s.id} className="flex justify-between items-center">
+                      <span>
+                        {s.device} - {s.ip}
+                      </span>
+                      {s.id !== 'current' && (
+                        <button
+                          onClick={() => revokeSession(s.id)}
+                          disabled={sessionLoading === s.id}
+                          className="text-blue-600 hover:underline disabled:opacity-60"
+                        >
+                          {sessionLoading === s.id ? 'Revoking...' : 'Revoke'}
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {sessions.length > 1 && (
+                  <button
+                    onClick={revokeAllSessions}
+                    disabled={sessionLoading === 'all'}
+                    className="mt-2 text-sm text-red-600 hover:underline disabled:opacity-60"
+                  >
+                    {sessionLoading === 'all' ? 'Revoking...' : 'Revoke All Other Sessions'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -407,16 +509,11 @@ export function SettingsPage() {
                 <p className="text-sm text-gray-600">{notification.description}</p>
               </div>
               <button
-                onClick={() => setSettings(prev => ({
-                  ...prev,
-                  notifications: { 
-                    ...prev.notifications, 
-                    [notification.key]: !prev.notifications[notification.key as keyof typeof prev.notifications]
-                  }
-                }))}
+                onClick={() => toggleNotification(notification.key)}
+                disabled={notificationLoading[notification.key]}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   settings.notifications[notification.key as keyof typeof settings.notifications] ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
+                } ${notificationLoading[notification.key] ? 'opacity-60' : ''}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

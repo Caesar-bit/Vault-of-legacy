@@ -52,7 +52,7 @@ export function ProfileDropdown({ user, t, logout, show, onClose, onNavigate }: 
         <button
           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl"
           onClick={() => {
-            onNavigate?.('settings');
+            onNavigate?.('profile');
             onClose();
           }}
         >
