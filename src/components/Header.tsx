@@ -5,18 +5,41 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { NewProjectModal } from './NewProjectModal';
 import { ProfileDropdown } from './ProfileDropdown';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
-  onNavigate?: (page: string) => void;
 }
 
-export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
+export function Header({ onToggleSidebar }: HeaderProps) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
+  const [avatar, setAvatar] = useState<string>(user?.avatar || '');
+
+  useEffect(() => {
+    try {
+      const key = user ? `vault_settings_${user.id}` : 'vault_settings';
+      const settings = JSON.parse(localStorage.getItem(key) || '{}');
+      setAvatar(settings.profile?.avatar || user?.avatar || '');
+    } catch {
+      setAvatar(user?.avatar || '');
+    }
+    const handler = () => {
+      try {
+        const key = user ? `vault_settings_${user.id}` : 'vault_settings';
+        const settings = JSON.parse(localStorage.getItem(key) || '{}');
+        setAvatar(settings.profile?.avatar || user?.avatar || '');
+      } catch {
+        setAvatar(user?.avatar || '');
+      }
+    };
+    window.addEventListener('vault_settings_updated', handler);
+    return () => window.removeEventListener('vault_settings_updated', handler);
+  }, [user]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [notifications, setNotifications] = useState(() => {
@@ -60,7 +83,7 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
   const handleSelect = (page: string) => {
     setSearchTerm('');
     setShowSuggestions(false);
-    onNavigate?.(page);
+    navigate(`/${page}`);
   };
 
   const markAsRead = (id: number) => {
@@ -205,8 +228,8 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
           >
             <span className="sr-only">Open user menu</span>
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-lg border-2 border-white/60">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-10 w-10 rounded-full object-cover" />
+              {avatar ? (
+                <img src={avatar} alt={user?.name} className="h-10 w-10 rounded-full object-cover" />
               ) : (
                 <span className="text-sm font-bold text-white">
                   {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
@@ -226,7 +249,6 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
             logout={logout}
             show={showProfileDropdown}
             onClose={() => setShowProfileDropdown(false)}
-            onNavigate={onNavigate}
           />
         </div>
       </div>

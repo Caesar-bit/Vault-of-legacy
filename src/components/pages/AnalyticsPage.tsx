@@ -36,35 +36,6 @@ interface AnalyticsData {
   geographicData: { country: string; visitors: number; percentage: number }[];
 }
 
-const generateTimeSeriesData = (days: number) => {
-  const data = [] as AnalyticsData['timeSeriesData'];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    data.push({
-      date: d.toISOString().slice(0, 10),
-      views: Math.floor(Math.random() * 1000) + 500,
-      visitors: Math.floor(Math.random() * 500) + 200,
-      sessions: Math.floor(Math.random() * 400) + 150,
-    });
-  }
-  return data;
-};
-
-const generateDeviceData = (): AnalyticsData['deviceData'] => {
-  const desktop = Math.floor(Math.random() * 30) + 40;
-  const mobile = Math.floor(Math.random() * (100 - desktop - 10)) + 10;
-  const tablet = 100 - desktop - mobile;
-  return [
-    { name: 'Desktop', value: desktop, color: '#3B82F6' },
-    { name: 'Mobile', value: mobile, color: '#10B981' },
-    { name: 'Tablet', value: tablet, color: '#F59E0B' },
-  ];
-};
-
-
-
-const randomTrend = () => Number((Math.random() * 20 - 10).toFixed(1));
 
 const getDaysForRange = (range: string) => {
   switch (range) {
@@ -79,19 +50,22 @@ const getDaysForRange = (range: string) => {
   }
 };
 
-const generateAnalyticsData = (_days: number): AnalyticsData => ({
-  overview: {
-    totalViews: 0,
-    uniqueVisitors: 0,
-    avgSessionDuration: "0:00",
-    bounceRate: "0%",
-    trends: { views: 0, visitors: 0, duration: 0, bounce: 0 },
-  },
-  timeSeriesData: [],
-  deviceData: [],
-  topContent: [],
-  geographicData: [],
-});
+const generateAnalyticsData = (days: number): AnalyticsData => {
+  void days;
+  return {
+    overview: {
+      totalViews: 0,
+      uniqueVisitors: 0,
+      avgSessionDuration: '0:00',
+      bounceRate: '0%',
+      trends: { views: 0, visitors: 0, duration: 0, bounce: 0 },
+    },
+    timeSeriesData: [],
+    deviceData: [],
+    topContent: [],
+    geographicData: [],
+  };
+};
 
 export function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('7d');

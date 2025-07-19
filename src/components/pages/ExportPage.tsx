@@ -110,7 +110,7 @@ export function ExportPage() {
   const [newName, setNewName] = useState('');
   const [format, setFormat] = useState('zip');
   const [source, setSource] = useState<'vault' | 'gallery'>('vault');
-  const [vaultStructure, setVaultStructure] = useState<VaultItem[]>(() => {
+  const [vaultStructure] = useState<VaultItem[]>(() => {
     const stored = localStorage.getItem('vault_files');
     return stored ? JSON.parse(stored) : [];
   });
@@ -120,17 +120,32 @@ export function ExportPage() {
     id: string;
     title: string;
   }
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
+  const [galleryItems] = useState<GalleryItem[]>(() => {
     const stored = localStorage.getItem('gallery_items');
     if (!stored) return [];
     try { return JSON.parse(stored); } catch { return []; }
   });
   const [gallerySelected, setGallerySelected] = useState<string[]>([]);
+  interface ExportItem {
+    id: string;
+    name: string;
+    format: string;
+    status: string;
+    created: string;
+    size: string;
+    downloadCount: number;
+    includes: string[];
+    source?: 'vault' | 'gallery';
+    path?: string[];
+    items: string[];
+    itemNames?: string[];
+    expires?: string;
+  }
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [detailsExport, setDetailsExport] = useState<any | null>(null);
+  const [detailsExport, setDetailsExport] = useState<ExportItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const [exportsList, setExportsList] = useState(() => {
+  const [exportsList, setExportsList] = useState<ExportItem[]>(() => {
     const stored = localStorage.getItem('exports');
     return stored ? JSON.parse(stored) : [];
   });
@@ -202,7 +217,7 @@ export function ExportPage() {
     URL.revokeObjectURL(url);
   };
 
-  const shareExport = async (item: any) => {
+  const shareExport = async (item: ExportItem) => {
     const url = `${window.location.origin}?export=${item.id}`;
     try {
       if (navigator.share) {

@@ -34,7 +34,7 @@ export interface UserItem {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "editor" | "contributor" | "viewer";
+  role: "admin" | "user" | "contributor" | "viewer";
   status: "active" | "pending" | "inactive" | "suspended";
   lastLogin: string | null;
   createdAt: string;
@@ -51,8 +51,8 @@ const roles = [
     color: "bg-red-100 text-red-800 border-red-200",
   },
   {
-    name: "Editor",
-    value: "editor",
+    name: "User",
+    value: "user",
     description: "Can create, edit, and manage content",
     permissions: ["read", "write", "delete"],
     color: "bg-blue-100 text-blue-800 border-blue-200",
@@ -159,7 +159,7 @@ export function UsersPage() {
     switch (role) {
       case "admin":
         return Crown;
-      case "editor":
+      case "user":
         return Edit;
       case "contributor":
         return UserPlus;
@@ -230,6 +230,8 @@ export function UsersPage() {
     try {
       if (editingId) {
         const updated = await updateUser(token, editingId, {
+          name: form.name,
+          email: form.email,
           role: form.role,
           status: form.status,
         });
@@ -237,10 +239,12 @@ export function UsersPage() {
           prev.map((u) =>
             u.id === editingId
               ? {
-                  ...u,
-                  role: updated.role,
-                  status: updated.status,
-                }
+                ...u,
+                name: updated.name,
+                email: updated.email,
+                role: updated.role,
+                status: updated.status,
+              }
               : u,
           ),
         );
@@ -283,7 +287,7 @@ export function UsersPage() {
 
   const bulkChangeRole = async () => {
     const role = prompt(
-      "Enter new role (admin, editor, contributor, viewer):",
+      "Enter new role (admin, user, contributor, viewer):",
       "viewer",
     );
     if (!role) return;

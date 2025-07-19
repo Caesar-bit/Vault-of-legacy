@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout } from './components/Layout';
@@ -23,89 +23,61 @@ import { APIPage } from './components/pages/APIPage';
 import { BackupPage } from './components/pages/BackupPage';
 import { BlockchainPage } from './components/pages/BlockchainPage';
 import { AboutPage } from './components/pages/AboutPage';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const navigate = useNavigate();
 
   if (isLoading) {
     return <LoadingScreen message="Initializing secure connection..." />;
   }
 
   if (!isAuthenticated) {
-    switch (authMode) {
-      case 'signup':
-        return <SignupForm onSwitchToLogin={() => setAuthMode('login')} />;
-      case 'forgot':
-        return <ForgotPasswordForm onSwitchToLogin={() => setAuthMode('login')} />;
-      default:
-        return (
-          <LoginForm
-            onSwitchToSignup={() => setAuthMode('signup')}
-            onSwitchToForgotPassword={() => setAuthMode('forgot')}
-          />
-        );
-    }
+    return (
+      <Routes>
+        <Route path="/signup" element={<SignupForm onSwitchToLogin={() => navigate('/login')} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordForm onSwitchToLogin={() => navigate('/login')} />} />
+        <Route path="*" element={<LoginForm onSwitchToSignup={() => navigate('/signup')} onSwitchToForgotPassword={() => navigate('/forgot-password')} />} />
+      </Routes>
+    );
   }
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'vault':
-        return <VaultPage />;
-      case 'timeline':
-        return <TimelinePage />;
-      case 'collections':
-        return <CollectionsPage />;
-      case 'archive':
-        return <ArchivePage />;
-      case 'gallery':
-        return <GalleryPage />;
-      case 'research':
-        return <ResearchPage />;
-      case 'users':
-        return user?.role === 'admin' ? (
-          <UsersPage />
-        ) : (
-          <div className="p-6">Access denied</div>
-        );
-      case 'analytics':
-        return <AnalyticsPage />;
-      case 'settings':
-        return <SettingsPage />;
-      case 'templates':
-        return <TemplatesPage />;
-      case 'export':
-        return <ExportPage />;
-      case 'privacy':
-        return <PrivacyPage />;
-      case 'api':
-        return <APIPage />;
-      case 'backup':
-        return <BackupPage />;
-      case 'blockchain':
-        return <BlockchainPage />;
-      case 'about':
-        return <AboutPage />;
-      default:
-        return <Dashboard onPageChange={setCurrentPage} />;
-    }
-  };
-
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-      {renderPage()}
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/vault" element={<VaultPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/collections" element={<CollectionsPage />} />
+        <Route path="/archive" element={<ArchivePage />} />
+        <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/research" element={<ResearchPage />} />
+        <Route path="/users" element={user?.role === 'admin' ? <UsersPage /> : <div className="p-6">Access denied</div>} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/templates" element={<TemplatesPage />} />
+        <Route path="/export" element={<ExportPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/api" element={<APIPage />} />
+        <Route path="/backup" element={<BackupPage />} />
+        <Route path="/blockchain" element={<BlockchainPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </Layout>
   );
 }
 
 function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </LanguageProvider>
+    <BrowserRouter>
+      <LanguageProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </LanguageProvider>
+    </BrowserRouter>
   );
 }
 

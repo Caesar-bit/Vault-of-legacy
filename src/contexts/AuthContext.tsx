@@ -50,7 +50,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const decrypted = JSON.parse(
             EncryptionService.decrypt(encryptedUser),
           );
-          const userData = { status: "active", ...decrypted } as User;
+          let avatar: string | undefined;
+          try {
+            const key = `vault_settings_${decrypted.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
+            avatar = settings.profile?.avatar;
+          } catch {
+            avatar = undefined;
+          }
+          const userData = { status: "active", avatar, ...decrypted } as User;
           setAuthState({
             user: userData,
             isAuthenticated: true,
@@ -73,6 +81,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (!authState.user) return;
+    const handler = () => {
+      try {
+        const key = `vault_settings_${authState.user?.id}`;
+        const settings = JSON.parse(localStorage.getItem(key) || '{}');
+        setAuthState(prev => ({
+          ...prev,
+          user: prev.user ? { ...prev.user, avatar: settings.profile?.avatar } : null,
+        }));
+      } catch {
+        // ignore parse errors
+      }
+    };
+    window.addEventListener('vault_settings_updated', handler);
+    return () => window.removeEventListener('vault_settings_updated', handler);
+  }, [authState.user]);
 
   const login = async (email: string, password: string): Promise<void> => {
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
@@ -105,6 +131,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: (() => {
+          try {
+            const key = `vault_settings_${data.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
+            return settings.profile?.avatar;
+          } catch {
+            return undefined;
+          }
+        })(),
       };
 
       localStorage.setItem("vault_token", data.token);
@@ -170,6 +205,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: (() => {
+          try {
+            const key = `vault_settings_${data.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
+            return settings.profile?.avatar;
+          } catch {
+            return undefined;
+          }
+        })(),
       };
 
       localStorage.setItem("vault_token", data.token);
