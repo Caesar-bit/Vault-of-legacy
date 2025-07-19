@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatedAlert } from '../AnimatedAlert';
+import { VaultItem } from '../FileManager';
 import { 
   Download, 
   FileText, 
@@ -20,7 +21,6 @@ import {
   Cloud,
   Database
 } from 'lucide-react';
-import { FileUpload } from '../FileUpload';
 
 const parseSize = (size: string) => {
   const [value, unit] = size.split(' ');
@@ -109,7 +109,23 @@ export function ExportPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [format, setFormat] = useState('zip');
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [source, setSource] = useState<'vault' | 'gallery'>('vault');
+  const [vaultStructure, setVaultStructure] = useState<VaultItem[]>(() => {
+    const stored = localStorage.getItem('vault_files');
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [vaultPath, setVaultPath] = useState<string[]>([]);
+  const [vaultSelected, setVaultSelected] = useState<string[]>([]);
+  interface GalleryItem {
+    id: string;
+    title: string;
+  }
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
+    const stored = localStorage.getItem('gallery_items');
+    if (!stored) return [];
+    try { return JSON.parse(stored); } catch { return []; }
+  });
+  const [gallerySelected, setGallerySelected] = useState<string[]>([]);
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [detailsExport, setDetailsExport] = useState<any | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -118,6 +134,30 @@ export function ExportPage() {
     const stored = localStorage.getItem('exports');
     return stored ? JSON.parse(stored) : [];
   });
+
+  const folderOptions = useMemo(() => {
+    const paths: Array<{ label: string; path: string[] }> = [];
+    const traverse = (items: VaultItem[], base: string[], labelParts: string[]) => {
+      paths.push({ label: labelParts.join('/') || 'Root', path: base });
+      for (const item of items) {
+        if (item.type === 'folder') {
+          traverse(item.children || [], [...base, item.id], [...labelParts, item.name]);
+        }
+      }
+    };
+    traverse(vaultStructure, [], []);
+    return paths;
+  }, [vaultStructure]);
+
+  const getItemsAtPath = (items: VaultItem[], p: string[]): VaultItem[] => {
+    let current = items;
+    for (const id of p) {
+      const folder = current.find((i) => i.id === id && i.type === 'folder');
+      if (!folder) return [];
+      current = folder.children || [];
+    }
+    return current;
+  };
 
   useEffect(() => {
     if (!alert) return;
@@ -466,12 +506,20 @@ export function ExportPage() {
                             {include}
                           </span>
                         ))}
-                        {exportItem.attachments && exportItem.attachments.map((att) => (
-                          <span key={att} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {att}
+                        {exportItem.itemNames && exportItem.itemNames.map((n) => (
+                          <span key={n} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {n}
                           </span>
                         ))}
                       </div>
+                      {exportItem.source && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Source: {exportItem.source}
+                          {exportItem.path && (
+                            <> &nbsp;| Path: {exportItem.path.length ? exportItem.path.join(' / ') : 'Root'}</>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -527,6 +575,16 @@ export function ExportPage() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
+              const itemNames =
+                source === 'vault'
+                  ? vaultSelected.map(id => {
+                      const file = getItemsAtPath(vaultStructure, vaultPath).find(f => f.id === id);
+                      return file?.name || id;
+                    })
+                  : gallerySelected.map(id => {
+                      const item = galleryItems.find(g => g.id === id);
+                      return item?.title || id;
+                    });
               const newExport = {
                 id: String(Date.now()),
                 name: newName || 'New Export',
@@ -536,14 +594,18 @@ export function ExportPage() {
                 size: '0 MB',
                 downloadCount: 0,
                 includes: selectedContent,
-                attachments: attachments.map(f => f.name),
+                source,
+                path: source === 'vault' ? vaultPath : undefined,
+                items: source === 'vault' ? vaultSelected : gallerySelected,
+                itemNames,
               };
               setExportsList(prev => [newExport, ...prev]);
               simulateProcessing(newExport.id);
               setAlert({ message: 'Export queued', type: 'success' });
               setNewName('');
               setFormat('zip');
-              setAttachments([]);
+              setVaultSelected([]);
+              setGallerySelected([]);
               setShowCreateModal(false);
             }}
           >
@@ -562,18 +624,68 @@ export function ExportPage() {
                 <option key={fmt.id} value={fmt.id}>{fmt.name}</option>
               ))}
             </select>
-            <div className="w-full">
-              <FileUpload
-                multiple
-                onFilesSelected={files => setAttachments(Array.from(files))}
-              />
-            </div>
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={source}
+              onChange={(e) => setSource(e.target.value as 'vault' | 'gallery')}
+            >
+              <option value="vault">Vault Files</option>
+              <option value="gallery">Gallery Media</option>
+            </select>
+            {source === 'vault' && (
+              <>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  value={vaultPath.join('/')}
+                  onChange={(e) => setVaultPath(e.target.value ? e.target.value.split('/') : [])}
+                >
+                  {folderOptions.map((opt) => (
+                    <option key={opt.path.join('/')} value={opt.path.join('/')}>{opt.label}</option>
+                  ))}
+                </select>
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                  {getItemsAtPath(vaultStructure, vaultPath).map(item => (
+                    <label key={item.id} className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={vaultSelected.includes(item.id)}
+                        onChange={(e) =>
+                          setVaultSelected((prev) =>
+                            e.target.checked ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                          )
+                        }
+                      />
+                      <span>{item.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+            {source === 'gallery' && (
+              <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                {galleryItems.map(item => (
+                  <label key={item.id} className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={gallerySelected.includes(item.id)}
+                      onChange={(e) =>
+                        setGallerySelected((prev) =>
+                          e.target.checked ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                        )
+                      }
+                    />
+                    <span>{item.title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
                 onClick={() => {
                   setShowCreateModal(false);
-                  setAttachments([]);
+                  setVaultSelected([]);
+                  setGallerySelected([]);
                 }}
                 className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
               >
@@ -595,15 +707,23 @@ export function ExportPage() {
           <p className="text-sm text-gray-500">Format: {detailsExport.format}</p>
           <p className="text-sm text-gray-500">Size: {detailsExport.size}</p>
           <p className="text-sm text-gray-500">Created: {formatDate(detailsExport.created)}</p>
+          {detailsExport.source && (
+            <p className="text-sm text-gray-500">
+              Source: {detailsExport.source}
+              {detailsExport.path && (
+                <> &nbsp;| Path: {detailsExport.path.length ? detailsExport.path.join(' / ') : 'Root'}</>
+              )}
+            </p>
+          )}
           <div className="flex flex-wrap gap-1">
-            {detailsExport.includes.map((inc) => (
+            {detailsExport.includes.map((inc: string) => (
               <span key={inc} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 {inc}
               </span>
             ))}
-            {detailsExport.attachments && detailsExport.attachments.map((att) => (
-              <span key={att} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {att}
+            {detailsExport.itemNames && detailsExport.itemNames.map((n: string) => (
+              <span key={n} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {n}
               </span>
             ))}
           </div>
