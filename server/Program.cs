@@ -95,6 +95,12 @@ using (var scope = app.Services.CreateScope())
             alter.CommandText = "ALTER TABLE Users ADD COLUMN CreatedAt TEXT;";
             alter.ExecuteNonQuery();
         }
+        // Fill missing CreatedAt values to avoid null dereference issues
+        using (var update = conn.CreateCommand())
+        {
+            update.CommandText = "UPDATE Users SET CreatedAt = datetime('now') WHERE CreatedAt IS NULL;";
+            update.ExecuteNonQuery();
+        }
 
         if (!hasRole)
         {

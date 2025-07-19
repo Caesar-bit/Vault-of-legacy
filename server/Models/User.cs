@@ -23,6 +23,7 @@ namespace VaultBackend.Models
 
         public DateTime? LastLogin { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        // Older databases may not have populated this column so make it nullable
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
