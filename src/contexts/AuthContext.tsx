@@ -40,7 +40,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const encryptedUser = localStorage.getItem('vault_user');
         const token = localStorage.getItem('vault_token');
         if (encryptedUser && token) {
-          const userData = JSON.parse(EncryptionService.decrypt(encryptedUser));
+          const decrypted = JSON.parse(EncryptionService.decrypt(encryptedUser));
+          const userData = { status: 'active', ...decrypted } as User;
           setAuthState({
             user: userData,
             isAuthenticated: true,
@@ -71,15 +72,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (!res.ok) throw new Error(await res.text());
 
-      const data: { id: string; email: string; name: string; token: string } = await res.json();
+      const data: { id: string; email: string; name: string; role: string; status: string; lastLogin: string | null; token: string } = await res.json();
 
       const user: User = {
         id: data.id,
         email: data.email,
         name: data.name,
-        role: 'user',
+        role: data.role as User['role'],
+        status: data.status as User['status'],
         createdAt: new Date(),
-        lastLogin: new Date(),
+        lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
       };
 
       localStorage.setItem('vault_token', data.token);
@@ -121,14 +123,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (!res.ok) throw new Error(await res.text());
 
-      const data: { id: string; email: string; name: string; token: string } = await res.json();
+      const data: { id: string; email: string; name: string; role: string; status: string; lastLogin: string | null; token: string } = await res.json();
 
       const user: User = {
         id: data.id,
         email: data.email,
         name: data.name,
-        role: 'user',
+        role: data.role as User['role'],
+        status: data.status as User['status'],
         createdAt: new Date(),
+        lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
       };
 
       localStorage.setItem('vault_token', data.token);

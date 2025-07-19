@@ -39,7 +39,7 @@ namespace VaultBackend.Controllers
             await _db.SaveChangesAsync();
 
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.LastLogin, token });
         }
 
         [HttpPost("login")]
@@ -53,7 +53,7 @@ namespace VaultBackend.Controllers
             await _db.SaveChangesAsync();
 
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.LastLogin, token });
         }
     }
 
