@@ -1,5 +1,6 @@
 // Add Blockchain to navigation links
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { 
@@ -22,32 +23,31 @@ import {
 } from 'lucide-react';
 
 interface NavigationProps {
-  currentPage: string;
-  onPageChange: (page: string) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-export function Navigation({ currentPage, onPageChange, collapsed, onToggleCollapse }: NavigationProps) {
+export function Navigation({ collapsed, onToggleCollapse }: NavigationProps) {
   const { logout } = useAuth();
   const { t, currentLanguage, languages, changeLanguage } = useLanguage();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const location = useLocation();
 
   const navigation = [
-    { name: t('dashboard'), page: 'dashboard', icon: LayoutDashboard },
-    { name: t('vault'), page: 'vault', icon: Vault },
-    { name: t('timeline'), page: 'timeline', icon: Clock },
-    { name: t('collections'), page: 'collections', icon: FolderOpen },
-    { name: t('archive'), page: 'archive', icon: Archive },
-    { name: t('gallery'), page: 'gallery', icon: ImageIcon },
-    { name: t('research'), page: 'research', icon: Search },
-    { name: t('users'), page: 'users', icon: Users },
-    { name: t('analytics'), page: 'analytics', icon: BarChart3 },
-    { name: 'API', page: 'api', icon: Key },
-    { name: 'Blockchain', page: 'blockchain', icon: Vault },
-    { name: t('settings'), page: 'settings', icon: Settings },
-    { name: t('templates'), page: 'templates', icon: FileText },
-    { name: t('export'), page: 'export', icon: Download },
+    { name: t('dashboard'), path: '/dashboard', icon: LayoutDashboard },
+    { name: t('vault'), path: '/vault', icon: Vault },
+    { name: t('timeline'), path: '/timeline', icon: Clock },
+    { name: t('collections'), path: '/collections', icon: FolderOpen },
+    { name: t('archive'), path: '/archive', icon: Archive },
+    { name: t('gallery'), path: '/gallery', icon: ImageIcon },
+    { name: t('research'), path: '/research', icon: Search },
+    { name: t('users'), path: '/users', icon: Users },
+    { name: t('analytics'), path: '/analytics', icon: BarChart3 },
+    { name: 'API', path: '/api', icon: Key },
+    { name: 'Blockchain', path: '/blockchain', icon: Vault },
+    { name: t('settings'), path: '/settings', icon: Settings },
+    { name: t('templates'), path: '/templates', icon: FileText },
+    { name: t('export'), path: '/export', icon: Download },
   ];
 
 function classNames(...classes: string[]) {
@@ -86,10 +86,10 @@ function classNames(...classes: string[]) {
               <ul role="list" className="-mx-2 space-y-1">
                 {navigation.map((item) => (
                   <li key={item.name}>
-                    <button
-                      onClick={() => onPageChange(item.page)}
+                    <Link
+                      to={item.path}
                       className={classNames(
-                        currentPage === item.page
+                        location.pathname === item.path
                           ? 'bg-white/20 text-white border-r-4 border-orange-400 shadow-lg'
                           : 'text-white/80 hover:text-white hover:bg-white/10',
                         `group flex gap-x-3 rounded-l-xl p-3 text-sm leading-6 font-medium transition-all duration-300 w-full text-left hover:shadow-lg ${collapsed ? 'justify-center' : ''}`
@@ -97,7 +97,7 @@ function classNames(...classes: string[]) {
                     >
                       <item.icon
                         className={classNames(
-                          currentPage === item.page ? 'text-orange-400' : 'text-white/60 group-hover:text-white',
+                          location.pathname === item.path ? 'text-orange-400' : 'text-white/60 group-hover:text-white',
                           'h-5 w-5 shrink-0'
                         )}
                         aria-hidden="true"
@@ -105,7 +105,7 @@ function classNames(...classes: string[]) {
                       {!collapsed && (
                         <span className="transition-opacity duration-300">{item.name}</span>
                       )}
-                    </button>
+                    </Link>
                   </li>
                 ))}
               </ul>

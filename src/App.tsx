@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout } from './components/Layout';
@@ -26,7 +32,6 @@ import { BlockchainPage } from './components/pages/BlockchainPage';
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
-  const [currentPage, setCurrentPage] = useState('dashboard');
 
   if (isLoading) {
     return <LoadingScreen message="Initializing secure connection..." />;
@@ -48,46 +53,28 @@ function AppContent() {
     }
   }
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'vault':
-        return <VaultPage />;
-      case 'timeline':
-        return <TimelinePage />;
-      case 'collections':
-        return <CollectionsPage />;
-      case 'archive':
-        return <ArchivePage />;
-      case 'gallery':
-        return <GalleryPage />;
-      case 'research':
-        return <ResearchPage />;
-      case 'users':
-        return <UsersPage />;
-      case 'analytics':
-        return <AnalyticsPage />;
-      case 'settings':
-        return <SettingsPage />;
-      case 'templates':
-        return <TemplatesPage />;
-      case 'export':
-        return <ExportPage />;
-      case 'privacy':
-        return <PrivacyPage />;
-      case 'api':
-        return <APIPage />;
-      case 'backup':
-        return <BackupPage />;
-      case 'blockchain':
-        return <BlockchainPage />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-      {renderPage()}
+    <Layout>
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/vault" element={<VaultPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/collections" element={<CollectionsPage />} />
+        <Route path="/archive" element={<ArchivePage />} />
+        <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/research" element={<ResearchPage />} />
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/templates" element={<TemplatesPage />} />
+        <Route path="/export" element={<ExportPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/api" element={<APIPage />} />
+        <Route path="/backup" element={<BackupPage />} />
+        <Route path="/blockchain" element={<BlockchainPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="*" element={<Navigate to="/dashboard" />} />
+      </Routes>
     </Layout>
   );
 }
@@ -96,7 +83,9 @@ function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <AppContent />
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
       </AuthProvider>
     </LanguageProvider>
   );

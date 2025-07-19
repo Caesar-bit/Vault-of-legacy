@@ -5,18 +5,13 @@ import { Header } from './Header';
 
 interface LayoutProps {
   children: React.ReactNode;
-  currentPage: string;
-  onPageChange: (page: string) => void;
 }
-
-export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
+export function Layout({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-purple-50">
-      <Navigation 
-        currentPage={currentPage} 
-        onPageChange={onPageChange}
+      <Navigation
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
