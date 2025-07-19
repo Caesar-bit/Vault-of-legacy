@@ -68,7 +68,7 @@ namespace VaultBackend.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] FpLoginRequest request)
         {
             var cred = await _db.FingerprintCredentials.FirstOrDefaultAsync(f => f.UserId == request.UserId && f.CredentialId == request.CredentialId);
             if (cred == null) return Unauthorized();
@@ -85,6 +85,6 @@ namespace VaultBackend.Controllers
         }
 
         public record EnrollRequest(string CredentialId);
-        public record LoginRequest(string UserId, string CredentialId);
+        public record FpLoginRequest(string UserId, string CredentialId);
     }
 }
