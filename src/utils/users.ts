@@ -43,7 +43,7 @@ export async function createUser(user: StoredUser): Promise<StoredUser> {
 export async function updateUser(id: string, data: Partial<StoredUser>): Promise<StoredUser | null> {
   return new Promise(resolve => {
     setTimeout(() => {
-      let users = readUsers();
+      const users = readUsers();
       const index = users.findIndex(u => u.id === id);
       if (index === -1) {
         resolve(null);

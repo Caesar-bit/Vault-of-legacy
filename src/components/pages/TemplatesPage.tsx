@@ -3,11 +3,10 @@ import {
   FileText,
   Plus,
   Search,
-  Filter, 
-  Eye, 
-  Download, 
-  Edit, 
-  Trash2, 
+  Eye,
+  Download,
+  Edit,
+  Trash2,
   Copy,
   Star,
   Clock,
@@ -16,8 +15,7 @@ import {
   List,
   Palette,
   Layout,
-  Image,
-  Calendar
+  Image
 } from 'lucide-react';
 import { FileUpload } from '../FileUpload';
 

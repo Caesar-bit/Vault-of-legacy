@@ -1,6 +1,8 @@
 // Fetch uploaded files for the authenticated user
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export async function fetchUploadedFiles(token: string): Promise<string[]> {
-  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/file/list`, {
+  const response = await fetch(`${API_BASE}/api/file/list`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -13,11 +15,16 @@ export async function fetchUploadedFiles(token: string): Promise<string[]> {
 }
 // Utility for API calls with JWT support
 
-export async function uploadFile(file: File, token: string): Promise<any> {
+export interface UploadedInfo {
+  path: string;
+  originalName: string;
+}
+
+export async function uploadFile(file: File, token: string): Promise<UploadedInfo> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch('/api/file/upload', {
+  const response = await fetch(`${API_BASE}/api/file/upload`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`

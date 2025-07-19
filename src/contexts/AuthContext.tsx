@@ -35,10 +35,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     // Check for existing session
-    const checkAuth = async () => {
+    const checkAuth = () => {
       try {
         const encryptedUser = localStorage.getItem('vault_user');
-        if (encryptedUser) {
+        const token = localStorage.getItem('vault_token');
+        if (encryptedUser && token) {
           const userData = JSON.parse(EncryptionService.decrypt(encryptedUser));
           setAuthState({
             user: userData,
@@ -60,31 +61,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (email: string, password: string): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock user data
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data: { id: string; email: string; name: string; token: string } = await res.json();
+
       const user: User = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        role: 'admin',
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: 'user',
         createdAt: new Date(),
         lastLogin: new Date(),
       };
 
-      // Encrypt and store user data
+      localStorage.setItem('vault_token', data.token);
       const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
       localStorage.setItem('vault_user', encryptedUser);
 
-      // Add login event to blockchain
       blockchain.addBlock({
         type: 'user_login',
         userId: user.id,
         timestamp: new Date(),
-        ip: 'xxx.xxx.xxx.xxx'
+        ip: '0.0.0.0'
       });
 
       setAuthState({
@@ -105,33 +111,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signup = async (email: string, password: string, name: string): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data: { id: string; email: string; name: string; token: string } = await res.json();
+
       const user: User = {
-        id: Date.now().toString(),
-        email,
-        name,
-        role: 'editor',
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: 'user',
         createdAt: new Date(),
       };
 
-      // Hash password and store securely
-      const salt = EncryptionService.generateSalt();
-      const hashedPassword = EncryptionService.hashPassword(password, salt);
+      localStorage.setItem('vault_token', data.token);
+      const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
+      localStorage.setItem('vault_user', encryptedUser);
 
-      // Add user creation to blockchain
       blockchain.addBlock({
         type: 'user_created',
         userId: user.id,
         email: user.email,
         timestamp: new Date()
       });
-
-      const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
-      localStorage.setItem('vault_user', encryptedUser);
 
       setAuthState({
         user,
@@ -151,6 +160,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = () => {
     localStorage.removeItem('vault_user');
+    localStorage.removeItem('vault_token');
     setAuthState({
       user: null,
       isAuthenticated: false,
@@ -186,14 +196,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const resetPassword = async (token: string, newPassword: string): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Hash new password
-      const salt = EncryptionService.generateSalt();
-      const hashedPassword = EncryptionService.hashPassword(newPassword, salt);
+      void newPassword;
 
       // Add password reset to blockchain
       blockchain.addBlock({

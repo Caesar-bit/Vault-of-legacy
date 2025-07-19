@@ -12,8 +12,7 @@ import {
   Save,
   Eye,
   EyeOff,
-  Check,
-  AlertTriangle
+  Check
 } from 'lucide-react';
 
 
