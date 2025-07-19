@@ -226,6 +226,7 @@ export function Header({ onToggleSidebar, onNavigate }: HeaderProps) {
             logout={logout}
             show={showProfileDropdown}
             onClose={() => setShowProfileDropdown(false)}
+            onNavigate={onNavigate}
           />
         </div>
       </div>

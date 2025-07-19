@@ -19,7 +19,8 @@ import {
   Star,
   Calendar,
   MapPin,
-  Tag
+  Tag,
+  Trash2
 } from 'lucide-react';
 import { UploadMediaModal } from '../UploadMediaModal';
 
@@ -35,6 +36,7 @@ interface GalleryItem {
   likes: number;
   tags: string[];
   featured: boolean;
+  liked?: boolean;
   duration?: string;
 }
 const exhibitions: Array<{id: string; title: string; description: string; itemCount: number; featured: boolean; thumbnail: string;}> = [];
@@ -47,14 +49,30 @@ const exhibitions: Array<{id: string; title: string; description: string; itemCo
 interface LightboxModalProps {
   item: GalleryItem;
   onClose: () => void;
+  onDelete: (id: string) => void;
 }
 
-function LightboxModal({ item, onClose }: LightboxModalProps) {
+function LightboxModal({ item, onClose, onDelete }: LightboxModalProps) {
   if (!item) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="relative bg-white/90 rounded-2xl shadow-2xl p-4 max-w-2xl w-full flex flex-col items-center">
-        <button className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl" onClick={onClose}>&times;</button>
+        <button
+          className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+          onClick={onClose}
+        >
+          &times;
+        </button>
+        <button
+          className="absolute top-2 left-2 text-gray-400 hover:text-gray-600"
+          onClick={() => {
+            onClose();
+            onDelete(item.id);
+          }}
+          title="Delete"
+        >
+          <Trash2 className="h-5 w-5" />
+        </button>
         <div className="w-full flex flex-col items-center">
           {item.type === 'image' ? (
             <img src={item.url} alt={item.title} className="rounded-xl max-h-[60vh] object-contain" />
@@ -121,6 +139,7 @@ export function GalleryPage() {
       likes: 0,
       tags: [],
       featured: false,
+      liked: false,
       duration: type === 'video' ? '' : undefined,
     };
     setGalleryItems((prev) => [newItem, ...prev]);
@@ -128,8 +147,20 @@ export function GalleryPage() {
 
   const handleLike = (id: string) => {
     setGalleryItems((items) =>
-      items.map((it) => (it.id === id ? { ...it, likes: it.likes + 1 } : it))
+      items.map((it) =>
+        it.id === id
+          ? {
+              ...it,
+              likes: it.liked ? it.likes - 1 : it.likes + 1,
+              liked: !it.liked,
+            }
+          : it,
+      ),
     );
+  };
+
+  const handleDelete = (id: string) => {
+    setGalleryItems((items) => items.filter((it) => it.id !== id));
   };
 
   const handleDownload = (item: GalleryItem) => {
@@ -357,7 +388,7 @@ export function GalleryPage() {
                     >
                       <Download className="h-4 w-4 text-blue-600" />
                     </button>
-                    <button
+                  <button
                       className="p-1 bg-white rounded shadow-sm hover:bg-red-50"
                       title="Like"
                       onClick={(e) => {
@@ -365,7 +396,19 @@ export function GalleryPage() {
                         handleLike(item.id);
                       }}
                     >
-                      <Heart className="h-4 w-4 text-red-500" />
+                      <Heart
+                        className={`h-4 w-4 ${item.liked ? 'text-red-600 fill-current' : 'text-red-500'}`}
+                      />
+                    </button>
+                    <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-gray-50"
+                      title="Delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-gray-600" />
                     </button>
                   </div>
                   {item.duration && (
@@ -480,7 +523,19 @@ export function GalleryPage() {
                       handleLike(item.id);
                     }}
                   >
-                    <Heart className="h-4 w-4" />
+                    <Heart
+                      className={`h-4 w-4 ${item.liked ? 'text-red-600 fill-current' : ''}`}
+                    />
+                  </button>
+                  <button
+                    className="p-2 text-gray-400 hover:text-gray-600"
+                    title="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(item.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -499,7 +554,11 @@ export function GalleryPage() {
 
         {/* Lightbox Modal */}
         {lightboxItem && (
-          <LightboxModal item={lightboxItem} onClose={() => setLightboxItem(null)} />
+          <LightboxModal
+            item={lightboxItem}
+            onClose={() => setLightboxItem(null)}
+            onDelete={handleDelete}
+          />
         )}
         {showUploadModal && (
           <UploadMediaModal

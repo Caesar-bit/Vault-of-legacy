@@ -8,9 +8,10 @@ interface ProfileDropdownProps {
   logout: () => void;
   show: boolean;
   onClose: () => void;
+  onNavigate?: (page: string) => void;
 }
 
-export function ProfileDropdown({ user, t, logout, show, onClose }: ProfileDropdownProps) {
+export function ProfileDropdown({ user, t, logout, show, onClose, onNavigate }: ProfileDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,11 +49,23 @@ export function ProfileDropdown({ user, t, logout, show, onClose }: ProfileDropd
         )}
       </div>
       <div className="py-1">
-        <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl">
+        <button
+          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl"
+          onClick={() => {
+            onNavigate?.('settings');
+            onClose();
+          }}
+        >
           <User className="h-4 w-4 mr-3" />
           {t('profile')}
         </button>
-        <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl">
+        <button
+          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl"
+          onClick={() => {
+            onNavigate?.('settings');
+            onClose();
+          }}
+        >
           <Settings className="h-4 w-4 mr-3" />
           {t('settings')}
         </button>

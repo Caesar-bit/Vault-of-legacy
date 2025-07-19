@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatedAlert } from '../AnimatedAlert';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   User,
   Shield,
@@ -29,6 +30,7 @@ const settingsSections = [
 ];
 
 export function SettingsPage() {
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -38,7 +40,12 @@ export function SettingsPage() {
     return stored ? JSON.parse(stored) : [];
   });
   const defaultSettings = {
-    profile: { name: "", email: "", bio: "", avatar: "" },
+    profile: {
+      name: user?.name || '',
+      email: user?.email || '',
+      bio: '',
+      avatar: user?.avatar || '',
+    },
     security: { twoFactorEnabled: false, passwordLastChanged: "", sessionTimeout: 30, loginNotifications: false },
     notifications: { emailNotifications: false, pushNotifications: false, weeklyDigest: false, securityAlerts: false, collaborationUpdates: false },
     appearance: { theme: "light", language: "en", timezone: "UTC", dateFormat: "MM/DD/YYYY" },
@@ -49,6 +56,19 @@ export function SettingsPage() {
     const stored = localStorage.getItem('vault_settings');
     return stored ? JSON.parse(stored) : defaultSettings;
   });
+
+  useEffect(() => {
+    if (!user) return;
+    setSettings((prev) => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || prev.profile.avatar,
+      },
+    }));
+  }, [user]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [passwordInputs, setPasswordInputs] = useState({ current: '', new: '', confirm: '' });
@@ -203,6 +223,39 @@ export function SettingsPage() {
                 className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            {user && (
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <input
+                    type="text"
+                    value={user.role}
+                    readOnly
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <input
+                    type="text"
+                    value={user.status}
+                    readOnly
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                  />
+                </div>
+                {user.lastLogin && (
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Login</label>
+                    <input
+                      type="text"
+                      value={new Date(user.lastLogin).toLocaleString()}
+                      readOnly
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <div>
