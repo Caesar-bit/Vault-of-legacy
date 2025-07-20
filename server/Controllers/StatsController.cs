@@ -88,5 +88,95 @@ namespace VaultBackend.Controllers
             }
             return count;
         }
+
+        [HttpGet("assets")]
+        public async Task<IActionResult> GetAssetBreakdown()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var counts = new Dictionary<string, int>
+            {
+                ["images"] = 0,
+                ["documents"] = 0,
+                ["videos"] = 0,
+                ["audio"] = 0
+            };
+
+            var structureEntry = await _db.FileStructures.FirstOrDefaultAsync(f => f.UserId == userId);
+            if (structureEntry != null)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(structureEntry.Data);
+                    CountFileTypes(doc.RootElement, counts);
+                }
+                catch { }
+            }
+
+            var collectionEntry = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "collection_files");
+            if (collectionEntry != null)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(collectionEntry.Data);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                    {
+                        if (prop.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            CountFileTypes(prop.Value, counts);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            var galleryEntry = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "gallery_items");
+            if (galleryEntry != null)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(galleryEntry.Data);
+                    foreach (var item in doc.RootElement.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("type", out var t))
+                        {
+                            AddAsset(counts, t.GetString());
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            return Ok(counts);
+        }
+
+        private static void CountFileTypes(JsonElement element, Dictionary<string, int> counts)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (item.TryGetProperty("children", out var children) && children.ValueKind == JsonValueKind.Array)
+                {
+                    CountFileTypes(children, counts);
+                }
+                if (item.TryGetProperty("type", out var t))
+                {
+                    AddAsset(counts, t.GetString());
+                }
+            }
+        }
+
+        private static void AddAsset(Dictionary<string, int> counts, string? type)
+        {
+            if (string.IsNullOrEmpty(type) || type == "folder") return;
+            var key = type switch
+            {
+                "image" => "images",
+                "video" => "videos",
+                "audio" => "audio",
+                _ => "documents"
+            };
+            counts[key] = counts.GetValueOrDefault(key) + 1;
+        }
     }
 }

@@ -227,7 +227,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Total Images</p>
-            <p className="text-2xl font-extrabold text-gray-900">1,247</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.filter(i => i.type === 'image').length}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -236,7 +236,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Videos</p>
-            <p className="text-2xl font-extrabold text-gray-900">89</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.filter(i => i.type === 'video').length}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -245,7 +245,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Total Views</p>
-            <p className="text-2xl font-extrabold text-gray-900">12,456</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.reduce((sum, i) => sum + i.views, 0)}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -254,7 +254,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Likes</p>
-            <p className="text-2xl font-extrabold text-gray-900">891</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.reduce((sum, i) => sum + i.likes, 0)}</p>
           </div>
         </div>
       </div>

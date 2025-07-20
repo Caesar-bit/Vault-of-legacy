@@ -134,3 +134,11 @@ export async function getStats(token: string) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function getAssetBreakdown(token: string) {
+  const res = await fetch(`${API_BASE}/api/stats/assets`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

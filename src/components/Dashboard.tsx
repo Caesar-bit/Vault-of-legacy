@@ -20,7 +20,7 @@ import {
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { ActivityLog } from '../types';
-import { getRecentActivity, getStats } from '../utils/api';
+import { getRecentActivity, getStats, getAssetBreakdown } from '../utils/api';
 import type { LucideIcon } from 'lucide-react';
 
 interface Stat {
@@ -39,12 +39,12 @@ const quickActions = [
   { name: 'Archive Content', icon: Archive, color: 'bg-orange-500' },
 ];
 
-const assetBreakdown = [
-  { type: 'Images', count: 7842, icon: ImageIcon, color: 'text-blue-600' },
-  { type: 'Documents', count: 3205, icon: FileText, color: 'text-green-600' },
-  { type: 'Videos', count: 1456, icon: Video, color: 'text-purple-600' },
-  { type: 'Audio', count: 344, icon: Music, color: 'text-orange-600' },
-];
+interface AssetBreakdownItem {
+  type: string;
+  count: number;
+  icon: LucideIcon;
+  color: string;
+}
 
 function getActivityIcon(action: string) {
   if (action.includes('Uploaded')) return Upload;
@@ -64,6 +64,12 @@ export function Dashboard() {
     { name: 'Active Projects', value: '0', change: '', changeType: 'increase', icon: FolderOpen },
     { name: 'Monthly Views', value: '0', change: '', changeType: 'increase', icon: Eye },
     { name: 'Contributors', value: '0', change: '', changeType: 'increase', icon: Users },
+  ]);
+  const [assetBreakdown, setAssetBreakdown] = useState<AssetBreakdownItem[]>([
+    { type: 'Images', count: 0, icon: ImageIcon, color: 'text-primary-600' },
+    { type: 'Documents', count: 0, icon: FileText, color: 'text-emerald-600' },
+    { type: 'Videos', count: 0, icon: Video, color: 'text-purple-600' },
+    { type: 'Audio', count: 0, icon: Music, color: 'text-orange-600' },
   ]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [recent, setRecent] = useState<ActivityLog[]>([]);
@@ -91,6 +97,16 @@ export function Dashboard() {
           { name: 'Active Projects', value: data.activeProjects.toString(), change: '', changeType: 'increase', icon: FolderOpen },
           { name: 'Monthly Views', value: data.monthlyViews.toLocaleString(), change: '', changeType: 'increase', icon: Eye },
           { name: 'Contributors', value: data.contributors.toString(), change: '', changeType: 'increase', icon: Users },
+        ]);
+      })
+      .catch(console.error);
+    getAssetBreakdown(token)
+      .then((data) => {
+        setAssetBreakdown([
+          { type: 'Images', count: data.images, icon: ImageIcon, color: 'text-primary-600' },
+          { type: 'Documents', count: data.documents, icon: FileText, color: 'text-emerald-600' },
+          { type: 'Videos', count: data.videos, icon: Video, color: 'text-purple-600' },
+          { type: 'Audio', count: data.audio, icon: Music, color: 'text-orange-600' },
         ]);
       })
       .catch(console.error);

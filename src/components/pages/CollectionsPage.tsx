@@ -28,6 +28,15 @@ interface Collection {
   tags: string[];
 }
 
+const countAssets = (items: VaultItem[]): number => {
+  return items.reduce((sum, item) => {
+    if (item.type === 'folder') {
+      return sum + countAssets(item.children || []);
+    }
+    return sum + 1;
+  }, 0);
+};
+
 
 
 export function CollectionsPage() {
@@ -448,9 +457,14 @@ export function CollectionsPage() {
           </div>
           <FileManager
             initialItems={collectionFiles[viewItem.id] || []}
-            onChange={(items) =>
-              setCollectionFiles((prev) => ({ ...prev, [viewItem.id]: items }))
-            }
+            onChange={(items) => {
+              setCollectionFiles((prev) => ({ ...prev, [viewItem.id]: items }));
+              setCollections((prev) =>
+                prev.map((c) =>
+                  c.id === viewItem.id ? { ...c, assetCount: countAssets(items) } : c
+                )
+              );
+            }}
           />
         </div>
       </div>
