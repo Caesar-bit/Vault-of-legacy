@@ -66,15 +66,19 @@ export function ChatWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50 text-sm">
       {open ? (
-        <div className="w-72 bg-white shadow-xl rounded-lg overflow-hidden">
+        <div className="w-80 bg-white shadow-xl rounded-lg overflow-hidden animate-slide-up">
           {header}
           {!minimized && (
             <>
-              <div ref={scrollRef} className="h-64 overflow-y-auto p-3 space-y-2">
+              <div ref={scrollRef} className="h-64 overflow-y-auto p-3 space-y-3 bg-gray-50">
                 {messages.map((m) => (
-                  <div key={m.id} className={m.userId === user?.id ? 'text-right' : ''}>
-                    <span className="font-bold mr-1">{m.userId === user?.id ? 'Me' : 'Agent'}:</span>
-                    <span>{m.content}</span>
+                  <div key={m.id} className={`flex ${m.userId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 shadow text-sm ${m.userId === user?.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'}`}>
+                      <p className="text-xs font-medium mb-1 opacity-70">
+                        {m.userId === user?.id ? 'Me' : 'Agent'}
+                      </p>
+                      <p>{m.content}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -86,7 +90,8 @@ export function ChatWidget() {
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                 />
                 <button
-                  className="bg-blue-600 text-white px-3 rounded"
+                  className="bg-blue-600 text-white px-3 rounded disabled:opacity-50"
+                  disabled={!message.trim()}
                   onClick={sendMessage}
                 >
                   Send
