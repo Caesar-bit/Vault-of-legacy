@@ -18,6 +18,7 @@ import {
   Share2
 } from 'lucide-react';
 import { FileUpload } from '../FileUpload';
+import { useUserData } from '../../utils/userData';
 
 // Mock data
 
@@ -57,19 +58,7 @@ export function ResearchPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [researchItems, setResearchItems] = useState<ResearchItem[]>(() => {
-    const stored = localStorage.getItem('research_items');
-    const items: unknown[] = stored ? JSON.parse(stored) : [];
-    return items.map((raw) => {
-      const it = raw as Partial<ResearchItem> & { attachments?: unknown[] };
-      const attachments: ResearchAttachment[] = Array.isArray(it.attachments)
-        ? it.attachments.map((att) =>
-            typeof att === 'string' ? { name: att, url: '' } : (att as ResearchAttachment)
-          )
-        : [];
-      return { ...(it as ResearchItem), attachments };
-    });
-  });
+  const [researchItems, setResearchItems] = useUserData<ResearchItem[]>('research_items', []);
   const [form, setForm] = useState({
     title: '',
     type: 'document',
@@ -84,9 +73,6 @@ export function ResearchPage() {
   });
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('research_items', JSON.stringify(researchItems));
-  }, [researchItems]);
 
   useEffect(() => {
     if (!alert) return;

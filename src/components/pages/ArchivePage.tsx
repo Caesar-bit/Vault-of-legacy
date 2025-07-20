@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Archive,
   Download,
@@ -16,6 +16,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
+import { useUserData } from '../../utils/userData';
 
 
 const retentionPolicies = [
@@ -41,10 +42,7 @@ interface Archive {
 
 
 export function ArchivePage() {
-  const [archives, setArchives] = useState<Archive[]>(() => {
-    const stored = localStorage.getItem('archives');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [archives, setArchives] = useUserData<Archive[]>('archives', []);
   const [selectedArchives, setSelectedArchives] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -54,18 +52,7 @@ export function ArchivePage() {
   const [name, setName] = useState('');
   const [type, setType] = useState('collection');
   const [retention, setRetention] = useState('25 Years');
-  const [archiveFiles, setArchiveFiles] = useState<Record<string, VaultItem[]>>(() => {
-    const stored = localStorage.getItem('archive_files');
-    return stored ? JSON.parse(stored) : {};
-  });
-
-  useEffect(() => {
-    localStorage.setItem('archive_files', JSON.stringify(archiveFiles));
-  }, [archiveFiles]);
-
-  useEffect(() => {
-    localStorage.setItem('archives', JSON.stringify(archives));
-  }, [archives]);
+  const [archiveFiles, setArchiveFiles] = useUserData<Record<string, VaultItem[]>>('archive_files', {});
 
   const downloadArchive = (archive: Archive) => {
     const data = archiveFiles[archive.id] || [];

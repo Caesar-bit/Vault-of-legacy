@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Plus, 
   Search, 
@@ -14,6 +14,7 @@ import {
   Globe
 } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
+import { useUserData } from '../../utils/userData';
 
 interface Collection {
   id: string;
@@ -30,11 +31,8 @@ interface Collection {
 
 
 export function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [collectionFiles, setCollectionFiles] = useState<Record<string, VaultItem[]>>(() => {
-    const stored = localStorage.getItem('collection_files');
-    return stored ? JSON.parse(stored) : {};
-  });
+  const [collections, setCollections] = useUserData<Collection[]>('collections', []);
+  const [collectionFiles, setCollectionFiles] = useUserData<Record<string, VaultItem[]>>('collection_files', {});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -43,10 +41,7 @@ export function CollectionsPage() {
   const [newIsPublic, setNewIsPublic] = useState(true);
   const [newPassword, setNewPassword] = useState('');
 
-  const [authorized, setAuthorized] = useState<Record<string, boolean>>(() => {
-    const stored = localStorage.getItem('collection_authorized');
-    return stored ? JSON.parse(stored) : {};
-  });
+  const [authorized, setAuthorized] = useUserData<Record<string, boolean>>('collection_authorized', {});
   const [passwordItem, setPasswordItem] = useState<Collection | null>(null);
   const [passwordInput, setPasswordInput] = useState('');
 
@@ -57,12 +52,6 @@ export function CollectionsPage() {
   const [editDesc, setEditDesc] = useState('');
   const [deleteItem, setDeleteItem] = useState<Collection | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('collection_files', JSON.stringify(collectionFiles));
-  }, [collectionFiles]);
-  useEffect(() => {
-    localStorage.setItem('collection_authorized', JSON.stringify(authorized));
-  }, [authorized]);
 
   const filteredCollections = collections.filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

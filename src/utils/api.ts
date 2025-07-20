@@ -106,3 +106,23 @@ export async function fetchChatHistory(token: string) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function getUserData(token: string, type: string) {
+  const res = await fetch(`${API_BASE}/api/userdata/${type}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function saveUserData(token: string, type: string, data: unknown) {
+  const res = await fetch(`${API_BASE}/api/userdata/${type}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

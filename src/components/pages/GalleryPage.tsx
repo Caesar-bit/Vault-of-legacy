@@ -23,6 +23,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { UploadMediaModal } from '../UploadMediaModal';
+import { useUserData } from '../../utils/userData';
 
 interface GalleryItem {
   id: string;
@@ -107,16 +108,10 @@ export function GalleryPage() {
   const [filterType, setFilterType] = useState('all');
   const [showExhibitions, setShowExhibitions] = useState(false);
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
-    const stored = localStorage.getItem('gallery_items');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [galleryItems, setGalleryItems] = useUserData<GalleryItem[]>('gallery_items', []);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('gallery_items', JSON.stringify(galleryItems));
-  }, [galleryItems]);
 
   useEffect(() => {
     if (!alert) return;

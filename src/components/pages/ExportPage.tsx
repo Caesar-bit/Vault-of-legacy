@@ -3,6 +3,7 @@ import { AnimatedAlert } from '../AnimatedAlert';
 import { VaultItem } from '../FileManager';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchVaultStructure } from '../../utils/api';
+import { useUserData } from '../../utils/userData';
 import { 
   Download, 
   FileText, 
@@ -132,11 +133,7 @@ export function ExportPage() {
     id: string;
     title: string;
   }
-  const [galleryItems] = useState<GalleryItem[]>(() => {
-    const stored = localStorage.getItem('gallery_items');
-    if (!stored) return [];
-    try { return JSON.parse(stored); } catch { return []; }
-  });
+  const [galleryItems] = useUserData<GalleryItem[]>('gallery_items', []);
   const [gallerySelected, setGallerySelected] = useState<string[]>([]);
   interface ExportItem {
     id: string;
@@ -157,10 +154,7 @@ export function ExportPage() {
   const [detailsExport, setDetailsExport] = useState<ExportItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const [exportsList, setExportsList] = useState<ExportItem[]>(() => {
-    const stored = localStorage.getItem('exports');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [exportsList, setExportsList] = useUserData<ExportItem[]>('exports', []);
 
   const folderOptions = useMemo(() => {
     const paths: Array<{ label: string; path: string[] }> = [];
@@ -192,9 +186,6 @@ export function ExportPage() {
     return () => clearTimeout(t);
   }, [alert]);
 
-  useEffect(() => {
-    localStorage.setItem('exports', JSON.stringify(exportsList));
-  }, [exportsList]);
 
   const simulateProcessing = (id: string) => {
     setTimeout(() => {

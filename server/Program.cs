@@ -228,6 +228,19 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Ensure UserData table exists for storing user-specific data
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='UserData';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE UserData (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Type TEXT NOT NULL, Data TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 

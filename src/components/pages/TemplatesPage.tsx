@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { FileUpload } from '../FileUpload';
 import { AnimatedAlert } from '../AnimatedAlert';
+import { useUserData } from '../../utils/userData';
 
 export interface TemplateItem {
   id: string;
@@ -65,14 +66,7 @@ export function TemplatesPage() {
     tags: '',
     preview: ''
   });
-  const [templates, setTemplates] = useState<TemplateItem[]>(() => {
-    const stored = localStorage.getItem('vault_templates');
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('vault_templates', JSON.stringify(templates));
-  }, [templates]);
+  const [templates, setTemplates] = useUserData<TemplateItem[]>('vault_templates', []);
 
   useEffect(() => {
     if (!alert) return;
