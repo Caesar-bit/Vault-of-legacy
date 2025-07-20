@@ -94,5 +94,10 @@ namespace VaultBackend.Hubs
                 });
             }
         }
+
+        public async Task RequestFaqSuggestions()
+        {
+            await Clients.Caller.SendAsync("ReceiveFaqSuggestions", _faq.GetQuestions());
+        }
     }
 }

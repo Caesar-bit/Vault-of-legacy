@@ -38,13 +38,22 @@ export function ChatWidget() {
     connection.on('ReceiveFaqSuggestions', (qs: string[]) => {
       setSuggestions(qs);
     });
-    connection.start();
+    connection
+      .start()
+      .then(() => connection.invoke('RequestFaqSuggestions'))
+      .catch((err) => console.error(err));
     connectionRef.current = connection;
     fetchChatHistory(token).then(setMessages).catch(() => {});
     return () => {
       connection.stop();
     };
   }, [token]);
+
+  useEffect(() => {
+    if (open && connectionRef.current) {
+      connectionRef.current.invoke('RequestFaqSuggestions').catch(() => {});
+    }
+  }, [open]);
 
   useEffect(() => {
     if (minimized) return;
@@ -115,13 +124,12 @@ export function ChatWidget() {
                   <div className="text-gray-500 text-xs">Bot is typing...</div>
                 )}
                 {suggestions.length > 0 && (
-                  <div className="space-y-1 mt-2">
-                    <p className="text-xs text-gray-500">Frequently asked:</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
                     {suggestions.map((q) => (
                       <button
                         key={q}
                         onClick={() => sendMessage(q)}
-                        className="block text-left text-blue-600 text-xs underline"
+                        className="bg-gray-200 rounded-full px-2 py-1 text-xs text-gray-800 hover:bg-gray-300"
                       >
                         {q}
                       </button>
