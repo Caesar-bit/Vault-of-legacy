@@ -118,6 +118,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
             <span>Back to sign in</span>
           </button>
         </form>
+        </div>
       </div>
     </div>
   );
