@@ -156,12 +156,49 @@ using (var scope = app.Services.CreateScope())
         if (!exists)
         {
             using var create = conn.CreateCommand();
-            create.CommandText = "CREATE TABLE FileStructures (Id TEXT PRIMARY KEY, Data TEXT NOT NULL);";
+            create.CommandText = "CREATE TABLE FileStructures (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Data TEXT NOT NULL);";
             create.ExecuteNonQuery();
+        }
+        else
+        {
+            using var info = conn.CreateCommand();
+            info.CommandText = "PRAGMA table_info('FileStructures');";
+            using var reader = info.ExecuteReader();
+            var hasUserId = false;
+            while (reader.Read())
+            {
+                if (reader.GetString(1) == "UserId")
+                {
+                    hasUserId = true;
+                }
+            }
+            if (!hasUserId)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE FileStructures ADD COLUMN UserId TEXT;";
+                alter.ExecuteNonQuery();
+            }
+        }
+    }
 
-            using var insert = conn.CreateCommand();
-            insert.CommandText = "INSERT INTO FileStructures (Id, Data) VALUES ('main', '[]');";
-            insert.ExecuteNonQuery();
+    // Ensure UploadedFiles table has UserId column
+    using (var info = conn.CreateCommand())
+    {
+        info.CommandText = "PRAGMA table_info('UploadedFiles');";
+        using var reader = info.ExecuteReader();
+        var hasUserId = false;
+        while (reader.Read())
+        {
+            if (reader.GetString(1) == "UserId")
+            {
+                hasUserId = true;
+            }
+        }
+        if (!hasUserId)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE UploadedFiles ADD COLUMN UserId TEXT;";
+            alter.ExecuteNonQuery();
         }
     }
 

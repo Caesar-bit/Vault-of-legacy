@@ -8,6 +8,9 @@ namespace VaultBackend.Models
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
+        public string UserId { get; set; } = string.Empty;
+
+        [Required]
         public string Path { get; set; } = string.Empty;
 
         [Required]

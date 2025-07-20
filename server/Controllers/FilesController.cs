@@ -36,16 +36,17 @@ namespace VaultBackend.Controllers
             if (file == null)
                 return BadRequest("No file provided");
 
-            var dir = Path.Combine(_env.ContentRootPath, "UploadedFiles");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+
+            var dir = Path.Combine(_env.ContentRootPath, "UploadedFiles", userId);
             Directory.CreateDirectory(dir);
             var filePath = Path.Combine(dir, Guid.NewGuid().ToString() + "_" + file.FileName);
             using var stream = System.IO.File.OpenWrite(filePath);
             await file.CopyToAsync(stream);
 
-            var uploaded = new UploadedFile { Path = filePath, OriginalName = file.FileName };
+            var uploaded = new UploadedFile { Path = filePath, OriginalName = file.FileName, UserId = userId };
             _db.UploadedFiles.Add(uploaded);
             await _db.SaveChangesAsync();
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
             await _logger.LogAsync(userId, "Uploaded file", file.FileName);
 
             return Ok(new { uploaded.Path, uploaded.OriginalName });
@@ -54,14 +55,23 @@ namespace VaultBackend.Controllers
         [HttpGet("list")]
         public async Task<IActionResult> List()
         {
-            var files = await _db.UploadedFiles.Select(f => new { f.Path, f.OriginalName }).ToListAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var files = await _db.UploadedFiles
+                .Where(f => f.UserId == userId)
+                .Select(f => new { f.Path, f.OriginalName })
+                .ToListAsync();
             return Ok(files);
         }
 
         [HttpGet("structure")]
         public async Task<IActionResult> GetStructure()
         {
-            var s = await _db.FileStructures.FirstOrDefaultAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var s = await _db.FileStructures.FirstOrDefaultAsync(f => f.UserId == userId);
             if (s == null) return Ok("[]");
             return Ok(JsonDocument.Parse(s.Data).RootElement);
         }
@@ -69,21 +79,22 @@ namespace VaultBackend.Controllers
         [HttpPost("structure")]
         public async Task<IActionResult> SaveStructure([FromBody] JsonElement data)
         {
-            var s = await _db.FileStructures.FirstOrDefaultAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var s = await _db.FileStructures.FirstOrDefaultAsync(f => f.UserId == userId);
             var newData = data.GetRawText();
             if (s == null)
             {
-                s = new FileStructure { Id = "main", Data = newData };
+                s = new FileStructure { UserId = userId, Data = newData };
                 _db.FileStructures.Add(s);
                 await _db.SaveChangesAsync();
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
                 await _logger.LogAsync(userId, "Updated vault structure", "");
             }
             else if (s.Data != newData)
             {
                 s.Data = newData;
                 await _db.SaveChangesAsync();
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
                 await _logger.LogAsync(userId, "Updated vault structure", "");
             }
             else
