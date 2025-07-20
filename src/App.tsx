@@ -36,9 +36,9 @@ function AppContent() {
   if (!isAuthenticated) {
     return (
       <Routes>
-        <Route path="/signup" element={<SignupForm onSwitchToLogin={() => navigate('/login')} />} />
+        <Route path="/signup" element={<SignupForm onSwitchToLogin={(email) => navigate('/login', { state: { email, forceLogin: true } })} />} />
         <Route path="/forgot-password" element={<ForgotPasswordForm onSwitchToLogin={() => navigate('/login')} />} />
-        <Route path="*" element={<LoginForm onSwitchToSignup={() => navigate('/signup')} onSwitchToForgotPassword={() => navigate('/forgot-password')} />} />
+        <Route path="*" element={<LoginForm onSwitchToSignup={(email) => navigate('/signup', { state: { email } })} onSwitchToForgotPassword={() => navigate('/forgot-password')} />} />
       </Routes>
     );
   }

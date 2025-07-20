@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock, Vault, Shield, Loader2, Fingerprint } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
+import { useLocation } from 'react-router-dom';
+
 interface LoginFormProps {
-  onSwitchToSignup: () => void;
+  onSwitchToSignup: (email?: string) => void;
   onSwitchToForgotPassword: () => void;
 }
 
 export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginFormProps) {
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +19,15 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
   const [userId, setUserId] = useState('');
   const [localError, setLocalError] = useState('');
   const { login, loginWithFingerprint, isLoading, error } = useAuth();
+
+  useEffect(() => {
+    if (location.state?.email) {
+      setEmail(location.state.email);
+    }
+    if (location.state?.forceLogin) {
+      setStage('password');
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +42,12 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         if (!data.exists) {
-          setLocalError('No account found. Please sign up.');
-        } else {
-          setFingerprintOption(data.fingerprintEnabled);
-          setUserId(data.userId);
-          setStage('password');
+          onSwitchToSignup(email);
+          return;
         }
+        setFingerprintOption(data.fingerprintEnabled);
+        setUserId(data.userId);
+        setStage('password');
       } catch {
         setLocalError('Unable to verify email');
       }

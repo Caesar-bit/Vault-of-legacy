@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Vault, Shield, Loader2, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SignupFormProps {
-  onSwitchToLogin: () => void;
+  onSwitchToLogin: (email?: string) => void;
 }
 
 export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
+  const location = useLocation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,10 +27,32 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
     { text: 'Contains special character', met: /[!@#$%^&*]/.test(formData.password) }
   ];
 
+  useEffect(() => {
+    if (location.state?.email) {
+      setFormData(prev => ({ ...prev, email: location.state.email }));
+    }
+  }, [location.state]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       return;
+    }
+    try {
+      const res = await fetch('/api/auth/prelogin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists) {
+          onSwitchToLogin(formData.email);
+          return;
+        }
+      }
+    } catch {
+      // ignore errors and attempt signup
     }
     await signup(formData.email, formData.password, formData.name);
   };
@@ -42,9 +66,9 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-md w-full space-y-8 animate-fade-in">
         <div className="text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-purple-600 mx-auto mb-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-purple-600 mx-auto mb-4 animate-bounce-slow">
             <Vault className="h-8 w-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Create your account</h2>

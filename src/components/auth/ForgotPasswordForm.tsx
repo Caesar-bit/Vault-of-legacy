@@ -20,9 +20,9 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 text-center">
+        <div className="max-w-md w-full space-y-8 text-center animate-fade-in">
           <div>
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mx-auto mb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mx-auto mb-4 animate-bounce-slow">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Check your email</h2>
@@ -51,9 +51,9 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-md w-full space-y-8 animate-fade-in">
         <div className="text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-purple-600 mx-auto mb-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-purple-600 mx-auto mb-4 animate-bounce-slow">
             <Vault className="h-8 w-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Forgot password?</h2>
