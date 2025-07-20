@@ -12,7 +12,7 @@ import { authenticateFingerprint } from "../utils/fingerprint";
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  loginWithFingerprint: () => Promise<void>;
+  loginWithFingerprint: (userId: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
@@ -173,10 +173,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const loginWithFingerprint = async (): Promise<void> => {
+  const loginWithFingerprint = async (userId: string): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const result = await authenticateFingerprint<User>();
+      const result = await authenticateFingerprint<User>(userId);
       if (!result) throw new Error('failed');
       const { user, token } = result;
       localStorage.setItem('vault_token', token);

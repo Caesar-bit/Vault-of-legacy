@@ -13,6 +13,7 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
   const [showPassword, setShowPassword] = useState(false);
   const [stage, setStage] = useState<'email' | 'password'>('email');
   const [fingerprintOption, setFingerprintOption] = useState(false);
+  const [userId, setUserId] = useState('');
   const [localError, setLocalError] = useState('');
   const { login, loginWithFingerprint, isLoading, error } = useAuth();
 
@@ -31,8 +32,8 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
         if (!data.exists) {
           setLocalError('No account found. Please sign up.');
         } else {
-          const fpUser = localStorage.getItem('vault_fp_user');
-          setFingerprintOption(data.fingerprintEnabled && fpUser === data.userId);
+          setFingerprintOption(data.fingerprintEnabled);
+          setUserId(data.userId);
           setStage('password');
         }
       } catch {
@@ -153,7 +154,7 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
               {fingerprintOption && (
                 <button
                   type="button"
-                  onClick={loginWithFingerprint}
+                  onClick={() => loginWithFingerprint(userId)}
                   className="group relative w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl text-sm font-semibold text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 transition-all duration-300"
                 >
                   <Fingerprint className="h-5 w-5 mr-2" /> Sign in with Fingerprint

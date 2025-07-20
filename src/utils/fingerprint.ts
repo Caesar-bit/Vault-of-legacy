@@ -47,7 +47,6 @@ export async function enrollFingerprint(user: User, token: string): Promise<void
     body: JSON.stringify({ credentialId }),
   });
   if (!res.ok) throw new Error(await res.text());
-  localStorage.setItem('vault_fp_user', user.id);
 }
 
 export async function removeFingerprint(token: string): Promise<void> {
@@ -55,12 +54,9 @@ export async function removeFingerprint(token: string): Promise<void> {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
-  localStorage.removeItem('vault_fp_user');
 }
 
-export async function authenticateFingerprint<T = User>(): Promise<{ user: T; token: string } | null> {
-  const userId = localStorage.getItem('vault_fp_user');
-  if (!userId) return null;
+export async function authenticateFingerprint<T = User>(userId: string): Promise<{ user: T; token: string } | null> {
   if (!('credentials' in navigator)) return null;
   const challenge = new Uint8Array(32);
   crypto.getRandomValues(challenge);
