@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, ArrowLeft, Vault, Shield, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { onBlockAdded, offBlockAdded } from '../../utils/blockchain';
+import { onBlockAdded, offBlockAdded, Block } from '../../utils/blockchain';
 
 interface ForgotPasswordFormProps {
   onSwitchToLogin: () => void;
@@ -21,7 +21,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
 
   useEffect(() => {
     if (!isWaiting) return;
-    const listener = (block: any) => {
+    const listener = (block: Block) => {
       if (
         block.data?.type === 'password_reset_completed' &&
         block.data?.email === email

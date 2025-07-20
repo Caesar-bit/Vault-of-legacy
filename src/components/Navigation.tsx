@@ -57,7 +57,13 @@ function classNames(...classes: string[]) {
 }
 
   return (
-    <div className={`fixed inset-y-0 z-50 flex flex-col lg:flex transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'}`}>
+    <div
+      className={`fixed inset-y-0 z-50 flex flex-col transition-all duration-300 transform ${
+        collapsed
+          ? 'w-72 -translate-x-full lg:translate-x-0 lg:w-20'
+          : 'w-72'
+      }`}
+    >
       <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gradient-to-br from-primary-600 via-purple-600 to-secondary-600 px-6 pb-4 shadow-2xl">
         <div className="flex h-16 shrink-0 items-center justify-between">
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'}`}>
