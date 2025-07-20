@@ -22,6 +22,26 @@ namespace VaultBackend.Hubs
             _ai = ai;
         }
 
+        public override async Task OnConnectedAsync()
+        {
+            var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+            }
+            await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, userId);
+            }
+            await base.OnDisconnectedAsync(exception);
+        }
+
         public async Task SendMessage(string message)
         {
             var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -38,7 +58,7 @@ namespace VaultBackend.Hubs
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Sent chat message", message);
 
-            await Clients.All.SendAsync("ReceiveMessage", new
+            await Clients.Group(userId).SendAsync("ReceiveMessage", new
             {
                 chatMessage.Id,
                 chatMessage.UserId,
@@ -57,7 +77,7 @@ namespace VaultBackend.Hubs
                 };
                 _db.ChatMessages.Add(botMessage);
                 await _db.SaveChangesAsync();
-                await Clients.Caller.SendAsync("ReceiveMessage", new
+                await Clients.Group(userId).SendAsync("ReceiveMessage", new
                 {
                     botMessage.Id,
                     botMessage.UserId,

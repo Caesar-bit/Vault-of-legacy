@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
+import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage } from '../../types';
 import { fetchChatHistory } from '../../utils/api';
@@ -11,6 +12,7 @@ export function ChatWidget() {
   const [minimized, setMinimized] = useState(false);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
   const connectionRef = useRef<HubConnection | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -22,6 +24,9 @@ export function ChatWidget() {
       .build();
     connection.on('ReceiveMessage', (msg: ChatMessage) => {
       setMessages((prev) => [...prev, msg]);
+      if (msg.userId === 'bot') {
+        setLoading(false);
+      }
     });
     connection.start();
     connectionRef.current = connection;
@@ -40,6 +45,7 @@ export function ChatWidget() {
   const sendMessage = async () => {
     const text = message.trim();
     if (!text) return;
+    setLoading(true);
     await connectionRef.current?.invoke('SendMessage', text);
     setMessage('');
   };
@@ -72,11 +78,16 @@ export function ChatWidget() {
             <>
               <div ref={scrollRef} className="h-64 overflow-y-auto p-3 space-y-2">
                 {messages.map((m) => (
-                  <div key={m.id} className={m.userId === user?.id ? 'text-right' : ''}>
-                    <span className="font-bold mr-1">{m.userId === user?.id ? 'Me' : 'Agent'}:</span>
-                    <span>{m.content}</span>
+                  <div key={m.id} className={`flex ${m.userId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${m.userId === user?.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'}`}>
+                      <p>{m.content}</p>
+                      <span className="block text-xs opacity-60 mt-1">{format(new Date(m.timestamp), 'p')}</span>
+                    </div>
                   </div>
                 ))}
+                {loading && (
+                  <div className="text-gray-500 text-xs">Bot is typing...</div>
+                )}
               </div>
               <div className="flex border-t p-2 gap-2">
                 <input
