@@ -23,7 +23,7 @@ namespace VaultBackend.Controllers
         public async Task<IActionResult> GetUsers()
         {
             var users = await _db.Users
-                .Select(u => new { u.Id, u.Email, u.Name, u.Role, u.Status, u.CreatedAt, u.LastLogin })
+                .Select(u => new { u.Id, u.Email, u.Name, u.Role, u.Status, u.CreatedAt, u.LastLogin, u.Avatar })
                 .ToListAsync();
             return Ok(users);
         }
@@ -47,7 +47,7 @@ namespace VaultBackend.Controllers
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, user.Avatar });
         }
 
         [HttpPatch("{id}")]
@@ -60,9 +60,10 @@ namespace VaultBackend.Controllers
             if (!string.IsNullOrEmpty(request.Email)) user.Email = request.Email;
             if (!string.IsNullOrEmpty(request.Role)) user.Role = request.Role;
             if (!string.IsNullOrEmpty(request.Status)) user.Status = request.Status;
+            if (!string.IsNullOrEmpty(request.Avatar)) user.Avatar = request.Avatar;
 
             await _db.SaveChangesAsync();
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, user.Avatar });
         }
 
         [HttpDelete("{id}")]
@@ -76,6 +77,6 @@ namespace VaultBackend.Controllers
         }
     }
 
-    public record UpdateUserRequest(string? Name, string? Email, string? Role, string? Status);
+    public record UpdateUserRequest(string? Name, string? Email, string? Role, string? Status, string? Avatar);
     public record InviteUserRequest(string Email, string Name, string Role);
 }

@@ -65,6 +65,7 @@ using (var scope = app.Services.CreateScope())
         var hasCreatedAt = false;
         var hasRole = false;
         var hasStatus = false;
+        var hasAvatar = false;
         while (reader.Read())
         {
             var column = reader.GetString(1);
@@ -83,6 +84,10 @@ using (var scope = app.Services.CreateScope())
             if (column == "Status")
             {
                 hasStatus = true;
+            }
+            if (column == "Avatar")
+            {
+                hasAvatar = true;
             }
         }
 
@@ -117,6 +122,13 @@ using (var scope = app.Services.CreateScope())
         {
             using var alter = conn.CreateCommand();
             alter.CommandText = "ALTER TABLE Users ADD COLUMN Status TEXT DEFAULT 'active';";
+            alter.ExecuteNonQuery();
+        }
+
+        if (!hasAvatar)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Users ADD COLUMN Avatar TEXT;";
             alter.ExecuteNonQuery();
         }
     }

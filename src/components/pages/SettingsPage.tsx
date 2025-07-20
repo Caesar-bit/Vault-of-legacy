@@ -106,7 +106,7 @@ export function SettingsPage() {
     if (!token || !user) return;
     setIsSaving(true);
     try {
-      await updateProfile(token, { name: settings.profile.name, email: settings.profile.email });
+      await updateProfile(token, { name: settings.profile.name, email: settings.profile.email, avatar: settings.profile.avatar });
       await refreshProfile();
       localStorage.setItem(`vault_settings_${user.id}`, JSON.stringify(settings));
       localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));

@@ -112,7 +112,7 @@ export function UsersPage() {
             permissions: roles.find((r) => r.value === u.role)?.permissions || [
               "read",
             ],
-            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}`,
+            avatar: u.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}`,
           })),
         );
       } catch (e) {
@@ -263,7 +263,7 @@ export function UsersPage() {
           lastLogin: created.lastLogin,
           createdAt: created.createdAt,
           permissions: roleInfo?.permissions ?? ["read"],
-          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(created.name)}`,
+          avatar: created.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(created.name)}`,
         };
         setUsers((prev) => [newUser, ...prev]);
       }

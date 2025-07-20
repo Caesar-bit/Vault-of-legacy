@@ -30,7 +30,7 @@ namespace VaultBackend.Controllers
             if (userId == null) return Unauthorized();
             var user = await _db.Users.FindAsync(userId);
             if (user == null) return NotFound();
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, user.Avatar });
         }
 
         [HttpPatch("me")]
@@ -51,9 +51,13 @@ namespace VaultBackend.Controllers
             {
                 user.Name = request.Name;
             }
+            if (!string.IsNullOrEmpty(request.Avatar))
+            {
+                user.Avatar = request.Avatar;
+            }
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Updated profile", user.Email);
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, user.Avatar });
         }
 
         [HttpPost("password")]
@@ -72,6 +76,6 @@ namespace VaultBackend.Controllers
         }
     }
 
-    public record UpdateProfileRequest(string? Name, string? Email);
+    public record UpdateProfileRequest(string? Name, string? Email, string? Avatar);
     public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 }

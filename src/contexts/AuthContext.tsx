@@ -134,7 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
-        avatar: (() => {
+        avatar: data.avatar ?? (() => {
           try {
             const key = `vault_settings_${data.id}`;
             const settings = JSON.parse(localStorage.getItem(key) || "{}");
@@ -168,7 +168,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAuthState((prev) => ({
         ...prev,
         isLoading: false,
-        error: "Invalid credentials",
+        error: err instanceof Error ? err.message : "Invalid credentials",
       }));
     }
   };
@@ -224,7 +224,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
-        avatar: (() => {
+        avatar: data.avatar ?? (() => {
           try {
             const key = `vault_settings_${data.id}`;
             const settings = JSON.parse(localStorage.getItem(key) || "{}");
@@ -344,7 +344,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User['status'],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
-        avatar: authState.user?.avatar,
+        avatar: data.avatar ?? authState.user?.avatar,
       };
       const encrypted = EncryptionService.encrypt(JSON.stringify(updated));
       localStorage.setItem('vault_user', encrypted);

@@ -44,7 +44,7 @@ namespace VaultBackend.Controllers
             await _db.SaveChangesAsync();
 
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, user.Avatar, token });
         }
 
         [HttpPost("login")]
@@ -54,11 +54,14 @@ namespace VaultBackend.Controllers
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return BadRequest("Invalid credentials");
 
+            if (user.Status != "active")
+                return BadRequest("Account inactive. Contact your administrator.");
+
             user.LastLogin = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
             var token = _tokens.GenerateToken(user);
-            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, token });
+            return Ok(new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, user.Avatar, token });
         }
     }
 

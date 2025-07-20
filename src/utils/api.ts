@@ -66,7 +66,7 @@ export async function getProfile(token: string) {
   return res.json();
 }
 
-export async function updateProfile(token: string, data: { name?: string; email?: string; }) {
+export async function updateProfile(token: string, data: { name?: string; email?: string; avatar?: string }) {
   const res = await fetch(`${API_BASE}/api/account/me`, {
     method: 'PATCH',
     headers: {

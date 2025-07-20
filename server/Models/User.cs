@@ -21,6 +21,8 @@ namespace VaultBackend.Models
 
         public string Status { get; set; } = "active";
 
+        public string? Avatar { get; set; }
+
         public DateTime? LastLogin { get; set; }
 
         // Older databases may not have populated this column so make it nullable
