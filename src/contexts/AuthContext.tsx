@@ -283,13 +283,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Add password reset request to blockchain
-      blockchain.addBlock({
+      const requestBlock = blockchain.addBlock({
         type: "password_reset_requested",
         email,
         timestamp: new Date(),
       });
 
       setAuthState((prev) => ({ ...prev, isLoading: false }));
+
+      // Simulate completion after verification
+      setTimeout(() => {
+        blockchain.addBlock({
+          type: "password_reset_completed",
+          email,
+          requestIndex: requestBlock.index,
+          timestamp: new Date(),
+        });
+      }, 1500);
     } catch (err) {
       console.error(err);
       setAuthState((prev) => ({

@@ -1,5 +1,8 @@
 import { ethers } from 'ethers';
 
+type BlockListener = (block: Block) => void;
+const listeners = new Set<BlockListener>();
+
 // Connect to MetaMask and get provider
 export async function getProvider() {
   if (!window.ethereum) throw new Error('MetaMask not found');
@@ -92,6 +95,7 @@ export class Blockchain {
 
     this.mineBlock(newBlock);
     this.chain.push(newBlock);
+    listeners.forEach((l) => l(newBlock));
     return newBlock;
   }
 
@@ -121,3 +125,10 @@ export class Blockchain {
 }
 
 export const blockchain = new Blockchain();
+export function onBlockAdded(listener: BlockListener) {
+  listeners.add(listener);
+}
+
+export function offBlockAdded(listener: BlockListener) {
+  listeners.delete(listener);
+}

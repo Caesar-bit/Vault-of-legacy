@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mail, ArrowLeft, Vault, Shield, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { onBlockAdded, offBlockAdded } from '../../utils/blockchain';
 
 interface ForgotPasswordFormProps {
   onSwitchToLogin: () => void;
@@ -9,13 +10,40 @@ interface ForgotPasswordFormProps {
 export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps) {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
   const { forgotPassword, isLoading, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsWaiting(true);
     await forgotPassword(email);
-    setIsSubmitted(true);
   };
+
+  useEffect(() => {
+    if (!isWaiting) return;
+    const listener = (block: any) => {
+      if (
+        block.data?.type === 'password_reset_completed' &&
+        block.data?.email === email
+      ) {
+        setIsSubmitted(true);
+        setIsWaiting(false);
+      }
+    };
+    onBlockAdded(listener);
+    return () => offBlockAdded(listener);
+  }, [email, isWaiting]);
+
+  if (isWaiting && !isSubmitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-500 via-purple-600 to-secondary-500 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-4 text-center">
+          <Loader2 className="h-10 w-10 mx-auto animate-spin text-white" />
+          <p className="text-white/80">Waiting for blockchain verification...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
