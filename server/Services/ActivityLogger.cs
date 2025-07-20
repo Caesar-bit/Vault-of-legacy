@@ -18,12 +18,26 @@ namespace VaultBackend.Services
 
         public async Task LogAsync(string userId, string action, string item)
         {
+            var now = DateTime.UtcNow;
+            var last = await _db.ActivityLogs
+                .Where(a => a.UserId == userId && a.Action == action && a.Item == item)
+                .OrderByDescending(a => a.Timestamp)
+                .FirstOrDefaultAsync();
+
+            if (last != null && (now - last.Timestamp).TotalSeconds < 5)
+            {
+                // Update timestamp instead of creating a duplicate entry
+                last.Timestamp = now;
+                await _db.SaveChangesAsync();
+                return;
+            }
+
             var entry = new ActivityLog
             {
                 UserId = userId,
                 Action = action,
                 Item = item,
-                Timestamp = DateTime.UtcNow
+                Timestamp = now
             };
             _db.ActivityLogs.Add(entry);
             await _db.SaveChangesAsync();
