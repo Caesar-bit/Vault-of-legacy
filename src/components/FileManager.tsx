@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { uploadFile } from '../utils/api';
 import {
   FolderPlus,
   Upload,
@@ -23,6 +25,7 @@ export interface VaultItem {
   owner: string;
   starred: boolean;
   url?: string;
+  path?: string;
   children?: VaultItem[];
 }
 
@@ -42,6 +45,7 @@ export function FileManager({ initialItems, onChange, initialPath = [] }: FileMa
   const [selected, setSelected] = useState<VaultItem | null>(null);
   const [renameName, setRenameName] = useState('');
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const { token, isAuthenticated } = useAuth();
   const [previewFile, setPreviewFile] = useState<VaultItem | null>(null);
 
   useEffect(() => {
@@ -147,16 +151,27 @@ export function FileManager({ initialItems, onChange, initialPath = [] }: FileMa
   const handleFiles = async (fileList: FileList) => {
     const arr = Array.from(fileList);
     const newFiles: VaultItem[] = await Promise.all(
-      arr.map(async (f) => ({
-        id: Date.now().toString() + Math.random().toString(36).slice(2, 8),
-        name: f.name,
-        type: detectType(f.name),
-        size: formatBytes(f.size),
-        modified: new Date().toISOString().slice(0, 10),
-        owner: 'You',
-        starred: false,
-        url: await toBase64(f),
-      }))
+      arr.map(async (f) => {
+        let uploaded: { path: string; originalName: string } | null = null;
+        if (isAuthenticated && token) {
+          try {
+            uploaded = await uploadFile(f, token);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        return {
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 8),
+          name: f.name,
+          type: detectType(f.name),
+          size: formatBytes(f.size),
+          modified: new Date().toISOString().slice(0, 10),
+          owner: 'You',
+          starred: false,
+          url: await toBase64(f),
+          path: uploaded?.path,
+        } as VaultItem;
+      })
     );
     updateAtPath(path, (prev) => [...newFiles, ...prev]);
   };

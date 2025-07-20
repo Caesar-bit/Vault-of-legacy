@@ -9,6 +9,7 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
 
   const [structure, setStructure] = useState<VaultItem[]>([]);
   const loadedRef = useRef(false);
+  const skipSave = useRef(true);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -16,6 +17,7 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
       try {
         const data = await fetchVaultStructure(token);
         setStructure(data);
+        skipSave.current = true;
         loadedRef.current = true;
       } catch (e) {
         console.error(e);
@@ -26,6 +28,10 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
 
   useEffect(() => {
     if (!isAuthenticated || !loadedRef.current) return;
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
     saveVaultStructure(token, structure).catch(console.error);
   }, [structure, isAuthenticated, token]);
 
