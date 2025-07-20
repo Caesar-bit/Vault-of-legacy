@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,11 @@ namespace VaultBackend.Controllers
         [HttpGet("history")]
         public async Task<IActionResult> History()
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
             var items = await _db.ChatMessages
+                .Where(m => m.UserId == userId || m.UserId == "bot")
                 .OrderBy(m => m.Timestamp)
                 .Take(50)
                 .Select(m => new

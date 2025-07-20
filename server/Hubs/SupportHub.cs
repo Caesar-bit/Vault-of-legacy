@@ -8,18 +8,19 @@ using VaultBackend.Services;
 namespace VaultBackend.Hubs
 {
     [Authorize]
-    public class ChatHub : Hub
+    public class SupportHub : Hub
     {
         private readonly AppDbContext _db;
         private readonly FaqService _faq;
-        private readonly ActivityLogger _logger;
         private readonly AiService _ai;
-        public ChatHub(AppDbContext db, FaqService faq, ActivityLogger logger, AiService ai)
+        private readonly ActivityLogger _logger;
+
+        public SupportHub(AppDbContext db, FaqService faq, AiService ai, ActivityLogger logger)
         {
             _db = db;
             _faq = faq;
-            _logger = logger;
             _ai = ai;
+            _logger = logger;
         }
 
         public override async Task OnConnectedAsync()
@@ -28,12 +29,12 @@ namespace VaultBackend.Hubs
             if (!string.IsNullOrEmpty(userId))
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, userId);
-                await Clients.Caller.SendAsync("ReceiveFaqSuggestions", _faq.GetQuestions());
+                await Clients.Caller.SendAsync("ReceiveSuggestions", _faq.GetQuestions());
                 await Clients.Caller.SendAsync("ReceiveMessage", new
                 {
                     Id = 0,
                     UserId = "bot",
-                    Content = "Hi! How can I help? Here are some common questions below.",
+                    Content = "Welcome to Vault Support. Ask me anything or choose a question below.",
                     Timestamp = DateTime.UtcNow
                 });
             }
@@ -50,54 +51,53 @@ namespace VaultBackend.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task SendMessage(string message)
+        public async Task SendMessage(string text)
         {
             var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null) return;
+            if (string.IsNullOrEmpty(userId)) return;
 
-            var chatMessage = new ChatMessage
+            var msg = new ChatMessage
             {
                 UserId = userId,
-                Content = message,
+                Content = text,
                 Timestamp = DateTime.UtcNow
             };
-
-            _db.ChatMessages.Add(chatMessage);
+            _db.ChatMessages.Add(msg);
             await _db.SaveChangesAsync();
-            await _logger.LogAsync(userId, "Sent chat message", message);
+            await _logger.LogAsync(userId, "Sent support message", text);
 
             await Clients.Group(userId).SendAsync("ReceiveMessage", new
             {
-                chatMessage.Id,
-                chatMessage.UserId,
-                chatMessage.Content,
-                chatMessage.Timestamp
+                msg.Id,
+                msg.UserId,
+                msg.Content,
+                msg.Timestamp
             });
 
-            var answer = _faq.GetAnswer(message) ?? await _ai.GetResponseAsync(message);
-            if (!string.IsNullOrEmpty(answer))
+            var reply = _faq.GetAnswer(text) ?? await _ai.GetResponseAsync(text);
+            if (!string.IsNullOrEmpty(reply))
             {
-                var botMessage = new ChatMessage
+                var bot = new ChatMessage
                 {
                     UserId = "bot",
-                    Content = answer,
+                    Content = reply,
                     Timestamp = DateTime.UtcNow
                 };
-                _db.ChatMessages.Add(botMessage);
+                _db.ChatMessages.Add(bot);
                 await _db.SaveChangesAsync();
                 await Clients.Group(userId).SendAsync("ReceiveMessage", new
                 {
-                    botMessage.Id,
-                    botMessage.UserId,
-                    botMessage.Content,
-                    botMessage.Timestamp
+                    bot.Id,
+                    bot.UserId,
+                    bot.Content,
+                    bot.Timestamp
                 });
             }
         }
 
-        public async Task RequestFaqSuggestions()
+        public async Task RequestSuggestions()
         {
-            await Clients.Caller.SendAsync("ReceiveFaqSuggestions", _faq.GetQuestions());
+            await Clients.Caller.SendAsync("ReceiveSuggestions", _faq.GetQuestions());
         }
     }
 }

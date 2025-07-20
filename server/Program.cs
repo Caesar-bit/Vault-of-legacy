@@ -249,7 +249,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<SupportHub>("/hubs/support");
 app.MapHub<ActivityHub>("/hubs/activity");
 
 app.Run();

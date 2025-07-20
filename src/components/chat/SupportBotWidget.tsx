@@ -4,9 +4,9 @@ import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage } from '../../types';
 import { fetchChatHistory } from '../../utils/api';
-import { X, Minus, MessageCircle } from 'lucide-react';
+import { MessageCircle, Minus, X } from 'lucide-react';
 
-export function ChatWidget() {
+export function SupportBotWidget() {
   const { token, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -21,7 +21,7 @@ export function ChatWidget() {
   useEffect(() => {
     if (!token) return;
     const connection = new HubConnectionBuilder()
-      .withUrl('/hubs/chat', { accessTokenFactory: () => token })
+      .withUrl('/hubs/support', { accessTokenFactory: () => token })
       .withAutomaticReconnect()
       .build();
     connection.on('ReceiveMessage', (msg: ChatMessage) => {
@@ -35,13 +35,11 @@ export function ChatWidget() {
         setLoading(false);
       }
     });
-    connection.on('ReceiveFaqSuggestions', (qs: string[]) => {
-      setSuggestions(qs);
-    });
+    connection.on('ReceiveSuggestions', (qs: string[]) => setSuggestions(qs));
     connection
       .start()
-      .then(() => connection.invoke('RequestFaqSuggestions'))
-      .catch((err) => console.error(err));
+      .then(() => connection.invoke('RequestSuggestions'))
+      .catch(console.error);
     connectionRef.current = connection;
     fetchChatHistory(token).then(setMessages).catch(() => {});
     return () => {
@@ -51,7 +49,7 @@ export function ChatWidget() {
 
   useEffect(() => {
     if (open && connectionRef.current) {
-      connectionRef.current.invoke('RequestFaqSuggestions').catch(() => {});
+      connectionRef.current.invoke('RequestSuggestions').catch(() => {});
     }
   }, [open]);
 
@@ -79,15 +77,9 @@ export function ChatWidget() {
     try {
       await connectionRef.current?.invoke('SendMessage', text);
     } catch {
-      // remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== localId));
       delete pending.current[text];
     }
-  };
-
-  const close = () => {
-    setOpen(false);
-    setMinimized(false);
   };
 
   const header = (
@@ -97,7 +89,7 @@ export function ChatWidget() {
         <button onClick={() => setMinimized(!minimized)} className="hover:text-gray-200">
           <Minus size={14} />
         </button>
-        <button onClick={close} className="hover:text-gray-200">
+        <button onClick={() => { setOpen(false); setMinimized(false); }} className="hover:text-gray-200">
           <X size={14} />
         </button>
       </div>
@@ -107,22 +99,20 @@ export function ChatWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50 text-sm">
       {open ? (
-        <div className="w-72 bg-white shadow-xl rounded-lg overflow-hidden">
+        <div className="w-80 bg-white shadow-xl rounded-lg overflow-hidden">
           {header}
           {!minimized && (
             <>
-              <div ref={scrollRef} className="h-64 overflow-y-auto p-3 space-y-2">
+              <div ref={scrollRef} className="h-72 overflow-y-auto p-3 space-y-2 text-gray-900">
                 {messages.map((m) => (
                   <div key={m.id} className={`flex ${m.userId === user?.id ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${m.userId === user?.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'}`}>
+                    <div className={`max-w-[70%] rounded-lg px-3 py-2 ${m.userId === user?.id ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
                       <p>{m.content}</p>
                       <span className="block text-xs opacity-60 mt-1">{format(new Date(m.timestamp), 'p')}</span>
                     </div>
                   </div>
                 ))}
-                {loading && (
-                  <div className="text-gray-500 text-xs">Bot is typing...</div>
-                )}
+                {loading && <div className="text-gray-500 text-xs">Bot is typing...</div>}
                 {suggestions.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {suggestions.map((q) => (
@@ -144,12 +134,7 @@ export function ChatWidget() {
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                 />
-                <button
-                  className="bg-blue-600 text-white px-3 rounded"
-                  onClick={sendMessage}
-                >
-                  Send
-                </button>
+                <button className="bg-blue-600 text-white px-3 rounded" onClick={() => sendMessage()}>Send</button>
               </div>
             </>
           )}
