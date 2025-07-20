@@ -11,11 +11,36 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [stage, setStage] = useState<'email' | 'password'>('email');
+  const [fingerprintOption, setFingerprintOption] = useState(false);
+  const [localError, setLocalError] = useState('');
   const { login, loginWithFingerprint, isLoading, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(email, password);
+    if (stage === 'email') {
+      setLocalError('');
+      try {
+        const res = await fetch('/api/auth/prelogin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        if (!data.exists) {
+          setLocalError('No account found. Please sign up.');
+        } else {
+          const fpUser = localStorage.getItem('vault_fp_user');
+          setFingerprintOption(data.fingerprintEnabled && fpUser === data.userId);
+          setStage('password');
+        }
+      } catch {
+        setLocalError('Unable to verify email');
+      }
+    } else {
+      await login(email, password);
+    }
   };
 
   return (
@@ -36,9 +61,9 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
 
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {error && (
+          {(error || localError) && (
             <div className="bg-rose-500/20 border border-rose-400/30 rounded-xl p-4 backdrop-blur-sm">
-              <p className="text-sm text-rose-200">{error}</p>
+              <p className="text-sm text-rose-200">{error || localError}</p>
             </div>
           )}
 
@@ -65,70 +90,76 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-white/60" />
+            {stage === 'password' && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-white/60" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block w-full pl-10 pr-10 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-white/60 hover:text-white" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-white/60 hover:text-white" />
+                    )}
+                  </button>
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
-                  placeholder="Enter your password"
-                />
+              </div>
+            )}
+          </div>
+
+          {stage === 'password' && (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-orange-500 focus:ring-orange-400 border-white/30 rounded bg-white/20"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-white/80">
+                    Remember me
+                  </label>
+                </div>
+
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={onSwitchToForgotPassword}
+                  className="text-sm text-orange-300 hover:text-orange-200 font-medium transition-colors duration-200"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-white/60 hover:text-white" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-white/60 hover:text-white" />
-                  )}
+                  Forgot password?
                 </button>
               </div>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-orange-500 focus:ring-orange-400 border-white/30 rounded bg-white/20"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-white/80">
-                Remember me
-              </label>
-            </div>
-
-            <button
-              type="button"
-              onClick={onSwitchToForgotPassword}
-              className="text-sm text-orange-300 hover:text-orange-200 font-medium transition-colors duration-200"
-            >
-              Forgot password?
-            </button>
-          </div>
-
-          {localStorage.getItem('vault_fp_user') && (
-            <button
-              type="button"
-              onClick={loginWithFingerprint}
-              className="group relative w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl text-sm font-semibold text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 transition-all duration-300"
-            >
-              <Fingerprint className="h-5 w-5 mr-2" /> Sign in with Fingerprint
-            </button>
+              {fingerprintOption && (
+                <button
+                  type="button"
+                  onClick={loginWithFingerprint}
+                  className="group relative w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl text-sm font-semibold text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 transition-all duration-300"
+                >
+                  <Fingerprint className="h-5 w-5 mr-2" /> Sign in with Fingerprint
+                </button>
+              )}
+            </>
           )}
 
           <button
@@ -139,7 +170,7 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword }: LoginF
             {isLoading ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
-              'Sign in'
+              stage === 'email' ? 'Continue' : 'Sign in'
             )}
           </button>
 

@@ -20,6 +20,19 @@ namespace VaultBackend.Controllers
             _tokens = tokens;
         }
 
+        [HttpPost("prelogin")]
+        public async Task<IActionResult> PreLogin(PreLoginRequest request)
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+            {
+                return Ok(new { exists = false });
+            }
+
+            var fp = await _db.FingerprintCredentials.AnyAsync(f => f.UserId == user.Id);
+            return Ok(new { exists = true, userId = user.Id, fingerprintEnabled = fp });
+        }
+
         [HttpPost("signup")]
         public async Task<IActionResult> Signup(SignupRequest request)
         {
@@ -66,5 +79,6 @@ namespace VaultBackend.Controllers
     }
 
     public record SignupRequest(string Email, string Password, string Name);
+    public record PreLoginRequest(string Email);
     public record LoginRequest(string Email, string Password);
 }
