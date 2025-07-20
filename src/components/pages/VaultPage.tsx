@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { FolderPlus, Upload } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,6 +8,7 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
   const { isAuthenticated, token } = useAuth();
 
   const [structure, setStructure] = useState<VaultItem[]>([]);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -15,6 +16,7 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
       try {
         const data = await fetchVaultStructure(token);
         setStructure(data);
+        loadedRef.current = true;
       } catch (e) {
         console.error(e);
       }
@@ -23,7 +25,7 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
   }, [isAuthenticated, token]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !loadedRef.current) return;
     saveVaultStructure(token, structure).catch(console.error);
   }, [structure, isAuthenticated, token]);
 

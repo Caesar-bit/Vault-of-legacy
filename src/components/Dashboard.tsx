@@ -62,6 +62,17 @@ export function Dashboard() {
   const connectionRef = useRef<HubConnection | null>(null);
   const navigate = useNavigate();
 
+  const handleView = (activity: ActivityLog) => {
+    const action = activity.action.toLowerCase();
+    if (action.includes('vault') || action.includes('file')) {
+      navigate('/vault');
+    } else if (action.includes('profile') || action.includes('password')) {
+      navigate('/settings');
+    } else if (action.includes('chat')) {
+      navigate('/research');
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
     getRecentActivity(token).then(setRecent).catch(console.error);
@@ -270,7 +281,7 @@ export function Dashboard() {
                         <p className="text-xs sm:text-sm text-gray-600">{new Date(activity.timestamp).toLocaleString()}</p>
                       </div>
                       <div className="flex-shrink-0 flex items-center justify-end">
-                        <button className="text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-semibold px-2 sm:px-3 py-1 rounded-lg hover:bg-primary-50 transition-all duration-200">
+                        <button onClick={() => handleView(activity)} className="text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-semibold px-2 sm:px-3 py-1 rounded-lg hover:bg-primary-50 transition-all duration-200">
                           View
                         </button>
                       </div>
