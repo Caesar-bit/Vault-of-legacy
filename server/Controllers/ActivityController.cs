@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VaultBackend.Data;
+using System.Security.Claims;
 
 namespace VaultBackend.Controllers
 {
@@ -20,7 +21,11 @@ namespace VaultBackend.Controllers
         [HttpGet("recent")]
         public async Task<IActionResult> GetRecent()
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
             var items = await _db.ActivityLogs
+                .Where(a => a.UserId == userId)
                 .OrderByDescending(a => a.Timestamp)
                 .Take(20)
                 .Select(a => new

@@ -27,7 +27,7 @@ namespace VaultBackend.Services
             };
             _db.ActivityLogs.Add(entry);
             await _db.SaveChangesAsync();
-            await _hub.Clients.All.SendAsync("NewActivity", new
+            await _hub.Clients.Group(userId).SendAsync("NewActivity", new
             {
                 entry.Id,
                 entry.UserId,
