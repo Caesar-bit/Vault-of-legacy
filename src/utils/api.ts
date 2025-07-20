@@ -126,3 +126,11 @@ export async function saveUserData(token: string, type: string, data: unknown) {
   });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export async function getStats(token: string) {
+  const res = await fetch(`${API_BASE}/api/stats/summary`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

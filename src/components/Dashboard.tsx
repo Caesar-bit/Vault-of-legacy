@@ -20,14 +20,16 @@ import {
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { ActivityLog } from '../types';
-import { getRecentActivity } from '../utils/api';
+import { getRecentActivity, getStats } from '../utils/api';
+import type { LucideIcon } from 'lucide-react';
 
-const stats = [
-  { name: 'Total Assets', value: '12,847', change: '+12%', changeType: 'increase', icon: FileText },
-  { name: 'Active Projects', value: '23', change: '+3', changeType: 'increase', icon: FolderOpen },
-  { name: 'Monthly Views', value: '45,672', change: '+18%', changeType: 'increase', icon: Eye },
-  { name: 'Contributors', value: '156', change: '+7', changeType: 'increase', icon: Users },
-];
+interface Stat {
+  name: string;
+  value: string;
+  change: string;
+  changeType: 'increase' | 'decrease';
+  icon: LucideIcon;
+}
 
 
 const quickActions = [
@@ -57,6 +59,12 @@ import { useNavigate } from 'react-router-dom';
 export function Dashboard() {
   const { t } = useLanguage();
   const { user, token } = useAuth();
+  const [stats, setStats] = useState<Stat[]>([
+    { name: 'Total Assets', value: '0', change: '', changeType: 'increase', icon: FileText },
+    { name: 'Active Projects', value: '0', change: '', changeType: 'increase', icon: FolderOpen },
+    { name: 'Monthly Views', value: '0', change: '', changeType: 'increase', icon: Eye },
+    { name: 'Contributors', value: '0', change: '', changeType: 'increase', icon: Users },
+  ]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [recent, setRecent] = useState<ActivityLog[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
@@ -76,6 +84,16 @@ export function Dashboard() {
   useEffect(() => {
     if (!token) return;
     getRecentActivity(token).then(setRecent).catch(console.error);
+    getStats(token)
+      .then((data) => {
+        setStats([
+          { name: 'Total Assets', value: data.totalAssets.toLocaleString(), change: '', changeType: 'increase', icon: FileText },
+          { name: 'Active Projects', value: data.activeProjects.toString(), change: '', changeType: 'increase', icon: FolderOpen },
+          { name: 'Monthly Views', value: data.monthlyViews.toLocaleString(), change: '', changeType: 'increase', icon: Eye },
+          { name: 'Contributors', value: data.contributors.toString(), change: '', changeType: 'increase', icon: Users },
+        ]);
+      })
+      .catch(console.error);
     const connection = new HubConnectionBuilder()
       .withUrl('/hubs/activity', { accessTokenFactory: () => token })
       .withAutomaticReconnect()
