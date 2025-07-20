@@ -15,6 +15,7 @@ export function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const connectionRef = useRef<HubConnection | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pending = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (!token) return;
@@ -23,6 +24,11 @@ export function ChatWidget() {
       .withAutomaticReconnect()
       .build();
     connection.on('ReceiveMessage', (msg: ChatMessage) => {
+      if (msg.userId === user?.id && pending.current[msg.content]) {
+        const tempId = pending.current[msg.content];
+        delete pending.current[msg.content];
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      }
       setMessages((prev) => [...prev, msg]);
       if (msg.userId === 'bot') {
         setLoading(false);
@@ -45,9 +51,25 @@ export function ChatWidget() {
   const sendMessage = async () => {
     const text = message.trim();
     if (!text) return;
-    setLoading(true);
-    await connectionRef.current?.invoke('SendMessage', text);
+    const localId = `local-${Date.now()}`;
+    const userId = user?.id || '';
+    const localMsg: ChatMessage = {
+      id: localId,
+      userId,
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+    pending.current[text] = localId;
+    setMessages((prev) => [...prev, localMsg]);
     setMessage('');
+    setLoading(true);
+    try {
+      await connectionRef.current?.invoke('SendMessage', text);
+    } catch {
+      // remove optimistic message on error
+      setMessages((prev) => prev.filter((m) => m.id !== localId));
+      delete pending.current[text];
+    }
   };
 
   const close = () => {

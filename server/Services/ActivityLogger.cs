@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using VaultBackend.Data;
 using VaultBackend.Hubs;
 using VaultBackend.Models;
