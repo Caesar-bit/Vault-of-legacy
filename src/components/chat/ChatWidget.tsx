@@ -51,7 +51,7 @@ export function ChatWidget() {
 
   const header = (
     <div className="flex items-center justify-between bg-blue-600 text-white px-3 py-2 rounded-t">
-      <span className="font-semibold">BOT</span>
+      <span className="font-semibold">Support</span>
       <div className="flex gap-1">
         <button onClick={() => setMinimized(!minimized)} className="hover:text-gray-200">
           <Minus size={14} />
@@ -73,7 +73,7 @@ export function ChatWidget() {
               <div ref={scrollRef} className="h-64 overflow-y-auto p-3 space-y-2">
                 {messages.map((m) => (
                   <div key={m.id} className={m.userId === user?.id ? 'text-right' : ''}>
-                    <span className="font-bold mr-1">{m.userId === user?.id ? 'Me' : m.userId === 'bot' ? 'Bot' : 'Agent'}:</span>
+                    <span className="font-bold mr-1">{m.userId === user?.id ? 'Me' : 'Agent'}:</span>
                     <span>{m.content}</span>
                   </div>
                 ))}

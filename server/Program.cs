@@ -11,6 +11,8 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<FaqService>();
 builder.Services.AddScoped<ActivityLogger>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<AiService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

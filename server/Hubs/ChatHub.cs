@@ -13,11 +13,13 @@ namespace VaultBackend.Hubs
         private readonly AppDbContext _db;
         private readonly FaqService _faq;
         private readonly ActivityLogger _logger;
-        public ChatHub(AppDbContext db, FaqService faq, ActivityLogger logger)
+        private readonly AiService _ai;
+        public ChatHub(AppDbContext db, FaqService faq, ActivityLogger logger, AiService ai)
         {
             _db = db;
             _faq = faq;
             _logger = logger;
+            _ai = ai;
         }
 
         public async Task SendMessage(string message)
@@ -44,7 +46,7 @@ namespace VaultBackend.Hubs
                 chatMessage.Timestamp
             });
 
-            var answer = _faq.GetAnswer(message);
+            var answer = _faq.GetAnswer(message) ?? await _ai.GetResponseAsync(message);
             if (!string.IsNullOrEmpty(answer))
             {
                 var botMessage = new ChatMessage
