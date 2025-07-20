@@ -28,6 +28,14 @@ namespace VaultBackend.Hubs
             if (!string.IsNullOrEmpty(userId))
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+                await Clients.Caller.SendAsync("ReceiveFaqSuggestions", _faq.GetQuestions());
+                await Clients.Caller.SendAsync("ReceiveMessage", new
+                {
+                    Id = 0,
+                    UserId = "bot",
+                    Content = "Hi! How can I help? Here are some common questions below.",
+                    Timestamp = DateTime.UtcNow
+                });
             }
             await base.OnConnectedAsync();
         }

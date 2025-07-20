@@ -13,6 +13,7 @@ export function ChatWidget() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const pending = useRef<Record<string, string>>({});
@@ -34,6 +35,9 @@ export function ChatWidget() {
         setLoading(false);
       }
     });
+    connection.on('ReceiveFaqSuggestions', (qs: string[]) => {
+      setSuggestions(qs);
+    });
     connection.start();
     connectionRef.current = connection;
     fetchChatHistory(token).then(setMessages).catch(() => {});
@@ -48,8 +52,8 @@ export function ChatWidget() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, minimized]);
 
-  const sendMessage = async () => {
-    const text = message.trim();
+  const sendMessage = async (override?: string) => {
+    const text = (override ?? message).trim();
     if (!text) return;
     const localId = `local-${Date.now()}`;
     const userId = user?.id || '';
@@ -109,6 +113,20 @@ export function ChatWidget() {
                 ))}
                 {loading && (
                   <div className="text-gray-500 text-xs">Bot is typing...</div>
+                )}
+                {suggestions.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    <p className="text-xs text-gray-500">Frequently asked:</p>
+                    {suggestions.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => sendMessage(q)}
+                        className="block text-left text-blue-600 text-xs underline"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
               <div className="flex border-t p-2 gap-2">

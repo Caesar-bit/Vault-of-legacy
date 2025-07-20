@@ -31,5 +31,10 @@ namespace VaultBackend.Services
             }
             return null;
         }
+
+        public IEnumerable<string> GetQuestions()
+        {
+            return _faqs.Keys;
+        }
     }
 }
