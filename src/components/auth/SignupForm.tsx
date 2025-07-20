@@ -41,36 +41,37 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-500 via-purple-600 to-secondary-500 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-purple-600 mx-auto mb-4">
-            <Vault className="h-8 w-8 text-white" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-500 mx-auto mb-6 shadow-2xl animate-float">
+            <Vault className="h-10 w-10 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Create your account</h2>
-          <p className="mt-2 text-gray-600">Join Vault of Legacy and preserve your digital heritage</p>
-          
-          <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-green-600">
-            <Shield className="h-4 w-4" />
+          <h2 className="text-4xl font-bold text-white">Create your account</h2>
+          <p className="mt-2 text-white/80 text-lg">Join Vault of Legacy and preserve your digital heritage</p>
+
+          <div className="mt-6 flex items-center justify-center space-x-2 text-sm text-emerald-300">
+            <Shield className="h-5 w-5" />
             <span>AES-256 Encrypted • Blockchain Secured</span>
           </div>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
+        <form className="space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="bg-rose-500/20 border border-rose-400/30 rounded-xl p-4 backdrop-blur-sm">
+              <p className="text-sm text-rose-200">{error}</p>
             </div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
                 Full name
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
+                  <User className="h-5 w-5 text-white/60" />
                 </div>
                 <input
                   id="name"
@@ -80,19 +81,19 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                  className="block w-full pl-10 pr-3 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
                   placeholder="Enter your full name"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
                 Email address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-5 w-5 text-white/60" />
                 </div>
                 <input
                   id="email"
@@ -102,19 +103,19 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                  className="block w-full pl-10 pr-3 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
                   placeholder="Enter your email"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
                 Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-white/60" />
                 </div>
                 <input
                   id="password"
@@ -124,7 +125,7 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                  className="block w-full pl-10 pr-10 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
                   placeholder="Create a password"
                 />
                 <button
@@ -133,9 +134,9 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <EyeOff className="h-5 w-5 text-white/60 hover:text-white" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <Eye className="h-5 w-5 text-white/60 hover:text-white" />
                   )}
                 </button>
               </div>
@@ -144,8 +145,8 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                 <div className="mt-2 space-y-1">
                   {passwordRequirements.map((req, index) => (
                     <div key={index} className="flex items-center space-x-2 text-xs">
-                      <Check className={`h-3 w-3 ${req.met ? 'text-green-500' : 'text-gray-300'}`} />
-                      <span className={req.met ? 'text-green-600' : 'text-gray-500'}>{req.text}</span>
+                      <Check className={`h-3 w-3 ${req.met ? 'text-emerald-400' : 'text-white/30'}`} />
+                      <span className={req.met ? 'text-emerald-300' : 'text-white/60'}>{req.text}</span>
                     </div>
                   ))}
                 </div>
@@ -153,12 +154,12 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
                 Confirm password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-white/60" />
                 </div>
                 <input
                   id="confirmPassword"
@@ -168,7 +169,7 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                  className="block w-full pl-10 pr-10 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
                   placeholder="Confirm your password"
                 />
                 <button
@@ -177,14 +178,14 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <EyeOff className="h-5 w-5 text-white/60 hover:text-white" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <Eye className="h-5 w-5 text-white/60 hover:text-white" />
                   )}
                 </button>
               </div>
               {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="mt-1 text-xs text-red-600">Passwords do not match</p>
+                <p className="mt-1 text-xs text-rose-300">Passwords do not match</p>
               )}
             </div>
           </div>
@@ -195,20 +196,20 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               name="terms"
               type="checkbox"
               required
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-orange-500 focus:ring-orange-400 border-white/30 rounded bg-white/20"
             />
-            <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="terms" className="ml-2 block text-sm text-white/80">
               I agree to the{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">Terms of Service</a>
+              <a href="#" className="text-orange-300 hover:text-orange-200">Terms of Service</a>
               {' '}and{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">Privacy Policy</a>
+              <a href="#" className="text-orange-300 hover:text-orange-200">Privacy Policy</a>
             </label>
           </div>
 
           <button
             type="submit"
             disabled={isLoading || formData.password !== formData.confirmPassword}
-            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -218,16 +219,17 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           </button>
 
           <div className="text-center">
-            <span className="text-sm text-gray-600">Already have an account? </span>
+            <span className="text-sm text-white/80">Already have an account? </span>
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+              className="text-sm text-orange-300 hover:text-orange-200 font-medium transition-colors duration-200"
             >
               Sign in
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
