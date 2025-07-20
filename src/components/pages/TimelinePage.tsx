@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useUserData } from '../../utils/userData';
 import { FileUpload } from '../FileUpload';
 import {
   Plus,
@@ -48,7 +49,7 @@ const getEventTypeIcon = (type: string) => {
 
 
 export function TimelinePage() {
-  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [events, setEvents] = useUserData<TimelineEvent[]>('timeline_events', []);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
