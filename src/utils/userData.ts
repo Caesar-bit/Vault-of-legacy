@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserData, saveUserData } from './api';
 
 export function useUserData<T>(type: string, defaultValue: T) {
   const { token } = useAuth();
-  const [data, setData] = useState<T>(defaultValue);
+  const [data, internalSetData] = useState<T>(defaultValue);
   const [initialized, setInitialized] = useState(false);
+  const hasLocalChanges = useRef(false);
+
+  const setData: typeof internalSetData = (value) => {
+    hasLocalChanges.current = true;
+    internalSetData(value);
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -13,10 +19,13 @@ export function useUserData<T>(type: string, defaultValue: T) {
     (async () => {
       try {
         const res = await getUserData(token, type);
-        setData((res as T) ?? defaultValue);
+        internalSetData((prev) =>
+          hasLocalChanges.current ? prev : ((res as T) ?? defaultValue)
+        );
+        hasLocalChanges.current = false;
       } catch (err) {
         console.error(err);
-        setData(defaultValue);
+        internalSetData((prev) => (hasLocalChanges.current ? prev : defaultValue));
       } finally {
         setInitialized(true);
       }
@@ -24,8 +33,12 @@ export function useUserData<T>(type: string, defaultValue: T) {
   }, [token, type]);
 
   useEffect(() => {
-    if (!token || !initialized) return;
-    saveUserData(token, type, data).catch(console.error);
+    if (!token || !initialized || !hasLocalChanges.current) return;
+    saveUserData(token, type, data)
+      .then(() => {
+        hasLocalChanges.current = false;
+      })
+      .catch(console.error);
   }, [token, type, data, initialized]);
 
   return [data, setData] as [T, React.Dispatch<React.SetStateAction<T>>];
