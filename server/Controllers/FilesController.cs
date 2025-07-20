@@ -70,18 +70,26 @@ namespace VaultBackend.Controllers
         public async Task<IActionResult> SaveStructure([FromBody] JsonElement data)
         {
             var s = await _db.FileStructures.FirstOrDefaultAsync();
+            var newData = data.GetRawText();
             if (s == null)
             {
-                s = new FileStructure { Id = "main", Data = data.GetRawText() };
+                s = new FileStructure { Id = "main", Data = newData };
                 _db.FileStructures.Add(s);
+                await _db.SaveChangesAsync();
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+                await _logger.LogAsync(userId, "Updated vault structure", "");
+            }
+            else if (s.Data != newData)
+            {
+                s.Data = newData;
+                await _db.SaveChangesAsync();
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+                await _logger.LogAsync(userId, "Updated vault structure", "");
             }
             else
             {
-                s.Data = data.GetRawText();
+                // No changes, so don't log another activity entry
             }
-            await _db.SaveChangesAsync();
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
-            await _logger.LogAsync(userId, "Updated vault structure", "");
             return NoContent();
         }
     }

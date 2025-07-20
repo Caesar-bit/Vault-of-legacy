@@ -67,11 +67,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     { name: t('gallery'), page: 'gallery' },
     { name: t('research'), page: 'research' },
     ...(user?.role === 'admin' ? [{ name: t('users'), page: 'users' }] : []),
-    { name: t('analytics'), page: 'analytics' },
+    ...(user?.role === 'admin' ? [{ name: t('analytics'), page: 'analytics' }] : []),
     { name: t('settings'), page: 'settings' },
     { name: t('templates'), page: 'templates' },
     { name: t('export'), page: 'export' },
-    { name: 'API', page: 'api' },
+    ...(user?.role === 'admin' ? [{ name: 'API', page: 'api' }] : []),
     { name: 'Blockchain', page: 'blockchain' },
     { name: t('about'), page: 'about' },
   ];

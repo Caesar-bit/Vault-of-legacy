@@ -54,12 +54,12 @@ function AppContent() {
         <Route path="/gallery" element={<GalleryPage />} />
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/users" element={user?.role === 'admin' ? <UsersPage /> : <div className="p-6">Access denied</div>} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/analytics" element={user?.role === 'admin' ? <AnalyticsPage /> : <div className="p-6">Access denied</div>} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/templates" element={<TemplatesPage />} />
         <Route path="/export" element={<ExportPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/api" element={<APIPage />} />
+        <Route path="/api" element={user?.role === 'admin' ? <APIPage /> : <div className="p-6">Access denied</div>} />
         <Route path="/backup" element={<BackupPage />} />
         <Route path="/blockchain" element={<BlockchainPage />} />
         <Route path="/about" element={<AboutPage />} />
