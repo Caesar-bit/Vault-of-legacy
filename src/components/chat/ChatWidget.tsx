@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HubConnectionBuilder, HubConnection, HubConnectionState } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage } from '../../types';
 import { fetchChatHistory, fetchFaqs } from '../../utils/api';

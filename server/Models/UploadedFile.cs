@@ -10,6 +10,7 @@ namespace VaultBackend.Models
         [Required]
         public string UserId { get; set; } = string.Empty;
 
+        // Path relative to the application root, e.g. "UploadedFiles/{userId}/filename"
         [Required]
         public string Path { get; set; } = string.Empty;
 

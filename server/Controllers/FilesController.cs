@@ -38,13 +38,13 @@ namespace VaultBackend.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
 
-            var dir = Path.Combine(_env.ContentRootPath, "UploadedFiles", userId);
-            Directory.CreateDirectory(dir);
-            var filePath = Path.Combine(dir, Guid.NewGuid().ToString() + "_" + file.FileName);
+            var relativePath = Path.Combine("UploadedFiles", userId, Guid.NewGuid().ToString() + "_" + file.FileName);
+            var filePath = Path.Combine(_env.ContentRootPath, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
             using var stream = System.IO.File.OpenWrite(filePath);
             await file.CopyToAsync(stream);
 
-            var uploaded = new UploadedFile { Path = filePath, OriginalName = file.FileName, UserId = userId };
+            var uploaded = new UploadedFile { Path = relativePath, OriginalName = file.FileName, UserId = userId };
             _db.UploadedFiles.Add(uploaded);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Uploaded file", file.FileName);
