@@ -13,6 +13,7 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [faqs, setFaqs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<'offline' | 'connecting' | 'online'>('offline');
   const connectionRef = useRef<HubConnection | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -25,9 +26,7 @@ export function ChatWidget() {
       .withAutomaticReconnect()
       .build();
     connection.on('ReceiveMessage', (msg: ChatMessage) => {
-      setMessages((prev) =>
-        msg.userId === user?.id ? prev : [...prev, msg]
-      );
+      setMessages((prev) => (msg.userId === user?.id ? prev : [...prev, msg]));
       setLoading(false);
     });
     connection.on('FaqList', (list: string[]) => setFaqs(list));
@@ -37,9 +36,13 @@ export function ChatWidget() {
         { id: crypto.randomUUID(), userId: 'bot', content: text, timestamp: new Date().toISOString() }
       ]);
     });
-    connection.start();
+    connection.onreconnected(() => setStatus('online'));
+    connection.onclose(() => setStatus('offline'));
     connectionRef.current = connection;
-    return () => { connection.stop(); };
+    setStatus('offline');
+    return () => {
+      connection.stop();
+    };
   }, [token]);
 
   useEffect(() => {
@@ -58,12 +61,23 @@ export function ChatWidget() {
     setMessage('');
     setLoading(true);
     try {
-      if (connectionRef.current?.state === HubConnectionState.Disconnected) {
-        await connectionRef.current.start();
+      if (status === 'offline') {
+        await connect();
       }
       await connectionRef.current?.invoke('SendMessage', content);
     } catch {
       setLoading(false);
+    }
+  };
+
+  const connect = async () => {
+    if (!connectionRef.current || status === 'online') return;
+    setStatus('connecting');
+    try {
+      await connectionRef.current.start();
+      setStatus('online');
+    } catch {
+      setStatus('offline');
     }
   };
 
@@ -75,16 +89,31 @@ export function ChatWidget() {
         <div className="w-80 bg-white shadow-xl rounded-lg overflow-hidden flex flex-col">
           <div className="flex items-center justify-between bg-blue-600 text-white px-3 py-2">
             <span className="font-semibold">Support</span>
-            <div className="flex gap-1">
-              <button onClick={() => setMinimized(!minimized)} className="hover:text-gray-200">
-                <Minus size={14} />
-              </button>
-              <button onClick={close} className="hover:text-gray-200">
-                <X size={14} />
-              </button>
-            </div>
+          <div className="flex gap-1">
+            <button onClick={() => setMinimized(!minimized)} className="hover:text-gray-200">
+              <Minus size={14} />
+            </button>
+            <button onClick={close} className="hover:text-gray-200">
+              <X size={14} />
+            </button>
           </div>
-          {!minimized && (
+        </div>
+        <div
+          className={`text-xs text-center ${
+            status === 'online'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-red-100 text-red-700'
+          } py-1`}
+        >
+          Bot: {status}
+          {status === 'offline' && (
+            <button onClick={connect} className="ml-2 underline text-blue-700">
+              Connect
+            </button>
+          )}
+          {status === 'connecting' && ' Connecting...'}
+        </div>
+        {!minimized && (
             <>
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2">
                 {messages.map((m) => (
