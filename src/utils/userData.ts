@@ -37,7 +37,7 @@ export function useUserData<T>(type: string, defaultValue: T) {
     if (!token || !initialized || !hasLocalChanges.current) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      saveUserData(token, type, data)
+      saveUserData(token, type, data, false)
         .then(() => {
           hasLocalChanges.current = false;
           saveTimeout.current = null;

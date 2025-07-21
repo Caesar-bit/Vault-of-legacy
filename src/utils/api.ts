@@ -108,8 +108,13 @@ export async function getUserData(token: string, type: string) {
   return res.json();
 }
 
-export async function saveUserData(token: string, type: string, data: unknown) {
-  const res = await fetch(`${API_BASE}/api/userdata/${type}`, {
+export async function saveUserData(
+  token: string,
+  type: string,
+  data: unknown,
+  log = false
+) {
+  const res = await fetch(`${API_BASE}/api/userdata/${type}?log=${log}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
