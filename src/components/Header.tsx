@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { ThemeToggle } from './ThemeToggle';
 import { Bell, Search, Plus, Menu, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,18 +7,20 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { NewProjectModal } from './NewProjectModal';
 import { ProfileDropdown } from './ProfileDropdown';
 import { useNavigate } from 'react-router-dom';
+import { ActivityLog } from '../types';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
 export function Header({ onToggleSidebar }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
+  const connectionRef = useRef<HubConnection | null>(null);
   const [avatar, setAvatar] = useState<string>(user?.avatar || '');
 
   useEffect(() => {
@@ -55,6 +58,32 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   useEffect(() => {
     localStorage.setItem('vault_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    if (!token) return;
+    const connection = new HubConnectionBuilder()
+      .withUrl('/hubs/activity', { accessTokenFactory: () => token })
+      .withAutomaticReconnect()
+      .build();
+    connection.on('NewActivity', (activity: ActivityLog) => {
+      setNotifications(prev => {
+        if (prev.some(n => n.id === activity.id)) return prev;
+        const item = {
+          id: activity.id,
+          title: activity.action,
+          message: activity.item,
+          time: new Date(activity.timestamp).toLocaleString(),
+          unread: true,
+        };
+        return [item, ...prev].slice(0, 50);
+      });
+    });
+    connection.start();
+    connectionRef.current = connection;
+    return () => {
+      connection.stop();
+    };
+  }, [token]);
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
