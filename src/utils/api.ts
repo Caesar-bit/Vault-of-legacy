@@ -46,8 +46,8 @@ export async function fetchVaultStructure(token: string) {
   return res.json();
 }
 
-export async function saveVaultStructure(token: string, data: unknown) {
-  const res = await fetch(`${API_BASE}/api/file/structure`, {
+export async function saveVaultStructure(token: string, data: unknown, log = true) {
+  const res = await fetch(`${API_BASE}/api/file/structure?log=${log}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,

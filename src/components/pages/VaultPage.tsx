@@ -10,6 +10,7 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
   const [structure, setStructure] = useState<VaultItem[]>([]);
   const loadedRef = useRef(false);
   const skipSave = useRef(true);
+  const skipLog = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -32,7 +33,8 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
       skipSave.current = false;
       return;
     }
-    saveVaultStructure(token, structure).catch(console.error);
+    saveVaultStructure(token, structure, !skipLog.current).catch(console.error);
+    skipLog.current = false;
   }, [structure, isAuthenticated, token]);
 
   return (
@@ -71,7 +73,14 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
         </div>
       </div>
 
-      <FileManager initialItems={structure} onChange={setStructure} initialPath={initialPath} />
+      <FileManager
+        initialItems={structure}
+        onChange={setStructure}
+        onUpload={() => {
+          skipLog.current = true;
+        }}
+        initialPath={initialPath}
+      />
     </div>
   );
 }

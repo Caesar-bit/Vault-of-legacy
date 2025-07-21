@@ -77,7 +77,7 @@ namespace VaultBackend.Controllers
         }
 
         [HttpPost("structure")]
-        public async Task<IActionResult> SaveStructure([FromBody] JsonElement data)
+        public async Task<IActionResult> SaveStructure([FromBody] JsonElement data, [FromQuery] bool log = true)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -89,13 +89,15 @@ namespace VaultBackend.Controllers
                 s = new FileStructure { UserId = userId, Data = newData };
                 _db.FileStructures.Add(s);
                 await _db.SaveChangesAsync();
-                await _logger.LogAsync(userId, "Updated vault structure", "");
+                if (log)
+                    await _logger.LogAsync(userId, "Updated vault structure", "");
             }
             else if (s.Data != newData)
             {
                 s.Data = newData;
                 await _db.SaveChangesAsync();
-                await _logger.LogAsync(userId, "Updated vault structure", "");
+                if (log)
+                    await _logger.LogAsync(userId, "Updated vault structure", "");
             }
             else
             {

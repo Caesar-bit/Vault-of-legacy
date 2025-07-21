@@ -33,9 +33,10 @@ interface FileManagerProps {
   initialItems: VaultItem[];
   onChange: (items: VaultItem[]) => void;
   initialPath?: string[];
+  onUpload?: () => void;
 }
 
-export function FileManager({ initialItems, onChange, initialPath = [] }: FileManagerProps) {
+export function FileManager({ initialItems, onChange, initialPath = [], onUpload }: FileManagerProps) {
   const [structure, setStructure] = useState<VaultItem[]>(initialItems);
   const [path, setPath] = useState<string[]>(initialPath);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -174,6 +175,7 @@ export function FileManager({ initialItems, onChange, initialPath = [] }: FileMa
       })
     );
     updateAtPath(path, (prev) => [...newFiles, ...prev]);
+    onUpload?.();
   };
 
   const handleUploadClick = () => fileInputRef.current?.click();
