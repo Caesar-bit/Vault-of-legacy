@@ -1,39 +1,26 @@
 import React, { useEffect, useState } from 'react';
+import { useUserData } from '../utils/userData';
 
 
 export function ThemeToggle() {
   const getSystemPref = () =>
     window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const getInitial = () => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
-      if (saved === 'dark') return true;
-      if (saved === 'light') return false;
-      return getSystemPref();
-    }
-    return false;
-  };
-  const [dark, setDark] = useState(getInitial);
+  const [dark, setDark] = useUserData('theme', getSystemPref());
 
   useEffect(() => {
     if (dark) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
     }
   }, [dark]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    if (!saved) {
-      setDark(getSystemPref());
-    }
+    setDark(getSystemPref());
     // Listen for system changes if no manual override
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('theme')) setDark(e.matches);
+      setDark(e.matches);
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);

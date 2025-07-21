@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useUserData } from '../../utils/userData';
 import { AnimatedAlert } from '../AnimatedAlert';
 import {
   Shield,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export function PrivacyPage() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useUserData('privacy_settings', {
     profileVisibility: 'private',
     searchEngineIndexing: false,
     dataSharing: false,
@@ -41,12 +42,11 @@ export function PrivacyPage() {
   };
 
   const saveChanges = () => {
-    localStorage.setItem('privacy_settings', JSON.stringify(settings));
     setAlert({ message: 'Settings saved', type: 'success' });
   };
 
   const exportData = () => {
-    const data = localStorage.getItem('vault_settings') || '{}';
+    const data = JSON.stringify(settings);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -58,7 +58,20 @@ export function PrivacyPage() {
   };
 
   const deleteAccount = () => {
-    localStorage.clear();
+    setSettings({
+      profileVisibility: 'private',
+      searchEngineIndexing: false,
+      dataSharing: false,
+      analyticsTracking: true,
+      cookieConsent: true,
+      emailMarketing: false,
+      thirdPartyIntegrations: false,
+      dataRetention: '25years',
+      encryptionLevel: 'aes256',
+      twoFactorAuth: true,
+      loginNotifications: true,
+      accessLogging: true,
+    });
     setAlert({ message: 'Account deleted', type: 'success' });
   };
 

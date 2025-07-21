@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { useUserData } from "../utils/userData";
 import { User, AuthState } from "../types";
 import { EncryptionService } from "../utils/encryption";
 import { blockchain } from "../utils/blockchain";
@@ -35,69 +36,33 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const [storedUser, setStoredUser] = useUserData<User | null>('auth_user', null);
+  const [storedToken, setStoredToken] = useUserData<string | null>('auth_token', null);
   const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
+    user: storedUser,
+    isAuthenticated: storedToken !== null,
+    isLoading: false,
     error: null,
-    token: null,
+    token: storedToken,
   });
 
   useEffect(() => {
-    // Check for existing session
-    const checkAuth = () => {
-      try {
-        const encryptedUser = localStorage.getItem("vault_user");
-        const token = localStorage.getItem("vault_token");
-        if (encryptedUser && token) {
-          const decrypted = JSON.parse(
-            EncryptionService.decrypt(encryptedUser),
-          );
-          let avatar: string | undefined;
-          try {
-            const key = `vault_settings_${decrypted.id}`;
-            const settings = JSON.parse(localStorage.getItem(key) || "{}");
-            avatar = settings.profile?.avatar;
-          } catch {
-            avatar = undefined;
-          }
-          const userData = { status: "active", avatar, ...decrypted } as User;
-          setAuthState({
-            user: userData,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-            token,
-          });
-        } else {
-          setAuthState((prev) => ({ ...prev, isLoading: false }));
-        }
-      } catch (err) {
-        console.error(err);
-        setAuthState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: "Session validation failed",
-        }));
-      }
-    };
-
-    checkAuth();
-  }, []);
+    setAuthState(prev => ({
+      ...prev,
+      user: storedUser,
+      token: storedToken,
+      isAuthenticated: storedToken !== null,
+      isLoading: false,
+    }));
+  }, [storedUser, storedToken]);
 
   useEffect(() => {
     if (!authState.user) return;
     const handler = () => {
-      try {
-        const key = `vault_settings_${authState.user?.id}`;
-        const settings = JSON.parse(localStorage.getItem(key) || '{}');
-        setAuthState(prev => ({
-          ...prev,
-          user: prev.user ? { ...prev.user, avatar: settings.profile?.avatar } : null,
-        }));
-      } catch {
-        // ignore parse errors
-      }
+      setAuthState(prev => ({
+        ...prev,
+        user: prev.user,
+      }));
     };
     window.addEventListener('vault_settings_updated', handler);
     return () => window.removeEventListener('vault_settings_updated', handler);
@@ -134,20 +99,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
-        avatar: data.avatar ?? (() => {
-          try {
-            const key = `vault_settings_${data.id}`;
-            const settings = JSON.parse(localStorage.getItem(key) || "{}");
-            return settings.profile?.avatar;
-          } catch {
-            return undefined;
-          }
-        })(),
+        avatar: data.avatar,
       };
 
-      localStorage.setItem("vault_token", data.token);
-      const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
-      localStorage.setItem("vault_user", encryptedUser);
+      setStoredToken(data.token);
+      setStoredUser(user);
 
       blockchain.addBlock({
         type: "user_login",
@@ -179,9 +135,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await authenticateFingerprint<User>(userId);
       if (!result) throw new Error('failed');
       const { user, token } = result;
-      localStorage.setItem('vault_token', token);
-      const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
-      localStorage.setItem('vault_user', encryptedUser);
+      setStoredToken(token);
+      setStoredUser(user);
       setAuthState({ user, isAuthenticated: true, isLoading: false, error: null, token });
     } catch (err) {
       console.error(err);
@@ -224,20 +179,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         status: data.status as User["status"],
         createdAt: new Date(data.createdAt),
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
-        avatar: data.avatar ?? (() => {
-          try {
-            const key = `vault_settings_${data.id}`;
-            const settings = JSON.parse(localStorage.getItem(key) || "{}");
-            return settings.profile?.avatar;
-          } catch {
-            return undefined;
-          }
-        })(),
+        avatar: data.avatar,
       };
 
-      localStorage.setItem("vault_token", data.token);
-      const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
-      localStorage.setItem("vault_user", encryptedUser);
+      setStoredToken(data.token);
+      setStoredUser(user);
 
       blockchain.addBlock({
         type: "user_created",
@@ -264,8 +210,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = () => {
-    localStorage.removeItem("vault_user");
-    localStorage.removeItem("vault_token");
+    setStoredUser(null);
+    setStoredToken(null);
     setAuthState({
       user: null,
       isAuthenticated: false,
@@ -356,8 +302,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
         avatar: data.avatar ?? authState.user?.avatar,
       };
-      const encrypted = EncryptionService.encrypt(JSON.stringify(updated));
-      localStorage.setItem('vault_user', encrypted);
+      setStoredUser(updated);
       setAuthState(prev => ({ ...prev, user: updated }));
     } catch (err) {
       console.error(err);

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { enrollFingerprint, removeFingerprint, hasFingerprint } from '../../utils/fingerprint';
 import { changePassword, updateProfile } from '../../utils/api';
+import { useUserData } from '../../utils/userData';
 
 
 const settingsSections = [
@@ -39,18 +40,13 @@ export function SettingsPage() {
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
-  const [sessions, setSessions] = useState<Array<{ id: string; device: string; ip: string; lastActive: string }>>(() => {
-    const stored = localStorage.getItem('vault_sessions');
-    return (
-      stored ? JSON.parse(stored) : [{ id: 'current', device: 'This Device', ip: '127.0.0.1', lastActive: new Date().toISOString() }]
-    );
-  });
+  const [sessions, setSessions] = useUserData<Array<{ id: string; device: string; ip: string; lastActive: string }>>(
+    'sessions',
+    [{ id: 'current', device: 'This Device', ip: '127.0.0.1', lastActive: new Date().toISOString() }],
+  );
   const [sessionLoading, setSessionLoading] = useState<string | null>(null);
   const [notificationLoading, setNotificationLoading] = useState<Record<string, boolean>>({});
-  const [apiKeys, setApiKeys] = useState(() => {
-    const stored = localStorage.getItem('vault_api_keys');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [apiKeys, setApiKeys] = useUserData('api_keys', []);
   const defaultSettings = {
     profile: {
       name: user?.name || '',
@@ -64,12 +60,11 @@ export function SettingsPage() {
     data: { storageUsed: 0, storageLimit: 100, autoBackup: false, compressionEnabled: false, retentionPeriod: 0 },
     privacy: { profileVisibility: "private", searchEngineIndexing: false, analyticsTracking: false, dataSharing: false }
   };
-  const [settings, setSettings] = useState(() => defaultSettings);
+  const [settings, setSettings] = useUserData('settings', defaultSettings);
 
   useEffect(() => {
     if (!user) return;
-    const stored = localStorage.getItem(`vault_settings_${user.id}`);
-    const base = stored ? JSON.parse(stored) : {
+    const base = {
       ...defaultSettings,
       profile: {
         ...defaultSettings.profile,
@@ -98,9 +93,7 @@ export function SettingsPage() {
     return () => clearTimeout(t);
   }, [alert]);
 
-  useEffect(() => {
-    localStorage.setItem('vault_sessions', JSON.stringify(sessions));
-  }, [sessions]);
+  // saving handled by useUserData
 
   const saveSettings = async () => {
     if (!token || !user) return;
@@ -108,8 +101,6 @@ export function SettingsPage() {
     try {
       await updateProfile(token, { name: settings.profile.name, email: settings.profile.email, avatar: settings.profile.avatar });
       await refreshProfile();
-      localStorage.setItem(`vault_settings_${user.id}`, JSON.stringify(settings));
-      localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));
       window.dispatchEvent(new Event('vault_settings_updated'));
       setAlert({ message: 'Settings saved', type: 'success' });
     } catch (e) {
@@ -155,7 +146,6 @@ export function SettingsPage() {
   const revokeKey = (id: string) => {
     setApiKeys(prev => {
       const updated = prev.filter(k => k.id !== id);
-      localStorage.setItem('vault_api_keys', JSON.stringify(updated));
       return updated;
     });
     setAlert({ message: 'Key revoked', type: 'success' });
@@ -165,7 +155,6 @@ export function SettingsPage() {
     const newKey = `sk-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
     setApiKeys(prev => {
       const updated = [...prev, { id: Date.now().toString(), key: newKey }];
-      localStorage.setItem('vault_api_keys', JSON.stringify(updated));
       return updated;
     });
     setAlert({ message: 'Key generated', type: 'success' });
