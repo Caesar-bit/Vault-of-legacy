@@ -22,9 +22,10 @@ namespace VaultBackend.Services
             {
                 var smtpHost = _config["Support:SmtpHost"];
                 var to = _config["Support:To"];
-                var from = _config["Support:From"] ?? to;
+                var fromConfig = _config["Support:From"];
                 if (!string.IsNullOrEmpty(smtpHost) && !string.IsNullOrEmpty(to))
                 {
+                    string from = string.IsNullOrEmpty(fromConfig) ? to : fromConfig!;
                     using var client = new SmtpClient(smtpHost);
                     var mail = new MailMessage(from, to, "Support request", $"User {userId}: {message}");
                     await client.SendMailAsync(mail);
