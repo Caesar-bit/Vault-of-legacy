@@ -119,15 +119,23 @@ export function GalleryPage() {
     return () => clearTimeout(t);
   }, [alert]);
 
-  const handleUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject();
+      reader.readAsDataURL(file);
+    });
+
+  const handleUpload = async (file: File) => {
+    const base64 = await toBase64(file);
     const type = file.type.startsWith('video') ? 'video' : 'image';
     const newItem: GalleryItem = {
       id: Date.now().toString(),
       title: file.name,
       type,
-      url,
-      thumbnail: url,
+      url: base64,
+      thumbnail: base64,
       date: new Date().toISOString().split('T')[0],
       location: 'Unknown',
       views: 0,
