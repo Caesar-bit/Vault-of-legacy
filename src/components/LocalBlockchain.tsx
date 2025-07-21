@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { blockchain, Block } from '../utils/blockchain';
+import { useEffect, useState } from 'react';
+import { blockchain, Block, onBlockAdded, offBlockAdded } from '../utils/blockchain';
 
 export function LocalBlockchain() {
   const [data, setData] = useState('');
@@ -7,14 +7,19 @@ export function LocalBlockchain() {
   const [isValid, setIsValid] = useState(true);
 
   const addBlock = () => {
-    const newBlock = blockchain.addBlock(data);
-    setChain([...chain, newBlock]);
+    blockchain.addBlock(data);
     setData('');
   };
 
   const validate = () => {
     setIsValid(blockchain.isChainValid());
   };
+
+  useEffect(() => {
+    const listener = (b: Block) => setChain((prev) => [...prev, b]);
+    onBlockAdded(listener);
+    return () => offBlockAdded(listener);
+  }, []);
 
   return (
     <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6 space-y-4">

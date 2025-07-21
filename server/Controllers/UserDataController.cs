@@ -34,7 +34,7 @@ namespace VaultBackend.Controllers
         }
 
         [HttpPost("{type}")]
-        public async Task<IActionResult> Save(string type, [FromBody] object payload)
+        public async Task<IActionResult> Save(string type, [FromBody] object payload, [FromQuery] bool log = true)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
@@ -45,13 +45,18 @@ namespace VaultBackend.Controllers
             {
                 entry = new UserData { UserId = userId, Type = type, Data = text };
                 _db.UserData.Add(entry);
+                await _db.SaveChangesAsync();
+                if (log)
+                    await _logger.LogAsync(userId, "Saved user data", type);
             }
-            else
+            else if (entry.Data != text)
             {
                 entry.Data = text;
+                await _db.SaveChangesAsync();
+                if (log)
+                    await _logger.LogAsync(userId, "Saved user data", type);
             }
-            await _db.SaveChangesAsync();
-            await _logger.LogAsync(userId, "Saved user data", type);
+            // if data unchanged, do nothing
             return NoContent();
         }
     }

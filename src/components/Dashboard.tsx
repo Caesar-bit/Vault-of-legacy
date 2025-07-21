@@ -115,7 +115,10 @@ export function Dashboard() {
       .withAutomaticReconnect()
       .build();
     connection.on('NewActivity', (activity: ActivityLog) => {
-      setRecent((prev) => [activity, ...prev].slice(0, 20));
+      setRecent((prev) => {
+        if (prev.some((a) => a.id === activity.id)) return prev;
+        return [activity, ...prev].slice(0, 20);
+      });
     });
     connection.start();
     connectionRef.current = connection;

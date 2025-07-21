@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  HubConnectionBuilder,
+  HubConnection,
+  HubConnectionState,
+} from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage } from '../../types';
 import { fetchChatHistory, fetchFaqs } from '../../utils/api';
@@ -39,11 +43,18 @@ export function ChatWidget() {
     connection.onreconnected(() => setStatus('online'));
     connection.onclose(() => setStatus('offline'));
     connectionRef.current = connection;
-    setStatus('offline');
+    setStatus('connecting');
+    connection
+      .start()
+      .then(() => setStatus('online'))
+      .catch((err) => {
+        console.error(err);
+        setStatus('offline');
+      });
     return () => {
       connection.stop();
     };
-  }, [token]);
+  }, [token, user?.id]);
 
   useEffect(() => {
     if (minimized) return;
@@ -70,16 +81,22 @@ export function ChatWidget() {
     }
   };
 
-  const connect = async () => {
-    if (!connectionRef.current || status === 'online') return;
+  const connect = useCallback(async () => {
+    const conn = connectionRef.current;
+    if (!conn) return;
+    if (conn.state === HubConnectionState.Connected) {
+      setStatus('online');
+      return;
+    }
     setStatus('connecting');
     try {
-      await connectionRef.current.start();
+      await conn.start();
       setStatus('online');
-    } catch {
+    } catch (err) {
+      console.error(err);
       setStatus('offline');
     }
-  };
+  }, []);
 
   const close = () => { setOpen(false); setMinimized(false); };
 
