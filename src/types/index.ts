@@ -59,12 +59,6 @@ export interface AuthState {
   token: string | null;
 }
 
-export interface ChatMessage {
-  id: string;
-  userId: string;
-  content: string;
-  timestamp: string;
-}
 
 export interface ActivityLog {
   id: string;

@@ -99,13 +99,6 @@ export async function getRecentActivity(token: string) {
   return res.json();
 }
 
-export async function fetchChatHistory(token: string) {
-  const res = await fetch(`${API_BASE}/api/chat/history`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
 
 export async function getUserData(token: string, type: string) {
   const res = await fetch(`${API_BASE}/api/userdata/${type}`, {
