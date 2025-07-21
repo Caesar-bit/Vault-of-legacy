@@ -135,3 +135,19 @@ export async function getAssetBreakdown(token: string) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function fetchChatHistory(token: string) {
+  const res = await fetch(`${API_BASE}/api/chat/history`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function fetchFaqs(token: string) {
+  const res = await fetch(`${API_BASE}/api/chat/faqs`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

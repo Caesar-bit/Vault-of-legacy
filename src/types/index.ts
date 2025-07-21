@@ -67,3 +67,10 @@ export interface ActivityLog {
   item: string;
   timestamp: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  content: string;
+  timestamp: string;
+}

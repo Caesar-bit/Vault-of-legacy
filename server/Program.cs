@@ -13,6 +13,7 @@ builder.Services.AddSingleton<FaqService>();
 builder.Services.AddScoped<ActivityLogger>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<AiService>();
+builder.Services.AddSingleton<SupportEscalationService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -229,6 +230,19 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Ensure ChatMessages table exists for chat history
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='ChatMessages';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE ChatMessages (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Content TEXT NOT NULL, Timestamp TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 
@@ -238,5 +252,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ActivityHub>("/hubs/activity");
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

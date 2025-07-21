@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VaultBackend.Data;
+using VaultBackend.Services;
 
 namespace VaultBackend.Controllers
 {
@@ -12,9 +13,11 @@ namespace VaultBackend.Controllers
     public class ChatController : ControllerBase
     {
         private readonly AppDbContext _db;
-        public ChatController(AppDbContext db)
+        private readonly FaqService _faq;
+        public ChatController(AppDbContext db, FaqService faq)
         {
             _db = db;
+            _faq = faq;
         }
 
         [HttpGet("history")]
@@ -36,6 +39,12 @@ namespace VaultBackend.Controllers
                 })
                 .ToListAsync();
             return Ok(items);
+        }
+
+        [HttpGet("faqs")]
+        public IActionResult Faqs()
+        {
+            return Ok(_faq.GetQuestions());
         }
     }
 }
