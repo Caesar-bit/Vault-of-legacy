@@ -14,7 +14,12 @@ export function useUserData<T>(type: string, defaultValue: T) {
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      // When not authenticated just use defaults so pages still render
+      internalSetData(defaultValue);
+      setInitialized(true);
+      return;
+    }
     setInitialized(false);
     (async () => {
       try {
