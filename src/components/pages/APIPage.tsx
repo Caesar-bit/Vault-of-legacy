@@ -33,7 +33,7 @@ const apiEndpoints = [
 ];
 
 export function APIPage() {
-  useAuth();
+  const auth = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [visibleKeys, setVisibleKeys] = useState<string[]>([]);
   interface ApiKey {
@@ -73,9 +73,8 @@ export function APIPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('vault_jwt');
-        if (!token) throw new Error('Not authenticated');
-        const keys = await fetchApiKeys(token);
+        if (!auth.token) throw new Error('Not authenticated');
+        const keys = await fetchApiKeys(auth.token);
         setApiKeys(keys);
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Failed to load API keys';
@@ -89,9 +88,8 @@ export function APIPage() {
 
   const handleCreateKey = async (name: string, permissions: string[]) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
-      if (!token) throw new Error('Not authenticated');
-      const newKey = await createApiKey(token, name, permissions);
+      if (!auth.token) throw new Error('Not authenticated');
+      const newKey = await createApiKey(auth.token, name, permissions);
       setApiKeys(prev => [newKey, ...prev]);
       setAlert({ message: 'API key created!', type: 'success' });
     } catch (e: unknown) {
@@ -107,9 +105,8 @@ export function APIPage() {
 
   const handleRefresh = async (id: string) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
-      if (!token) throw new Error('Not authenticated');
-      const updated = await regenerateApiKey(token, id);
+      if (!auth.token) throw new Error('Not authenticated');
+      const updated = await regenerateApiKey(auth.token, id);
       setApiKeys(prev => prev.map(k => k.id === id ? updated : k));
       setAlert({ message: 'API key regenerated!', type: 'success' });
     } catch (e: unknown) {
@@ -121,9 +118,8 @@ export function APIPage() {
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to revoke this API key?')) {
       try {
-        const token = localStorage.getItem('vault_jwt');
-        if (!token) throw new Error('Not authenticated');
-        await deleteApiKey(token, id);
+        if (!auth.token) throw new Error('Not authenticated');
+        await deleteApiKey(auth.token, id);
         setApiKeys(prev => prev.filter(k => k.id !== id));
         setAlert({ message: 'API key revoked!', type: 'success' });
       } catch (e: unknown) {

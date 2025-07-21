@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useUserData } from '../utils/userData';
 
 interface Language {
   code: string;
@@ -144,13 +145,13 @@ interface LanguageProviderProps {
 }
 
 export function LanguageProvider({ children }: LanguageProviderProps) {
-  const [currentLanguage, setCurrentLanguage] = useState<Language>(languages[0]);
+  const [languageCode, setLanguageCode] = useUserData('language', languages[0].code);
+  const currentLanguage = languages.find(lang => lang.code === languageCode) || languages[0];
 
   const changeLanguage = (code: string) => {
     const language = languages.find(lang => lang.code === code);
     if (language) {
-      setCurrentLanguage(language);
-      localStorage.setItem('vault_language', code);
+      setLanguageCode(code);
     }
   };
 
@@ -158,12 +159,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     return translations[currentLanguage.code]?.[key] || translations.en[key] || key;
   };
 
-  React.useEffect(() => {
-    const savedLanguage = localStorage.getItem('vault_language');
-    if (savedLanguage) {
-      changeLanguage(savedLanguage);
-    }
-  }, []);
+  // userData handles persistence
 
   return (
     <LanguageContext.Provider value={{

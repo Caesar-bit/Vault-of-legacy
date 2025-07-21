@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useUserData } from '../../utils/userData';
 import { AnimatedAlert } from '../AnimatedAlert';
 import {
   TrendingDown,
@@ -70,23 +71,18 @@ const generateAnalyticsData = (days: number): AnalyticsData => {
 export function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('7d');
   const [selectedMetric, setSelectedMetric] = useState('views');
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>(() => {
-    const stored = localStorage.getItem('analytics-7d');
-    return stored ? JSON.parse(stored) : generateAnalyticsData(7);
-  });
+  const [analyticsStore, setAnalyticsStore] = useUserData<Record<string, AnalyticsData>>('analytics', {});
+  const analyticsData = analyticsStore[dateRange] ?? generateAnalyticsData(getDaysForRange(dateRange));
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
-    const key = `analytics-${dateRange}`;
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      setAnalyticsData(JSON.parse(stored));
-    } else {
-      const data = generateAnalyticsData(getDaysForRange(dateRange));
-      setAnalyticsData(data);
-      localStorage.setItem(key, JSON.stringify(data));
+    if (!analyticsStore[dateRange]) {
+      setAnalyticsStore(prev => ({
+        ...prev,
+        [dateRange]: generateAnalyticsData(getDaysForRange(dateRange)),
+      }));
     }
-  }, [dateRange]);
+  }, [dateRange, analyticsStore, setAnalyticsStore]);
 
   useEffect(() => {
     if (!alert) return;
@@ -96,8 +92,7 @@ export function AnalyticsPage() {
 
   const handleRefresh = () => {
     const data = generateAnalyticsData(getDaysForRange(dateRange));
-    setAnalyticsData(data);
-    localStorage.setItem(`analytics-${dateRange}`, JSON.stringify(data));
+    setAnalyticsStore(prev => ({ ...prev, [dateRange]: data }));
   };
 
   const handleExport = () => {

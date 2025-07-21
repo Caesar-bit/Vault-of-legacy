@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useUserData } from '../../utils/userData';
 import {
   HardDrive,
   Cloud,
@@ -26,15 +27,8 @@ export function BackupPage() {
   const [location, setLocation] = useState('cloud');
   const [alert, setAlert] = useState<string | null>(null);
 
-  const [backups, setBackups] = useState(() => {
-    const stored = localStorage.getItem('backups');
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const [schedules, setSchedules] = useState(() => {
-    const stored = localStorage.getItem('backup_schedules');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [backups, setBackups] = useUserData('backups', []);
+  const [schedules, setSchedules] = useUserData('backup_schedules', []);
   const [backupSettings, setBackupSettings] = useState({
     autoBackup: true,
     cloudSync: true,
@@ -44,13 +38,7 @@ export function BackupPage() {
     maxBackups: 10,
   });
 
-  useEffect(() => {
-    localStorage.setItem('backups', JSON.stringify(backups));
-  }, [backups]);
-
-  useEffect(() => {
-    localStorage.setItem('backup_schedules', JSON.stringify(schedules));
-  }, [schedules]);
+  // persistence handled by useUserData
 
   useEffect(() => {
     if (!alert) return;
@@ -193,7 +181,6 @@ export function BackupPage() {
                   onClick={() => {
                     const updated = schedules.map((s, i) => i === index ? { ...s, enabled: !s.enabled } : s);
                     setSchedules(updated);
-                    localStorage.setItem('backup_schedules', JSON.stringify(updated));
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     schedule.enabled ? 'bg-blue-600' : 'bg-gray-200'
@@ -402,7 +389,6 @@ export function BackupPage() {
               };
               const updated = [newBackup, ...backups];
               setBackups(updated);
-              localStorage.setItem('backups', JSON.stringify(updated));
               setName('');
               setType('full');
               setLocation('cloud');

@@ -26,6 +26,7 @@ namespace VaultBackend.Controllers
             if (userId == null) return Unauthorized();
 
             var uploaded = await _db.UploadedFiles.CountAsync(f => f.UserId == userId);
+
             var structureEntry = await _db.FileStructures.FirstOrDefaultAsync(f => f.UserId == userId);
             int structureCount = 0;
             if (structureEntry != null)
@@ -40,7 +41,56 @@ namespace VaultBackend.Controllers
                     structureCount = 0;
                 }
             }
-            var totalAssets = uploaded + structureCount;
+
+            int collectionCount = 0;
+            var collectionFiles = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "collection_files");
+            if (collectionFiles != null)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(collectionFiles.Data);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                    {
+                        if (prop.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            collectionCount += CountItems(prop.Value);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            int archiveCount = 0;
+            var archiveFiles = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "archive_files");
+            if (archiveFiles != null)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(archiveFiles.Data);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                    {
+                        if (prop.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            archiveCount += CountItems(prop.Value);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            int galleryCount = 0;
+            var galleryEntry = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "gallery_items");
+            if (galleryEntry != null)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(galleryEntry.Data);
+                    galleryCount = doc.RootElement.GetArrayLength();
+                }
+                catch { }
+            }
+
+            var totalAssets = uploaded + structureCount + collectionCount + archiveCount + galleryCount;
 
             var collectionsEntry = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "collections");
             int activeProjects = 0;
@@ -142,6 +192,23 @@ namespace VaultBackend.Controllers
                         if (item.TryGetProperty("type", out var t))
                         {
                             AddAsset(counts, t.GetString());
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            var archiveEntry = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "archive_files");
+            if (archiveEntry != null)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(archiveEntry.Data);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                    {
+                        if (prop.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            CountFileTypes(prop.Value, counts);
                         }
                     }
                 }

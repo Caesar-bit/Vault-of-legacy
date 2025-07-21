@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useUserData } from '../utils/userData';
 import { ThemeToggle } from './ThemeToggle';
 import { Bell, Search, Plus, Menu, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,40 +22,20 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const [avatar, setAvatar] = useState<string>(user?.avatar || '');
 
   useEffect(() => {
-    try {
-      const key = user ? `vault_settings_${user.id}` : 'vault_settings';
-      const settings = JSON.parse(localStorage.getItem(key) || '{}');
-      setAvatar(settings.profile?.avatar || user?.avatar || '');
-    } catch {
-      setAvatar(user?.avatar || '');
-    }
-    const handler = () => {
-      try {
-        const key = user ? `vault_settings_${user.id}` : 'vault_settings';
-        const settings = JSON.parse(localStorage.getItem(key) || '{}');
-        setAvatar(settings.profile?.avatar || user?.avatar || '');
-      } catch {
-        setAvatar(user?.avatar || '');
-      }
-    };
+    setAvatar(user?.avatar || '');
+    const handler = () => setAvatar(user?.avatar || '');
     window.addEventListener('vault_settings_updated', handler);
     return () => window.removeEventListener('vault_settings_updated', handler);
   }, [user]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [notifications, setNotifications] = useState(() => {
-    const stored = localStorage.getItem('vault_notifications');
-    if (stored) return JSON.parse(stored);
-    return [
-      { id: 1, title: 'New collection shared', message: 'Sarah shared "Wedding Photos" with you', time: '2 min ago', unread: true },
-      { id: 2, title: 'Archive completed', message: 'Family Documents archive has been processed', time: '1 hour ago', unread: true },
-      { id: 3, title: 'Timeline updated', message: 'New milestone added to "Life Journey"', time: '3 hours ago', unread: false },
-    ];
-  });
+  const [notifications, setNotifications] = useUserData('notifications', [
+    { id: 1, title: 'New collection shared', message: 'Sarah shared "Wedding Photos" with you', time: '2 min ago', unread: true },
+    { id: 2, title: 'Archive completed', message: 'Family Documents archive has been processed', time: '1 hour ago', unread: true },
+    { id: 3, title: 'Timeline updated', message: 'New milestone added to "Life Journey"', time: '3 hours ago', unread: false },
+  ]);
 
-  useEffect(() => {
-    localStorage.setItem('vault_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+  // persistence handled by useUserData
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
@@ -98,11 +79,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     setNotifications([]);
   };
 
+  const [projects, setProjects] = useUserData('projects', [] as Array<{ id: number; name: string; description: string }>);
+
   const handleCreateProject = (project: { name: string; description: string }) => {
-    const stored = localStorage.getItem('vault_projects');
-    const projects = stored ? JSON.parse(stored) : [];
-    projects.push({ id: Date.now(), ...project });
-    localStorage.setItem('vault_projects', JSON.stringify(projects));
+    setProjects(prev => [...prev, { id: Date.now(), ...project }]);
   };
 
   return (
