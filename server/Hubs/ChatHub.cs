@@ -65,15 +65,9 @@ namespace VaultBackend.Hubs
             _db.ChatMessages.Add(chatMessage);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Sent chat message", message);
-            await Clients.Group(userId).SendAsync("ReceiveMessage", new
-            {
-                chatMessage.Id,
-                chatMessage.UserId,
-                chatMessage.Content,
-                chatMessage.Timestamp
-            });
 
-            var answer = _faq.GetAnswer(message);
+            var greeting = GetGreetingReply(message);
+            var answer = _faq.GetAnswer(message) ?? greeting;
             if (answer == null)
             {
                 var context = await _db.ChatMessages
@@ -86,6 +80,11 @@ namespace VaultBackend.Hubs
                 context.Add(new { role = "user", content = message });
                 var payload = JsonSerializer.Serialize(context);
                 answer = await _ai.GetResponseAsync(payload);
+            }
+
+            if (!string.IsNullOrEmpty(greeting))
+            {
+                await Clients.Group(userId).SendAsync("FaqList", _faq.GetQuestions());
             }
 
             if (string.IsNullOrEmpty(answer))
@@ -109,6 +108,16 @@ namespace VaultBackend.Hubs
                 botMessage.Content,
                 botMessage.Timestamp
             });
+        }
+
+        private static string? GetGreetingReply(string message)
+        {
+            var text = message.Trim().ToLowerInvariant();
+            if (text.StartsWith("hi") || text.StartsWith("hello") || text.StartsWith("hey"))
+            {
+                return "Hello! How can I help you today?";
+            }
+            return null;
         }
     }
 }

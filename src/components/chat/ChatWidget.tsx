@@ -25,7 +25,9 @@ export function ChatWidget() {
       .withAutomaticReconnect()
       .build();
     connection.on('ReceiveMessage', (msg: ChatMessage) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) =>
+        msg.userId === user?.id ? prev : [...prev, msg]
+      );
       setLoading(false);
     });
     connection.on('FaqList', (list: string[]) => setFaqs(list));
