@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, HubConnectionState } from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage } from '../../types';
 import { fetchChatHistory, fetchFaqs } from '../../utils/api';
@@ -57,7 +57,14 @@ export function ChatWidget() {
     ]);
     setMessage('');
     setLoading(true);
-    await connectionRef.current?.invoke('SendMessage', content);
+    try {
+      if (connectionRef.current?.state === HubConnectionState.Disconnected) {
+        await connectionRef.current.start();
+      }
+      await connectionRef.current?.invoke('SendMessage', content);
+    } catch {
+      setLoading(false);
+    }
   };
 
   const close = () => { setOpen(false); setMinimized(false); };
