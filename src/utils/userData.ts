@@ -19,10 +19,12 @@ export function useUserData<T>(type: string, defaultValue: T) {
     (async () => {
       try {
         const res = await getUserData(token, type);
-        internalSetData((prev) =>
-          hasLocalChanges.current ? prev : ((res as T) ?? defaultValue)
-        );
-        hasLocalChanges.current = false;
+        internalSetData((prev) => {
+          if (hasLocalChanges.current) {
+            return prev;
+          }
+          return (res as T) ?? defaultValue;
+        });
       } catch (err) {
         console.error(err);
         internalSetData((prev) => (hasLocalChanges.current ? prev : defaultValue));
@@ -41,5 +43,9 @@ export function useUserData<T>(type: string, defaultValue: T) {
       .catch(console.error);
   }, [token, type, data, initialized]);
 
-  return [data, setData] as [T, React.Dispatch<React.SetStateAction<T>>];
+  return [data, setData, initialized] as [
+    T,
+    React.Dispatch<React.SetStateAction<T>>,
+    boolean
+  ];
 }
