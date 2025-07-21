@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Navigation } from './Navigation';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { SupportBotWidget } from './chat/SupportBotWidget';
+import { ChatWidget } from './chat/ChatWidget';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,7 +27,7 @@ export function Layout({ children }: LayoutProps) {
         </main>
         <Footer />
       </div>
-      <SupportBotWidget />
+      <ChatWidget />
     </div>
   );
 }
