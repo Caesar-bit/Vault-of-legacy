@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Boxes } from 'lucide-react';
 import { blockchain, Block, onBlockAdded, offBlockAdded } from '../utils/blockchain';
 
 export function LocalBlockchain() {
@@ -23,7 +24,10 @@ export function LocalBlockchain() {
 
   return (
     <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6 space-y-4">
-      <h2 className="text-xl font-bold text-gray-900">Local Blockchain</h2>
+      <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+        <Boxes className="h-5 w-5 text-gray-700" />
+        <span>Local Blockchain</span>
+      </h2>
       <div className="flex space-x-2">
         <input
           value={data}

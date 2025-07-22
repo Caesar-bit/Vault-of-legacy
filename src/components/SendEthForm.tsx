@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Send } from 'lucide-react';
 import { sendEth } from '../utils/blockchain';
 
 export function SendEthForm() {
@@ -24,8 +25,11 @@ export function SendEthForm() {
   };
 
   return (
-    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6">
-      <h2 className="text-xl font-bold mb-2 text-gray-900">Send ETH</h2>
+    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6 space-y-1">
+      <h2 className="text-xl font-bold mb-2 text-gray-900 flex items-center space-x-2">
+        <Send className="h-5 w-5 text-gray-700" />
+        <span>Send ETH</span>
+      </h2>
       <form className="space-y-4" onSubmit={handleSend}>
         <input
           className="w-full border border-gray-200 rounded-lg px-3 py-2"

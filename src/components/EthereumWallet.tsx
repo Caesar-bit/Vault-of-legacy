@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy } from 'lucide-react';
+import { Copy, Wallet2, Coins, Network as NetworkIcon } from 'lucide-react';
 import { useEthereum } from '../hooks/useEthereum';
 
 export function EthereumWallet() {
@@ -14,23 +14,32 @@ export function EthereumWallet() {
   };
 
   return (
-    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6 space-y-2">
+    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Ethereum Wallet</h2>
+        <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+          <Wallet2 className="h-5 w-5 text-gray-700" />
+          <span>Ethereum Wallet</span>
+        </h2>
         <span className="text-xs text-gray-600">{status}</span>
       </div>
       {address ? (
-        <div className="space-y-1">
+        <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <div className="font-mono text-xs break-all">{address}</div>
-            <button onClick={copyAddress} className="p-1 rounded hover:bg-gray-200">
+            <button onClick={copyAddress} className="p-1 rounded hover:bg-gray-200" title="Copy address">
               <Copy className="h-4 w-4" />
             </button>
             {copied && <span className="text-xs text-green-600">Copied</span>}
           </div>
-          <div className="text-gray-700 text-sm">Balance: <span className="font-semibold">{balance || '0'} ETH</span></div>
+          <div className="flex items-center text-gray-700 text-sm space-x-1">
+            <Coins className="h-4 w-4" />
+            <span className="font-semibold text-lg">{balance || '0'} ETH</span>
+          </div>
           {network && (
-            <div className="text-gray-700 text-sm">Network: <span className="font-semibold">{network}</span></div>
+            <div className="flex items-center text-gray-700 text-sm space-x-1">
+              <NetworkIcon className="h-4 w-4" />
+              <span className="font-semibold">{network}</span>
+            </div>
           )}
           {blockNumber !== null && (
             <div className="text-gray-700 text-sm">Latest block: <span className="font-semibold">{blockNumber}</span></div>

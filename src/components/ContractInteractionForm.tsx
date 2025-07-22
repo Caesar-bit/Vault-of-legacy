@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BookType } from 'lucide-react';
 import { callContract, sendContractTx } from '../utils/blockchain';
 
 export function ContractInteractionForm() {
@@ -36,8 +37,11 @@ export function ContractInteractionForm() {
   };
 
   return (
-    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6">
-      <h2 className="text-xl font-bold mb-2 text-gray-900">Smart Contract Interaction</h2>
+    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6 space-y-1">
+      <h2 className="text-xl font-bold mb-2 text-gray-900 flex items-center space-x-2">
+        <BookType className="h-5 w-5 text-gray-700" />
+        <span>Smart Contract Interaction</span>
+      </h2>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <input
           className="w-full border border-gray-200 rounded-lg px-3 py-2"
