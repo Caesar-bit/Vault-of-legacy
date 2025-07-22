@@ -7,6 +7,7 @@ export function useUserData<T>(type: string, defaultValue: T) {
   const [data, internalSetData] = useState<T>(defaultValue);
   const [initialized, setInitialized] = useState(false);
   const hasLocalChanges = useRef(false);
+  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const setData: typeof internalSetData = (value) => {
     hasLocalChanges.current = true;
@@ -34,11 +35,15 @@ export function useUserData<T>(type: string, defaultValue: T) {
 
   useEffect(() => {
     if (!token || !initialized || !hasLocalChanges.current) return;
-    saveUserData(token, type, data)
-      .then(() => {
-        hasLocalChanges.current = false;
-      })
-      .catch(console.error);
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      saveUserData(token, type, data, false)
+        .then(() => {
+          hasLocalChanges.current = false;
+          saveTimeout.current = null;
+        })
+        .catch(console.error);
+    }, 1000);
   }, [token, type, data, initialized]);
 
   return [data, setData] as [T, React.Dispatch<React.SetStateAction<T>>];

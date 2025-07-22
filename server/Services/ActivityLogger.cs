@@ -25,7 +25,8 @@ namespace VaultBackend.Services
                 .OrderByDescending(a => a.Timestamp)
                 .FirstOrDefaultAsync();
 
-            if (last != null && (now - last.Timestamp).TotalSeconds < 5)
+            var threshold = action == "Saved user data" ? 30 : 5;
+            if (last != null && (now - last.Timestamp).TotalSeconds < threshold)
             {
                 // Update timestamp instead of creating a duplicate entry
                 last.Timestamp = now;

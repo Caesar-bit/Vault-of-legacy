@@ -25,7 +25,6 @@ namespace VaultBackend.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            var uploaded = await _db.UploadedFiles.CountAsync(f => f.UserId == userId);
             var structureEntry = await _db.FileStructures.FirstOrDefaultAsync(f => f.UserId == userId);
             int structureCount = 0;
             if (structureEntry != null)
@@ -40,7 +39,7 @@ namespace VaultBackend.Controllers
                     structureCount = 0;
                 }
             }
-            var totalAssets = uploaded + structureCount;
+            var totalAssets = structureCount;
 
             var collectionsEntry = await _db.UserData.FirstOrDefaultAsync(u => u.UserId == userId && u.Type == "collections");
             int activeProjects = 0;

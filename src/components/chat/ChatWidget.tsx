@@ -14,17 +14,16 @@ export function ChatWidget() {
   const [faqs, setFaqs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'offline' | 'connecting' | 'online'>('offline');
-  const connectionRef = useRef<HubConnection | null>(null);
+  const connectionRef = useRef<HubConnection>();
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!token) return;
-    fetchFaqs(token).then(setFaqs).catch(() => {});
-    fetchChatHistory(token).then(setMessages).catch(() => {});
+    if (!open || !token) return;
     const connection = new HubConnectionBuilder()
       .withUrl('/hubs/chat', { accessTokenFactory: () => token })
       .withAutomaticReconnect()
       .build();
+
     connection.on('ReceiveMessage', (msg: ChatMessage) => {
       setMessages((prev) => (msg.userId === user?.id ? prev : [...prev, msg]));
       setLoading(false);
@@ -33,17 +32,36 @@ export function ChatWidget() {
     connection.on('Welcome', (text: string) => {
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), userId: 'bot', content: text, timestamp: new Date().toISOString() }
+        {
+          id: crypto.randomUUID(),
+          userId: 'bot',
+          content: text,
+          timestamp: new Date().toISOString(),
+        },
       ]);
     });
+    connection.onreconnecting(() => setStatus('connecting'));
     connection.onreconnected(() => setStatus('online'));
     connection.onclose(() => setStatus('offline'));
+
+    setStatus('connecting');
+    connection
+      .start()
+      .then(async () => {
+        setStatus('online');
+        await Promise.all([
+          fetchFaqs(token).then(setFaqs).catch(() => {}),
+          fetchChatHistory(token).then(setMessages).catch(() => {}),
+        ]);
+      })
+      .catch(() => setStatus('offline'));
+
     connectionRef.current = connection;
-    setStatus('offline');
     return () => {
       connection.stop();
+      connectionRef.current = undefined;
     };
-  }, [token]);
+  }, [open, token, user?.id]);
 
   useEffect(() => {
     if (minimized) return;
@@ -54,24 +72,29 @@ export function ChatWidget() {
   const send = async (text?: string) => {
     const content = (text ?? message).trim();
     if (!content) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), userId: user?.id || '', content, timestamp: new Date().toISOString() }
-    ]);
+    const local = {
+      id: crypto.randomUUID(),
+      userId: user?.id || '',
+      content,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, local]);
     setMessage('');
     setLoading(true);
     try {
       if (status === 'offline') {
-        await connect();
+        await connectionRef.current?.start();
+        setStatus('online');
       }
       await connectionRef.current?.invoke('SendMessage', content);
     } catch {
+      setStatus('offline');
       setLoading(false);
     }
   };
 
   const connect = async () => {
-    if (!connectionRef.current || status === 'online') return;
+    if (!connectionRef.current) return;
     setStatus('connecting');
     try {
       await connectionRef.current.start();
@@ -117,22 +140,23 @@ export function ChatWidget() {
             <>
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2">
                 {messages.map((m) => (
-                  <div key={m.id} className={m.userId === user?.id ? 'text-right' : ''}>
-                    <span className="font-bold mr-1">{m.userId === user?.id ? 'Me' : 'Bot'}:</span>
-                    <span>{m.content}</span>
+                  <div key={m.id} className={`flex ${m.userId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`${m.userId === user?.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'} rounded-lg px-3 py-1 max-w-[70%]`}>
+                      {m.content}
+                    </div>
                   </div>
                 ))}
-                {loading && <div className="text-gray-500">Bot is typing...</div>}
+                {loading && <div className="text-gray-500 text-xs">Bot is typing...</div>}
+                {faqs.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {faqs.map((q) => (
+                      <button key={q} onClick={() => send(q)} className="bg-gray-200 rounded-full px-2 py-1 text-xs text-gray-800 hover:bg-gray-300">
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {faqs.length > 0 && (
-                <div className="p-2 flex flex-wrap gap-2 border-t">
-                  {faqs.map((q) => (
-                    <button key={q} onClick={() => send(q)} className="text-xs bg-gray-200 rounded-full px-2 py-1 hover:bg-gray-300">
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              )}
               <div className="flex border-t p-2 gap-2">
                 <input
                   className="flex-grow border rounded p-1"

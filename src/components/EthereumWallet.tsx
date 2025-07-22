@@ -1,57 +1,62 @@
 import { useState } from 'react';
-// Add TypeScript support for window.ethereum
-declare global {
-  interface Window {
-    ethereum?: ethers.Eip1193Provider;
-  }
-}
-import { ethers } from 'ethers';
+import { Copy, Wallet2, Coins, Network as NetworkIcon } from 'lucide-react';
+import { useEthereum } from '../hooks/useEthereum';
 
 export function EthereumWallet() {
-  const [address, setAddress] = useState('');
-  const [balance, setBalance] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { status, address, balance, network, blockNumber, connect } = useEthereum();
+  const [copied, setCopied] = useState(false);
 
-  const connectWallet = async () => {
-    setError('');
-    setIsLoading(true);
-    try {
-      if (!window.ethereum) {
-        setError('MetaMask is not installed.');
-        setIsLoading(false);
-        return;
-      }
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send('eth_requestAccounts', []);
-      setAddress(accounts[0]);
-      const bal = await provider.getBalance(accounts[0]);
-      setBalance(ethers.formatEther(bal));
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not connect wallet.';
-      setError(message);
-    }
-    setIsLoading(false);
+  const copyAddress = () => {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
   };
 
   return (
-    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6">
-      <h2 className="text-xl font-bold mb-2 text-gray-900">Ethereum Wallet</h2>
-      <button
-        onClick={connectWallet}
-        className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 mb-4"
-        disabled={isLoading}
-      >
-        {isLoading ? 'Connecting...' : 'Connect Wallet'}
-      </button>
-      {address && (
-        <div className="mb-2">
-          <div className="text-gray-700 text-sm">Address:</div>
-          <div className="font-mono text-xs break-all">{address}</div>
-          <div className="text-gray-700 text-sm mt-2">Balance: <span className="font-semibold">{balance} ETH</span></div>
+    <div className="glassy-card p-6 rounded-2xl border border-white/30 shadow-xl mb-6 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+          <Wallet2 className="h-5 w-5 text-gray-700" />
+          <span>Ethereum Wallet</span>
+        </h2>
+        <span className="text-xs text-gray-600">{status}</span>
+      </div>
+      {address ? (
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="font-mono text-xs break-all">{address}</div>
+            <button onClick={copyAddress} className="p-1 rounded hover:bg-gray-200" title="Copy address">
+              <Copy className="h-4 w-4" />
+            </button>
+            {copied && <span className="text-xs text-green-600">Copied</span>}
+          </div>
+          <div className="flex items-center text-gray-700 text-sm space-x-1">
+            <Coins className="h-4 w-4" />
+            <span className="font-semibold text-lg">{balance || '0'} ETH</span>
+          </div>
+          {network && (
+            <div className="flex items-center text-gray-700 text-sm space-x-1">
+              <NetworkIcon className="h-4 w-4" />
+              <span className="font-semibold">{network}</span>
+            </div>
+          )}
+          {blockNumber !== null && (
+            <div className="text-gray-700 text-sm">Latest block: <span className="font-semibold">{blockNumber}</span></div>
+          )}
         </div>
+      ) : (
+        <button
+          onClick={connect}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+          disabled={status === 'connecting' || status === 'not-installed'}
+        >
+          {status === 'connecting' ? 'Connecting...' : 'Connect Wallet'}
+        </button>
       )}
-      {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
+      {status === 'not-installed' && (
+        <div className="text-red-600 text-sm">MetaMask not detected.</div>
+      )}
     </div>
   );
 }
