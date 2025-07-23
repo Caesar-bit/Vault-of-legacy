@@ -19,7 +19,9 @@ import {
   ChevronRight,
   Globe,
   Key,
-  Info
+  Info,
+  UserCheck,
+  Lock
 } from 'lucide-react';
 
 import { NavLink } from 'react-router-dom';
@@ -46,6 +48,8 @@ export function Navigation({ collapsed, onToggleCollapse }: NavigationProps) {
     ...(user?.role === 'admin' ? [{ name: t('analytics'), to: '/analytics', icon: BarChart3 }] : []),
     ...(user?.role === 'admin' ? [{ name: 'API', to: '/api', icon: Key }] : []),
     { name: 'Blockchain', to: '/blockchain', icon: Vault },
+    { name: 'Trustees', to: '/trustees', icon: UserCheck },
+    { name: 'Releases', to: '/releases', icon: Lock },
     { name: t('settings'), to: '/settings', icon: Settings },
     { name: t('templates'), to: '/templates', icon: FileText },
     { name: t('export'), to: '/export', icon: Download },

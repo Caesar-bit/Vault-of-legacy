@@ -243,6 +243,32 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Ensure Trustees table exists
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Trustees';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE Trustees (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Name TEXT NOT NULL, Email TEXT NOT NULL, Tier TEXT NOT NULL, Verified INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
+    // Ensure ReleaseSchedules table exists
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='ReleaseSchedules';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE ReleaseSchedules (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, FilePath TEXT NOT NULL, ReleaseDate TEXT NOT NULL, TriggerEvent TEXT NOT NULL, BeneficiaryEmail TEXT, RequiresApproval INTEGER NOT NULL, Released INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 

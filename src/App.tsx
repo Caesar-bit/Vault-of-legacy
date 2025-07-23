@@ -23,6 +23,8 @@ import { APIPage } from './components/pages/APIPage';
 import { BackupPage } from './components/pages/BackupPage';
 import { BlockchainPage } from './components/pages/BlockchainPage';
 import { AboutPage } from './components/pages/AboutPage';
+import { TrusteesPage } from './components/pages/TrusteesPage';
+import { ReleasesPage } from './components/pages/ReleasesPage';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 function AppContent() {
@@ -62,6 +64,8 @@ function AppContent() {
         <Route path="/api" element={user?.role === 'admin' ? <APIPage /> : <div className="p-6">Access denied</div>} />
         <Route path="/backup" element={<BackupPage />} />
         <Route path="/blockchain" element={<BlockchainPage />} />
+        <Route path="/trustees" element={<TrusteesPage />} />
+        <Route path="/releases" element={<ReleasesPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

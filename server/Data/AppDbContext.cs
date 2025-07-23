@@ -17,5 +17,7 @@ namespace VaultBackend.Data
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
         public DbSet<UserData> UserData => Set<UserData>();
+        public DbSet<Trustee> Trustees => Set<Trustee>();
+        public DbSet<ReleaseSchedule> ReleaseSchedules => Set<ReleaseSchedule>();
     }
 }
