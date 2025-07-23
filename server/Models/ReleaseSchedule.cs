@@ -21,6 +21,9 @@ namespace VaultBackend.Models
         [EmailAddress]
         public string BeneficiaryEmail { get; set; } = string.Empty;
 
+        public string? BeneficiaryId { get; set; }
+        public Beneficiary? Beneficiary { get; set; }
+
         public bool RequiresApproval { get; set; } = false;
 
         public bool Released { get; set; } = false;

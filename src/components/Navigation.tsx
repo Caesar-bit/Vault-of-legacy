@@ -49,6 +49,7 @@ export function Navigation({ collapsed, onToggleCollapse }: NavigationProps) {
     ...(user?.role === 'admin' ? [{ name: 'API', to: '/api', icon: Key }] : []),
     { name: 'Blockchain', to: '/blockchain', icon: Vault },
     { name: 'Trustees', to: '/trustees', icon: UserCheck },
+    { name: 'Beneficiaries', to: '/beneficiaries', icon: UserCheck },
     { name: 'Releases', to: '/releases', icon: Lock },
     { name: t('settings'), to: '/settings', icon: Settings },
     { name: t('templates'), to: '/templates', icon: FileText },

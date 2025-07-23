@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using VaultBackend.Data;
 using VaultBackend.Services;
 using VaultBackend.Hubs;
+using VaultBackend.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,7 @@ builder.Services.AddScoped<ActivityLogger>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<AiService>();
 builder.Services.AddSingleton<SupportEscalationService>();
+builder.Services.AddHostedService<ReleaseEngine>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -264,7 +266,37 @@ using (var scope = app.Services.CreateScope())
         if (!exists)
         {
             using var create = conn.CreateCommand();
-            create.CommandText = "CREATE TABLE ReleaseSchedules (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, FilePath TEXT NOT NULL, ReleaseDate TEXT NOT NULL, TriggerEvent TEXT NOT NULL, BeneficiaryEmail TEXT, RequiresApproval INTEGER NOT NULL, Released INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.CommandText = "CREATE TABLE ReleaseSchedules (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, FilePath TEXT NOT NULL, ReleaseDate TEXT NOT NULL, TriggerEvent TEXT NOT NULL, BeneficiaryEmail TEXT, BeneficiaryId TEXT, RequiresApproval INTEGER NOT NULL, Released INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+        else
+        {
+            using var info = conn.CreateCommand();
+            info.CommandText = "PRAGMA table_info('ReleaseSchedules');";
+            using var reader = info.ExecuteReader();
+            var hasBeneficiaryId = false;
+            while (reader.Read())
+            {
+                if (reader.GetString(1) == "BeneficiaryId") hasBeneficiaryId = true;
+            }
+            if (!hasBeneficiaryId)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE ReleaseSchedules ADD COLUMN BeneficiaryId TEXT;";
+                alter.ExecuteNonQuery();
+            }
+        }
+    }
+
+    // Ensure Beneficiaries table exists
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Beneficiaries';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE Beneficiaries (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Name TEXT NOT NULL, Email TEXT NOT NULL, Verified INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
             create.ExecuteNonQuery();
         }
     }

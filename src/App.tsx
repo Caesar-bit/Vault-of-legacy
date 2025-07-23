@@ -25,6 +25,7 @@ import { BlockchainPage } from './components/pages/BlockchainPage';
 import { AboutPage } from './components/pages/AboutPage';
 import { TrusteesPage } from './components/pages/TrusteesPage';
 import { ReleasesPage } from './components/pages/ReleasesPage';
+import { BeneficiariesPage } from './components/pages/BeneficiariesPage';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 function AppContent() {
@@ -65,6 +66,7 @@ function AppContent() {
         <Route path="/backup" element={<BackupPage />} />
         <Route path="/blockchain" element={<BlockchainPage />} />
         <Route path="/trustees" element={<TrusteesPage />} />
+        <Route path="/beneficiaries" element={<BeneficiariesPage />} />
         <Route path="/releases" element={<ReleasesPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

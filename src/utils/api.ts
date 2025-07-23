@@ -186,6 +186,43 @@ export async function removeTrustee(token: string, id: string) {
   if (!res.ok) throw new Error(await res.text());
 }
 
+export async function fetchBeneficiaries(token: string) {
+  const res = await fetch(`${API_BASE}/api/beneficiaries`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function addBeneficiary(token: string, data: { name: string; email: string }) {
+  const res = await fetch(`${API_BASE}/api/beneficiaries`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function removeBeneficiary(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/beneficiaries/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function verifyBeneficiary(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/beneficiaries/${id}/verify`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
 export async function fetchReleases(token: string) {
   const res = await fetch(`${API_BASE}/api/releases`, {
     headers: { Authorization: `Bearer ${token}` },

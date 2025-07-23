@@ -28,7 +28,10 @@ namespace VaultBackend.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            var items = await _db.ReleaseSchedules.Where(r => r.UserId == userId).ToListAsync();
+            var items = await _db.ReleaseSchedules
+                .Include(r => r.Beneficiary)
+                .Where(r => r.UserId == userId)
+                .ToListAsync();
             return Ok(items);
         }
 
@@ -41,6 +44,15 @@ namespace VaultBackend.Controllers
             schedule.Id = Guid.NewGuid().ToString();
             schedule.UserId = userId;
             schedule.CreatedAt = DateTime.UtcNow;
+            if (!string.IsNullOrEmpty(schedule.BeneficiaryId))
+            {
+                var ben = await _db.Beneficiaries.FirstOrDefaultAsync(b => b.Id == schedule.BeneficiaryId && b.UserId == userId);
+                if (ben != null)
+                {
+                    schedule.BeneficiaryEmail = ben.Email;
+                }
+            }
+
             _db.ReleaseSchedules.Add(schedule);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Scheduled release", schedule.FilePath);
@@ -59,6 +71,7 @@ namespace VaultBackend.Controllers
             schedule.Released = true;
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Triggered release", schedule.FilePath);
+            await _logger.LogAsync(userId, "Release sent", schedule.BeneficiaryEmail);
             return Ok();
         }
 
