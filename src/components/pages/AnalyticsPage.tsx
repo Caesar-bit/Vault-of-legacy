@@ -50,20 +50,89 @@ const getDaysForRange = (range: string) => {
   }
 };
 
+const randomInt = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
 const generateAnalyticsData = (days: number): AnalyticsData => {
-  void days;
+  const timeSeriesData = Array.from({ length: days }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - i - 1));
+    return {
+      date: date.toISOString().slice(0, 10),
+      views: randomInt(50, 150),
+      visitors: randomInt(20, 120),
+      sessions: randomInt(15, 100),
+    };
+  });
+
+  const totals = timeSeriesData.reduce(
+    (acc, d) => {
+      acc.views += d.views;
+      acc.visitors += d.visitors;
+      return acc;
+    },
+    { views: 0, visitors: 0 }
+  );
+
+  const avgSessionSeconds = randomInt(60, 600);
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const deviceRaw = [Math.random(), Math.random(), Math.random()];
+  const deviceTotal = deviceRaw.reduce((a, b) => a + b, 0);
+  const [desktopRaw, mobileRaw, tabletRaw] = deviceRaw;
+  const desktopPct = Math.round((desktopRaw / deviceTotal) * 100);
+  const mobilePct = Math.round((mobileRaw / deviceTotal) * 100);
+  let tabletPct = Math.round((tabletRaw / deviceTotal) * 100);
+  const diff = 100 - (desktopPct + mobilePct + tabletPct);
+  tabletPct += diff;
+  const deviceData = [
+    { name: 'Desktop', value: desktopPct, color: '#3B82F6' },
+    { name: 'Mobile', value: mobilePct, color: '#10B981' },
+    { name: 'Tablet', value: tabletPct, color: '#F59E0B' },
+  ];
+
+  const sampleTitles = [
+    'Getting Started Guide',
+    'Advanced Security Tips',
+    'Managing Collections',
+    'Exporting Your Data',
+    'Mobile App Overview',
+  ];
+  const topContent = sampleTitles.slice(0, 4).map((title) => ({
+    title,
+    views: randomInt(200, 2000),
+    engagement: `${randomInt(40, 90)}%`,
+    type: ['article', 'video', 'guide'][randomInt(0, 2)],
+  }));
+
+  const countries = ['United States', 'Germany', 'Brazil', 'Japan', 'India'];
+  const geographicData = countries.map((c) => ({
+    country: c,
+    visitors: randomInt(50, 500),
+    percentage: randomInt(5, 40),
+  }));
+
   return {
     overview: {
-      totalViews: 0,
-      uniqueVisitors: 0,
-      avgSessionDuration: '0:00',
-      bounceRate: '0%',
-      trends: { views: 0, visitors: 0, duration: 0, bounce: 0 },
+      totalViews: totals.views,
+      uniqueVisitors: totals.visitors,
+      avgSessionDuration: formatDuration(avgSessionSeconds),
+      bounceRate: `${randomInt(20, 70)}%`,
+      trends: {
+        views: randomInt(-10, 10),
+        visitors: randomInt(-10, 10),
+        duration: randomInt(-5, 5),
+        bounce: randomInt(-5, 5),
+      },
     },
-    timeSeriesData: [],
-    deviceData: [],
-    topContent: [],
-    geographicData: [],
+    timeSeriesData,
+    deviceData,
+    topContent,
+    geographicData,
   };
 };
 
