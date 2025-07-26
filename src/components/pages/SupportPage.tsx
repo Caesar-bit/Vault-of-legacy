@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { createTicket, fetchTickets } from '../../utils/api';
 import { SupportTicket } from '../../types';
@@ -12,14 +12,14 @@ export function SupportPage() {
   const [description, setDescription] = useState('');
   const [alert, setAlert] = useState<string | null>(null);
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!token) return;
     fetchTickets(token).then(setTickets).catch(() => {});
-  };
+  }, [token]);
 
   useEffect(() => {
     load();
-  }, [token, load]);
+  }, [load]);
 
   const submit = async () => {
     if (!token || !title.trim() || !description.trim()) return;
