@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
 import { createTicket, fetchTickets, updateTicket, deleteTicket } from '../../utils/api';
@@ -99,6 +99,22 @@ export function SupportPage() {
     }
   };
 
+  const ticketStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of tickets) {
+      counts[t.status] = (counts[t.status] || 0) + 1;
+    }
+    const open = counts['open'] || 0;
+    const closed = counts['closed'] || 0;
+    return {
+      total: tickets.length,
+      open,
+      closed,
+      other: tickets.length - open - closed,
+      byStatus: counts,
+    };
+  }, [tickets]);
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white p-6 shadow-lg flex items-center gap-4">
@@ -106,6 +122,25 @@ export function SupportPage() {
         <div>
           <h1 className="text-2xl font-bold">Support</h1>
           <p className="text-white/80">Create tickets and review your requests.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-2xl font-bold">{ticketStats.total}</div>
+          <div className="text-gray-600">Total</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-2xl font-bold">{ticketStats.open}</div>
+          <div className="text-gray-600">Open</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-2xl font-bold">{ticketStats.closed}</div>
+          <div className="text-gray-600">Closed</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-2xl font-bold">{ticketStats.other}</div>
+          <div className="text-gray-600">Other</div>
         </div>
       </div>
 
