@@ -40,33 +40,49 @@ export function AddBeneficiaryModal({ isOpen, onClose, onCreate, initial }: AddB
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md space-y-4">
-        <h2 className="text-xl font-bold">{initial ? 'Edit Beneficiary' : 'Add Beneficiary'}</h2>
-        <input
-          className="w-full rounded-lg border-gray-300 focus:ring-primary-500"
-          placeholder="Name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-        />
-        <input
-          className="w-full rounded-lg border-gray-300 focus:ring-primary-500"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-        />
-        <input
-          className="w-full rounded-lg border-gray-300 focus:ring-primary-500"
-          placeholder="Phone"
-          value={phone}
-          onChange={e => setPhone(e.target.value)}
-        />
-        <input
-          className="w-full rounded-lg border-gray-300 focus:ring-primary-500"
-          placeholder="Relationship"
-          value={relationship}
-          onChange={e => setRelationship(e.target.value)}
-        />
-        {error && <div className="text-red-500 text-sm">{error}</div>}
-        <div className="flex justify-end gap-2 pt-2">
+        <h2 className="text-xl font-bold mb-2">{initial ? 'Edit Beneficiary' : 'Add Beneficiary'}</h2>
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Name</span>
+            <input
+              className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Email</span>
+            <input
+              className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Phone</span>
+            <input
+              className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Relationship</span>
+            <select
+              className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+              value={relationship}
+              onChange={e => setRelationship(e.target.value)}
+            >
+              <option value="">Select relationship</option>
+              <option value="Mother">Mother</option>
+              <option value="Father">Father</option>
+              <option value="Son">Son</option>
+            </select>
+          </label>
+        </div>
+        {error && <div className="text-red-500 text-sm pt-1">{error}</div>}
+        <div className="flex justify-end gap-2 pt-4">
           <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300" onClick={onClose}>
             Cancel
           </button>
