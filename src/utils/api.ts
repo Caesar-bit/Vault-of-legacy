@@ -275,3 +275,28 @@ export async function createTicket(
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function updateTicket(
+  token: string,
+  id: string,
+  data: { title?: string; description?: string; status?: string }
+) {
+  const res = await fetch(`${API_BASE}/api/tickets/${id}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteTicket(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/tickets/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

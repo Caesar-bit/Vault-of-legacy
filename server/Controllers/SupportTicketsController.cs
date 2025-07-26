@@ -59,5 +59,54 @@ namespace VaultBackend.Controllers
             await _escalation.NotifyAsync(userId, ticket.Description);
             return Ok(ticket);
         }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(string id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "user";
+            var ticket = await _db.SupportTickets.FirstOrDefaultAsync(t => t.Id == id);
+            if (ticket == null) return NotFound();
+            if (role != "admin" && ticket.UserId != userId) return Forbid();
+            return Ok(ticket);
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Update(string id, [FromBody] UpdateTicketRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "user";
+            var ticket = await _db.SupportTickets.FirstOrDefaultAsync(t => t.Id == id);
+            if (ticket == null) return NotFound();
+            if (role != "admin" && ticket.UserId != userId) return Forbid();
+
+            if (!string.IsNullOrEmpty(request.Title)) ticket.Title = request.Title;
+            if (!string.IsNullOrEmpty(request.Description)) ticket.Description = request.Description;
+            if (!string.IsNullOrEmpty(request.Status)) ticket.Status = request.Status;
+
+            await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Updated support ticket", ticket.Title);
+            return Ok(ticket);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "user";
+            var ticket = await _db.SupportTickets.FirstOrDefaultAsync(t => t.Id == id);
+            if (ticket == null) return NotFound();
+            if (role != "admin" && ticket.UserId != userId) return Forbid();
+
+            _db.SupportTickets.Remove(ticket);
+            await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Deleted support ticket", ticket.Title);
+            return Ok();
+        }
     }
+
+    public record UpdateTicketRequest(string? Title, string? Description, string? Status);
 }
