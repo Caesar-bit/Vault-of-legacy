@@ -23,3 +23,7 @@ The backend issues JWT tokens for authenticated users. Configure the signing key
 ### Translations endpoint
 
 Localization files live under `server/Resources/Translations`. Each language is a JSON file (e.g. `en.json`). The API exposes `/api/translations/{lang}` to fetch the key/value pairs for a given language.
+
+### API listing endpoint
+
+Authenticated users can retrieve a list of available API routes via `/api/info/routes`. Each entry contains the HTTP method and path, which is useful for building dynamic API documentation in the frontend.

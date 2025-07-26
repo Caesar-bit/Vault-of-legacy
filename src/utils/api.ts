@@ -300,3 +300,11 @@ export async function deleteTicket(token: string, id: string) {
   });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export async function fetchApiEndpoints(token: string) {
+  const res = await fetch(`${API_BASE}/api/info/routes`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
