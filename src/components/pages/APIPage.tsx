@@ -65,7 +65,7 @@ export function APIPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('vault_jwt');
+        const token = localStorage.getItem('vault_token');
         if (!token) throw new Error('Not authenticated');
         const keys = await fetchApiKeys(token);
         setApiKeys(keys);
@@ -83,7 +83,7 @@ export function APIPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const token = localStorage.getItem('vault_jwt');
+        const token = localStorage.getItem('vault_token');
         if (!token) return;
         const routes = await fetchApiEndpoints(token);
         setApiEndpoints(routes);
@@ -96,7 +96,7 @@ export function APIPage() {
 
   const handleCreateKey = async (name: string, permissions: string[]) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
+      const token = localStorage.getItem('vault_token');
       if (!token) throw new Error('Not authenticated');
       const newKey = await createApiKey(token, name, permissions);
       setApiKeys(prev => [newKey, ...prev]);
@@ -114,7 +114,7 @@ export function APIPage() {
 
   const handleRefresh = async (id: string) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
+      const token = localStorage.getItem('vault_token');
       if (!token) throw new Error('Not authenticated');
       const updated = await regenerateApiKey(token, id);
       setApiKeys(prev => prev.map(k => k.id === id ? updated : k));
@@ -128,7 +128,7 @@ export function APIPage() {
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to revoke this API key?')) {
       try {
-        const token = localStorage.getItem('vault_jwt');
+        const token = localStorage.getItem('vault_token');
         if (!token) throw new Error('Not authenticated');
         await deleteApiKey(token, id);
         setApiKeys(prev => prev.filter(k => k.id !== id));
