@@ -78,6 +78,12 @@ export function AddBeneficiaryModal({ isOpen, onClose, onCreate, initial }: AddB
               <option value="Mother">Mother</option>
               <option value="Father">Father</option>
               <option value="Son">Son</option>
+              <option value="Daughter">Daughter</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Brother">Brother</option>
+              <option value="Sister">Sister</option>
+              <option value="Friend">Friend</option>
+              <option value="Other">Other</option>
             </select>
           </label>
         </div>
