@@ -251,3 +251,27 @@ export async function triggerRelease(token: string, id: string) {
   });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export async function fetchTickets(token: string) {
+  const res = await fetch(`${API_BASE}/api/tickets`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function createTicket(
+  token: string,
+  data: { title: string; description: string }
+) {
+  const res = await fetch(`${API_BASE}/api/tickets`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

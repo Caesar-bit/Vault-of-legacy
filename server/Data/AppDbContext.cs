@@ -20,5 +20,6 @@ namespace VaultBackend.Data
         public DbSet<Beneficiary> Beneficiaries => Set<Beneficiary>();
         public DbSet<Trustee> Trustees => Set<Trustee>();
         public DbSet<ReleaseSchedule> ReleaseSchedules => Set<ReleaseSchedule>();
+        public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
     }
 }

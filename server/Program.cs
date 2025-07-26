@@ -301,6 +301,19 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Ensure SupportTickets table exists
+    using (var check = conn.CreateCommand())
+    {
+        check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='SupportTickets';";
+        var exists = check.ExecuteScalar() != null;
+        if (!exists)
+        {
+            using var create = conn.CreateCommand();
+            create.CommandText = "CREATE TABLE SupportTickets (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Title TEXT NOT NULL, Description TEXT NOT NULL, Status TEXT NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.ExecuteNonQuery();
+        }
+    }
+
     conn.Close();
 }
 

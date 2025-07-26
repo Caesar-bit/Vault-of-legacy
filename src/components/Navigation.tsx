@@ -21,7 +21,8 @@ import {
   Key,
   Info,
   UserCheck,
-  Lock
+  Lock,
+  MessageCircle
 } from 'lucide-react';
 
 import { NavLink } from 'react-router-dom';
@@ -51,6 +52,7 @@ export function Navigation({ collapsed, onToggleCollapse }: NavigationProps) {
     { name: 'Trustees', to: '/trustees', icon: UserCheck },
     { name: 'Beneficiaries', to: '/beneficiaries', icon: UserCheck },
     { name: 'Releases', to: '/releases', icon: Lock },
+    { name: 'Support', to: '/support', icon: MessageCircle },
     { name: t('settings'), to: '/settings', icon: Settings },
     { name: t('templates'), to: '/templates', icon: FileText },
     { name: t('export'), to: '/export', icon: Download },
