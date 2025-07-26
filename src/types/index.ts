@@ -74,3 +74,12 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
 }
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  status: string;
+  createdAt: string;
+}
