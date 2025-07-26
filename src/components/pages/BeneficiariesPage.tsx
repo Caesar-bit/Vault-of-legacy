@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { User, CheckCircle, Mail, PlusCircle, Trash2, Pencil } from 'lucide-react';
+import {
+  User,
+  CheckCircle,
+  Mail,
+  PlusCircle,
+  Trash2,
+  Pencil,
+  Phone,
+  Heart,
+  Search,
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   fetchBeneficiaries,
@@ -26,6 +36,7 @@ export function BeneficiariesPage() {
   const [alert, setAlert] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<BeneficiaryItem | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated || !token) return;
@@ -89,6 +100,12 @@ export function BeneficiariesPage() {
     setShowModal(true);
   };
 
+  const filtered = beneficiaries.filter(
+    (b) =>
+      b.name.toLowerCase().includes(search.toLowerCase()) ||
+      b.email.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-8">
       {alert && <AnimatedAlert message={alert} type="success" onClose={() => setAlert(null)} />}
@@ -103,9 +120,23 @@ export function BeneficiariesPage() {
           <PlusCircle className="h-5 w-5" /> Add
         </button>
       </div>
+      <div className="flex items-center gap-2">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <input
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 focus:ring-primary-500"
+            placeholder="Search beneficiaries"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {beneficiaries.map((b) => (
-          <div key={b.id} className="glassy-card rounded-2xl border border-white/30 p-5 shadow-lg backdrop-blur-lg relative overflow-hidden">
+        {filtered.map((b) => (
+          <div
+            key={b.id}
+            className="glassy-card rounded-2xl border border-white/30 p-5 shadow-lg backdrop-blur-lg relative overflow-hidden transform transition hover:-translate-y-1 hover:shadow-2xl animate-slide-up"
+          >
             <div className="absolute -top-6 -right-6 w-16 h-16 bg-green-400/10 rounded-full blur-xl" />
             <div className="flex items-center space-x-3 mb-2 relative z-10">
               <div className="p-2 bg-white/60 rounded-xl shadow">
@@ -115,8 +146,12 @@ export function BeneficiariesPage() {
             </div>
             <div className="space-y-1 text-sm text-gray-600 mb-3 relative z-10">
               <div className="flex items-center"><Mail className="h-4 w-4 mr-1" />{b.email}</div>
-              {b.phone && <div className="flex items-center"><span className="w-4 inline-block" /><span>{b.phone}</span></div>}
-              {b.relationship && <div className="flex items-center"><span className="w-4 inline-block" /><span className="italic">{b.relationship}</span></div>}
+              {b.phone && (
+                <div className="flex items-center"><Phone className="h-4 w-4 mr-1" />{b.phone}</div>
+              )}
+              {b.relationship && (
+                <div className="flex items-center"><Heart className="h-4 w-4 mr-1" /> <span className="italic">{b.relationship}</span></div>
+              )}
             </div>
             <div className="flex items-center justify-between relative z-10">
               {b.verified ? (
@@ -140,7 +175,7 @@ export function BeneficiariesPage() {
       </div>
       <style>{`
         .glassy-card {
-          background: rgba(255,255,255,0.7);
+          background: linear-gradient(to bottom right, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
           backdrop-filter: blur(12px);
         }
       `}</style>

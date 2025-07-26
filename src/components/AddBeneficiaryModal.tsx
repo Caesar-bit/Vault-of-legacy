@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { User, Mail, Phone, Heart } from 'lucide-react';
 
 interface AddBeneficiaryModalProps {
   isOpen: boolean;
@@ -38,12 +39,14 @@ export function AddBeneficiaryModal({ isOpen, onClose, onCreate, initial }: AddB
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fade-in">
+      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md space-y-4 animate-slide-up">
         <h2 className="text-xl font-bold mb-2">{initial ? 'Edit Beneficiary' : 'Add Beneficiary'}</h2>
         <div className="space-y-3">
           <label className="block">
-            <span className="text-sm font-medium text-gray-700">Name</span>
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+              <User className="h-4 w-4" /> Name
+            </span>
             <input
               className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
               value={name}
@@ -51,7 +54,9 @@ export function AddBeneficiaryModal({ isOpen, onClose, onCreate, initial }: AddB
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-gray-700">Email</span>
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+              <Mail className="h-4 w-4" /> Email
+            </span>
             <input
               className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
               type="email"
@@ -60,7 +65,9 @@ export function AddBeneficiaryModal({ isOpen, onClose, onCreate, initial }: AddB
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-gray-700">Phone</span>
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+              <Phone className="h-4 w-4" /> Phone
+            </span>
             <input
               className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
               value={phone}
@@ -68,7 +75,9 @@ export function AddBeneficiaryModal({ isOpen, onClose, onCreate, initial }: AddB
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-gray-700">Relationship</span>
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+              <Heart className="h-4 w-4" /> Relationship
+            </span>
             <select
               className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
               value={relationship}
