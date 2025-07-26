@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
 import { createTicket, fetchTickets, updateTicket, deleteTicket } from '../../utils/api';
 import { SupportTicket } from '../../types';
@@ -16,6 +17,7 @@ export function SupportPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editStatus, setEditStatus] = useState('open');
+  const connectionRef = useRef<HubConnection | null>(null);
 
   const load = useCallback(() => {
     if (!token) return;
@@ -26,14 +28,38 @@ export function SupportPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!token) return;
+    const connection = new HubConnectionBuilder()
+      .withUrl('/hubs/tickets', { accessTokenFactory: () => token })
+      .withAutomaticReconnect()
+      .build();
+    connection.on('TicketCreated', (t: SupportTicket) =>
+      setTickets((prev) => [t, ...prev])
+    );
+    connection.on('TicketUpdated', (t: SupportTicket) =>
+      setTickets((prev) => prev.map((p) => (p.id === t.id ? t : p)))
+    );
+    connection.on('TicketDeleted', (id: string) =>
+      setTickets((prev) => prev.filter((p) => p.id !== id))
+    );
+    connection
+      .start()
+      .catch(() => {});
+    connectionRef.current = connection;
+    return () => {
+      connection.stop();
+    };
+  }, [token]);
+
   const submit = async () => {
     if (!token || !title.trim() || !description.trim()) return;
     try {
-      await createTicket(token, { title, description });
+      const created = await createTicket(token, { title, description });
+      setTickets((prev) => [created, ...prev]);
       setTitle('');
       setDescription('');
       setAlert('Ticket created');
-      load();
     } catch {
       setAlert('Failed to create ticket');
     }
@@ -49,14 +75,14 @@ export function SupportPage() {
   const saveEdit = async () => {
     if (!token || !editingId) return;
     try {
-      await updateTicket(token, editingId, {
+      const updated = await updateTicket(token, editingId, {
         title: editTitle,
         description: editDescription,
         status: editStatus,
       });
+      setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setEditingId(null);
       setAlert('Ticket updated');
-      load();
     } catch {
       setAlert('Failed to update ticket');
     }
@@ -66,8 +92,8 @@ export function SupportPage() {
     if (!token) return;
     try {
       await deleteTicket(token, id);
+      setTickets((prev) => prev.filter((t) => t.id !== id));
       setAlert('Ticket deleted');
-      load();
     } catch {
       setAlert('Failed to delete');
     }

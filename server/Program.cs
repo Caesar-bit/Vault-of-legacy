@@ -324,5 +324,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<ActivityHub>("/hubs/activity");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<SupportTicketHub>("/hubs/tickets");
 
 app.Run();

@@ -2,9 +2,11 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using VaultBackend.Data;
 using VaultBackend.Models;
 using VaultBackend.Services;
+using VaultBackend.Hubs;
 
 namespace VaultBackend.Controllers
 {
@@ -16,12 +18,14 @@ namespace VaultBackend.Controllers
         private readonly AppDbContext _db;
         private readonly ActivityLogger _logger;
         private readonly SupportEscalationService _escalation;
+        private readonly IHubContext<SupportTicketHub> _hub;
 
-        public SupportTicketsController(AppDbContext db, ActivityLogger logger, SupportEscalationService escalation)
+        public SupportTicketsController(AppDbContext db, ActivityLogger logger, SupportEscalationService escalation, IHubContext<SupportTicketHub> hub)
         {
             _db = db;
             _logger = logger;
             _escalation = escalation;
+            _hub = hub;
         }
 
         [HttpGet]
@@ -57,6 +61,8 @@ namespace VaultBackend.Controllers
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Created support ticket", ticket.Title);
             await _escalation.NotifyAsync(userId, ticket.Description);
+            await _hub.Clients.Group(userId).SendAsync("TicketCreated", ticket);
+            await _hub.Clients.Group("admin").SendAsync("TicketCreated", ticket);
             return Ok(ticket);
         }
 
@@ -88,6 +94,8 @@ namespace VaultBackend.Controllers
 
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Updated support ticket", ticket.Title);
+            await _hub.Clients.Group(ticket.UserId).SendAsync("TicketUpdated", ticket);
+            await _hub.Clients.Group("admin").SendAsync("TicketUpdated", ticket);
             return Ok(ticket);
         }
 
@@ -104,6 +112,8 @@ namespace VaultBackend.Controllers
             _db.SupportTickets.Remove(ticket);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Deleted support ticket", ticket.Title);
+            await _hub.Clients.Group(ticket.UserId).SendAsync("TicketDeleted", ticket.Id);
+            await _hub.Clients.Group("admin").SendAsync("TicketDeleted", ticket.Id);
             return Ok();
         }
     }

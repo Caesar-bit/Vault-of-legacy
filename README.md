@@ -27,3 +27,7 @@ Localization files live under `server/Resources/Translations`. Each language is 
 ### API listing endpoint
 
 Authenticated users can retrieve a list of available API routes via `/api/info/routes`. Each entry contains the HTTP method and path, which is useful for building dynamic API documentation in the frontend.
+
+### Real-time support tickets
+
+Clients can subscribe to ticket updates over SignalR at `/hubs/tickets`. Events `TicketCreated`, `TicketUpdated`, and `TicketDeleted` notify the relevant user (and admins) when their tickets change.
