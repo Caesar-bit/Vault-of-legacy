@@ -17,6 +17,11 @@ namespace VaultBackend.Models
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
+        [Phone]
+        public string Phone { get; set; } = string.Empty;
+
+        public string Relationship { get; set; } = string.Empty;
+
         public bool Verified { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -288,7 +288,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Ensure Beneficiaries table exists
+    // Ensure Beneficiaries table exists and has latest columns
     using (var check = conn.CreateCommand())
     {
         check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Beneficiaries';";
@@ -296,8 +296,34 @@ using (var scope = app.Services.CreateScope())
         if (!exists)
         {
             using var create = conn.CreateCommand();
-            create.CommandText = "CREATE TABLE Beneficiaries (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Name TEXT NOT NULL, Email TEXT NOT NULL, Verified INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.CommandText = "CREATE TABLE Beneficiaries (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Name TEXT NOT NULL, Email TEXT NOT NULL, Phone TEXT, Relationship TEXT, Verified INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
             create.ExecuteNonQuery();
+        }
+        else
+        {
+            using var info = conn.CreateCommand();
+            info.CommandText = "PRAGMA table_info('Beneficiaries');";
+            using var reader = info.ExecuteReader();
+            var hasPhone = false;
+            var hasRelationship = false;
+            while (reader.Read())
+            {
+                var column = reader.GetString(1);
+                if (column == "Phone") hasPhone = true;
+                if (column == "Relationship") hasRelationship = true;
+            }
+            if (!hasPhone)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE Beneficiaries ADD COLUMN Phone TEXT;";
+                alter.ExecuteNonQuery();
+            }
+            if (!hasRelationship)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE Beneficiaries ADD COLUMN Relationship TEXT;";
+                alter.ExecuteNonQuery();
+            }
         }
     }
 

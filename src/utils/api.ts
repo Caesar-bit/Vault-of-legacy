@@ -194,9 +194,29 @@ export async function fetchBeneficiaries(token: string) {
   return res.json();
 }
 
-export async function addBeneficiary(token: string, data: { name: string; email: string }) {
+export async function addBeneficiary(
+  token: string,
+  data: { name: string; email: string; phone: string; relationship: string }
+) {
   const res = await fetch(`${API_BASE}/api/beneficiaries`, {
     method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateBeneficiary(
+  token: string,
+  id: string,
+  data: { name?: string; email?: string; phone?: string; relationship?: string }
+) {
+  const res = await fetch(`${API_BASE}/api/beneficiaries/${id}`, {
+    method: 'PATCH',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',

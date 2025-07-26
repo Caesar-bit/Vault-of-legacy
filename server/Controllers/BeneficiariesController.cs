@@ -33,18 +33,44 @@ namespace VaultBackend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Beneficiary beneficiary)
+        public async Task<IActionResult> Create([FromBody] BeneficiaryRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            beneficiary.Id = Guid.NewGuid().ToString();
-            beneficiary.UserId = userId;
-            beneficiary.CreatedAt = DateTime.UtcNow;
+            var beneficiary = new Beneficiary
+            {
+                Id = Guid.NewGuid().ToString(),
+                UserId = userId,
+                Name = request.Name,
+                Email = request.Email,
+                Phone = request.Phone,
+                Relationship = request.Relationship,
+                CreatedAt = DateTime.UtcNow,
+            };
             _db.Beneficiaries.Add(beneficiary);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Added beneficiary", beneficiary.Email);
             return Ok(beneficiary);
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Update(string id, [FromBody] UpdateBeneficiaryRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var item = await _db.Beneficiaries.FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId);
+            if (item == null) return NotFound();
+
+            if (!string.IsNullOrEmpty(request.Name)) item.Name = request.Name;
+            if (!string.IsNullOrEmpty(request.Email)) item.Email = request.Email;
+            if (!string.IsNullOrEmpty(request.Phone)) item.Phone = request.Phone;
+            if (!string.IsNullOrEmpty(request.Relationship)) item.Relationship = request.Relationship;
+
+            await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Updated beneficiary", item.Email);
+            return Ok(item);
         }
 
         [HttpPost("{id}/verify")]
@@ -77,4 +103,8 @@ namespace VaultBackend.Controllers
             return Ok();
         }
     }
+
+    public record BeneficiaryRequest(string Name, string Email, string Phone, string Relationship);
+
+    public record UpdateBeneficiaryRequest(string? Name, string? Email, string? Phone, string? Relationship);
 }
