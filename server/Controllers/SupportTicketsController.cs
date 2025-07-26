@@ -40,14 +40,19 @@ namespace VaultBackend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] SupportTicket ticket)
+        public async Task<IActionResult> Create([FromBody] SupportTicketRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
-            ticket.Id = Guid.NewGuid().ToString();
-            ticket.UserId = userId;
-            ticket.Status = "open";
-            ticket.CreatedAt = DateTime.UtcNow;
+            var ticket = new SupportTicket
+            {
+                Id = Guid.NewGuid().ToString(),
+                UserId = userId,
+                Title = request.Title,
+                Description = request.Description,
+                Status = "open",
+                CreatedAt = DateTime.UtcNow
+            };
             _db.SupportTickets.Add(ticket);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Created support ticket", ticket.Title);
