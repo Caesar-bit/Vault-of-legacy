@@ -3,7 +3,17 @@ import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
 import { createTicket, fetchTickets, updateTicket, deleteTicket } from '../../utils/api';
 import { SupportTicket } from '../../types';
-import { MessageCircle, Plus, Edit2, Trash2, Eye } from 'lucide-react';
+import {
+  MessageCircle,
+  Plus,
+  Edit2,
+  Trash2,
+  Eye,
+  Ticket,
+  CheckCircle2,
+  Circle,
+  AlertCircle,
+} from 'lucide-react';
 import { AnimatedAlert } from '../AnimatedAlert';
 
 export function SupportPage() {
@@ -126,21 +136,25 @@ export function SupportPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 text-center">
+        <div className="stat-card">
+          <Ticket className="w-6 h-6 text-indigo-600" />
           <div className="text-2xl font-bold">{ticketStats.total}</div>
-          <div className="text-gray-600">Total</div>
+          <div className="text-gray-600 text-sm">Total</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
+        <div className="stat-card">
+          <Circle className="w-6 h-6 text-blue-600" />
           <div className="text-2xl font-bold">{ticketStats.open}</div>
-          <div className="text-gray-600">Open</div>
+          <div className="text-gray-600 text-sm">Open</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
+        <div className="stat-card">
+          <CheckCircle2 className="w-6 h-6 text-green-600" />
           <div className="text-2xl font-bold">{ticketStats.closed}</div>
-          <div className="text-gray-600">Closed</div>
+          <div className="text-gray-600 text-sm">Closed</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
+        <div className="stat-card">
+          <AlertCircle className="w-6 h-6 text-yellow-600" />
           <div className="text-2xl font-bold">{ticketStats.other}</div>
-          <div className="text-gray-600">Other</div>
+          <div className="text-gray-600 text-sm">Other</div>
         </div>
       </div>
 
@@ -254,6 +268,20 @@ export function SupportPage() {
         .glassy-card {
           background: rgba(255,255,255,0.7);
           backdrop-filter: blur(12px);
+        }
+        .stat-card {
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 1rem;
+          transition: transform 0.2s;
+        }
+        .stat-card:hover {
+          transform: translateY(-4px);
         }
       `}</style>
     </div>
