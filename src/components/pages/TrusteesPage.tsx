@@ -8,10 +8,17 @@ import {
   Search,
   Trash2,
   CheckCircle,
-  XCircle,
+  Pencil,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchTrustees, addTrustee, removeTrustee } from '../../utils/api';
+import {
+  fetchTrustees,
+  addTrustee,
+  removeTrustee,
+  updateTrustee,
+  verifyTrustee,
+} from '../../utils/api';
+import { AddTrusteeModal } from '../AddTrusteeModal';
 import { AnimatedAlert } from '../AnimatedAlert';
 
 interface TrusteeItem {
@@ -25,12 +32,11 @@ interface TrusteeItem {
 export function TrusteesPage() {
   const { token, isAuthenticated } = useAuth();
   const [trustees, setTrustees] = useState<TrusteeItem[]>([]);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [tier, setTier] = useState('reviewer');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTier, setFilterTier] = useState('all');
   const [alert, setAlert] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<TrusteeItem | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated || !token) return;
@@ -46,18 +52,22 @@ export function TrusteesPage() {
     }
   };
 
-  const onAdd = async () => {
+  const saveTrustee = async (data: { name: string; email: string; tier: string }) => {
     if (!token) return;
     try {
-      await addTrustee(token, { name, email, tier });
-      setName('');
-      setEmail('');
-      setTier('reviewer');
-      setAlert('Trustee added');
+      if (editing) {
+        await updateTrustee(token, editing.id, data);
+        setAlert('Trustee updated');
+      } else {
+        await addTrustee(token, data);
+        setAlert('Trustee added');
+      }
+      setEditing(null);
+      setShowModal(false);
       load();
     } catch (e) {
       console.error(e);
-      setAlert('Failed to add trustee');
+      setAlert('Failed to save trustee');
     }
   };
 
@@ -69,6 +79,21 @@ export function TrusteesPage() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const onVerify = async (id: string) => {
+    if (!token) return;
+    try {
+      await verifyTrustee(token, id);
+      load();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const onEdit = (t: TrusteeItem) => {
+    setEditing(t);
+    setShowModal(true);
   };
 
   const counts = {
@@ -141,37 +166,14 @@ export function TrusteesPage() {
       </div>
 
       {/* Add Trustee */}
-      <div className="glassy-card p-6 rounded-3xl border border-white/30 shadow-xl space-y-4">
-        <h3 className="text-lg font-bold text-gray-900">Add Trustee</h3>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            className="border rounded px-3 py-2 flex-1 bg-white/80"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            className="border rounded px-3 py-2 flex-1 bg-white/80"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <select
-            className="border rounded px-3 py-2 bg-white/80"
-            value={tier}
-            onChange={(e) => setTier(e.target.value)}
-          >
-            <option value="reviewer">Reviewer</option>
-            <option value="executor">Executor</option>
-            <option value="recipient">Recipient</option>
-          </select>
-          <button
-            onClick={onAdd}
-            className="bg-primary-600 text-white rounded px-4 py-2"
-          >
-            Add
-          </button>
-        </div>
+      <div className="glassy-card p-6 rounded-3xl border border-white/30 shadow-xl flex justify-between items-center">
+        <h3 className="text-lg font-bold">Trustees</h3>
+        <button
+          onClick={() => { setEditing(null); setShowModal(true); }}
+          className="flex items-center gap-1 bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
+        >
+          Add
+        </button>
       </div>
 
       {/* Search & Filters */}
@@ -221,8 +223,13 @@ export function TrusteesPage() {
                 {t.verified ? (
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-gray-400" />
+                  <button onClick={() => onVerify(t.id)} className="text-primary-600 hover:underline text-sm flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" /> Verify
+                  </button>
                 )}
+                <button onClick={() => onEdit(t)} className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg">
+                  <Pencil className="h-4 w-4" />
+                </button>
                 <button
                   onClick={() => onRemove(t.id)}
                   className="p-2 text-red-500 hover:text-red-700 rounded-lg hover:bg-red-50 transition"
@@ -247,6 +254,12 @@ export function TrusteesPage() {
         }
         .animate-fade-in { animation: fade-in 0.7s cubic-bezier(.4,0,.2,1) both; }
       `}</style>
+      <AddTrusteeModal
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); setEditing(null); }}
+        onSave={saveTrustee}
+        initial={editing ?? undefined}
+      />
     </div>
   );
 }

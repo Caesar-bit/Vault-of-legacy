@@ -26,6 +26,7 @@ import { AboutPage } from './components/pages/AboutPage';
 import { TrusteesPage } from './components/pages/TrusteesPage';
 import { ReleasesPage } from './components/pages/ReleasesPage';
 import { BeneficiariesPage } from './components/pages/BeneficiariesPage';
+import { SupportPage } from './components/pages/SupportPage';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 function AppContent() {
@@ -68,6 +69,7 @@ function AppContent() {
         <Route path="/trustees" element={<TrusteesPage />} />
         <Route path="/beneficiaries" element={<BeneficiariesPage />} />
         <Route path="/releases" element={<ReleasesPage />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

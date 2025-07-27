@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { APIKeyModal } from './APIKeyModal';
 import { fetchApiKeys, createApiKey, deleteApiKey, regenerateApiKey } from '../../utils/apikeys';
+import { fetchApiEndpoints } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { AnimatedAlert } from '../AnimatedAlert';
 import { 
@@ -21,21 +22,12 @@ import {
 } from 'lucide-react';
 
 
-const apiEndpoints = [
-  { method: 'GET', endpoint: '/api/v1/assets', description: 'Retrieve all assets' },
-  { method: 'POST', endpoint: '/api/v1/assets', description: 'Create new asset' },
-  { method: 'GET', endpoint: '/api/v1/collections', description: 'List collections' },
-  { method: 'POST', endpoint: '/api/v1/collections', description: 'Create collection' },
-  { method: 'GET', endpoint: '/api/v1/timeline', description: 'Get timeline events' },
-  { method: 'POST', endpoint: '/api/v1/timeline', description: 'Add timeline event' },
-  { method: 'GET', endpoint: '/api/v1/users', description: 'List users (admin only)' },
-  { method: 'GET', endpoint: '/api/v1/analytics', description: 'Get analytics data' }
-];
 
 export function APIPage() {
   useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [visibleKeys, setVisibleKeys] = useState<string[]>([]);
+  const [apiEndpoints, setApiEndpoints] = useState<{ method: string; endpoint: string }[]>([]);
   interface ApiKey {
     id: string;
     name: string;
@@ -73,7 +65,7 @@ export function APIPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('vault_jwt');
+        const token = localStorage.getItem('vault_token');
         if (!token) throw new Error('Not authenticated');
         const keys = await fetchApiKeys(token);
         setApiKeys(keys);
@@ -87,9 +79,24 @@ export function APIPage() {
     load();
   }, []);
 
+  // Fetch API endpoints on mount
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const token = localStorage.getItem('vault_token');
+        if (!token) return;
+        const routes = await fetchApiEndpoints(token);
+        setApiEndpoints(routes);
+      } catch {
+        // ignore errors
+      }
+    };
+    load();
+  }, []);
+
   const handleCreateKey = async (name: string, permissions: string[]) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
+      const token = localStorage.getItem('vault_token');
       if (!token) throw new Error('Not authenticated');
       const newKey = await createApiKey(token, name, permissions);
       setApiKeys(prev => [newKey, ...prev]);
@@ -107,7 +114,7 @@ export function APIPage() {
 
   const handleRefresh = async (id: string) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
+      const token = localStorage.getItem('vault_token');
       if (!token) throw new Error('Not authenticated');
       const updated = await regenerateApiKey(token, id);
       setApiKeys(prev => prev.map(k => k.id === id ? updated : k));
@@ -121,7 +128,7 @@ export function APIPage() {
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to revoke this API key?')) {
       try {
-        const token = localStorage.getItem('vault_jwt');
+        const token = localStorage.getItem('vault_token');
         if (!token) throw new Error('Not authenticated');
         await deleteApiKey(token, id);
         setApiKeys(prev => prev.filter(k => k.id !== id));
@@ -356,14 +363,11 @@ export function APIPage() {
         <div className="divide-y divide-gray-200">
           {apiEndpoints.map((endpoint, index) => (
             <div key={index} className="p-6 hover:bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getMethodColor(endpoint.method)}`}>
-                    {endpoint.method}
-                  </span>
-                  <code className="text-sm font-mono text-gray-900 dark:text-white">{endpoint.endpoint}</code>
-                </div>
-                <p className="text-sm text-gray-600">{endpoint.description}</p>
+              <div className="flex items-center space-x-4">
+                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getMethodColor(endpoint.method)}`}>
+                  {endpoint.method}
+                </span>
+                <code className="text-sm font-mono text-gray-900 dark:text-white">{endpoint.endpoint}</code>
               </div>
             </div>
           ))}

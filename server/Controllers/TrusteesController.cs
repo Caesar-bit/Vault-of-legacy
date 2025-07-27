@@ -33,18 +33,57 @@ namespace VaultBackend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Trustee trustee)
+        public async Task<IActionResult> Create([FromBody] TrusteeRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null) return Unauthorized();
 
-            trustee.Id = Guid.NewGuid().ToString();
-            trustee.UserId = userId;
-            trustee.CreatedAt = DateTime.UtcNow;
+            var trustee = new Trustee
+            {
+                Id = Guid.NewGuid().ToString(),
+                UserId = userId,
+                Name = request.Name,
+                Email = request.Email,
+                Tier = request.Tier,
+                CreatedAt = DateTime.UtcNow
+            };
             _db.Trustees.Add(trustee);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Added trustee", trustee.Email);
             return Ok(trustee);
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Update(string id, [FromBody] UpdateTrusteeRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var item = await _db.Trustees.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+            if (item == null) return NotFound();
+
+            if (!string.IsNullOrEmpty(request.Name)) item.Name = request.Name;
+            if (!string.IsNullOrEmpty(request.Email)) item.Email = request.Email;
+            if (!string.IsNullOrEmpty(request.Tier)) item.Tier = request.Tier;
+
+            await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Updated trustee", item.Email);
+            return Ok(item);
+        }
+
+        [HttpPost("{id}/verify")]
+        public async Task<IActionResult> Verify(string id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var item = await _db.Trustees.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+            if (item == null) return NotFound();
+
+            item.Verified = true;
+            await _db.SaveChangesAsync();
+            await _logger.LogAsync(userId, "Verified trustee", item.Email);
+            return Ok();
         }
 
         [HttpDelete("{id}")]
