@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   User,
   CheckCircle,
@@ -28,6 +28,7 @@ interface BeneficiaryItem {
   phone: string;
   relationship: string;
   verified: boolean;
+  verifiedAt?: string | null;
 }
 
 export function BeneficiariesPage() {
@@ -37,6 +38,12 @@ export function BeneficiariesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<BeneficiaryItem | null>(null);
   const [search, setSearch] = useState('');
+
+  const stats = useMemo(() => {
+    const verified = beneficiaries.filter((b) => b.verified).length;
+    const total = beneficiaries.length;
+    return { total, verified, unverified: total - verified };
+  }, [beneficiaries]);
 
   useEffect(() => {
     if (!isAuthenticated || !token) return;
@@ -120,6 +127,23 @@ export function BeneficiariesPage() {
           <PlusCircle className="h-5 w-5" /> Add
         </button>
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="stat-card">
+          <User className="w-6 h-6 text-indigo-600" />
+          <div className="text-2xl font-bold">{stats.total}</div>
+          <div className="text-gray-600 text-sm">Total</div>
+        </div>
+        <div className="stat-card">
+          <CheckCircle className="w-6 h-6 text-green-600" />
+          <div className="text-2xl font-bold">{stats.verified}</div>
+          <div className="text-gray-600 text-sm">Verified</div>
+        </div>
+        <div className="stat-card">
+          <User className="w-6 h-6 text-yellow-600" />
+          <div className="text-2xl font-bold">{stats.unverified}</div>
+          <div className="text-gray-600 text-sm">Unverified</div>
+        </div>
+      </div>
       <div className="flex items-center gap-2">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -177,6 +201,20 @@ export function BeneficiariesPage() {
         .glassy-card {
           background: linear-gradient(to bottom right, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
           backdrop-filter: blur(12px);
+        }
+        .stat-card {
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 1rem;
+          transition: transform 0.2s;
+        }
+        .stat-card:hover {
+          transform: translateY(-4px);
         }
       `}</style>
       <AddBeneficiaryModal

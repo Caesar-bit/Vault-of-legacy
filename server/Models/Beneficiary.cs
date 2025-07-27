@@ -24,6 +24,8 @@ namespace VaultBackend.Models
 
         public bool Verified { get; set; } = false;
 
+        public DateTime? VerifiedAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

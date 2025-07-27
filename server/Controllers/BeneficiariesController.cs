@@ -83,6 +83,7 @@ namespace VaultBackend.Controllers
             if (item == null) return NotFound();
 
             item.Verified = true;
+            item.VerifiedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Verified beneficiary", item.Email);
             return Ok();

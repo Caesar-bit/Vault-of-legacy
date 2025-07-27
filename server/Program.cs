@@ -296,7 +296,7 @@ using (var scope = app.Services.CreateScope())
         if (!exists)
         {
             using var create = conn.CreateCommand();
-            create.CommandText = "CREATE TABLE Beneficiaries (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Name TEXT NOT NULL, Email TEXT NOT NULL, Phone TEXT, Relationship TEXT, Verified INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.CommandText = "CREATE TABLE Beneficiaries (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, Name TEXT NOT NULL, Email TEXT NOT NULL, Phone TEXT, Relationship TEXT, Verified INTEGER NOT NULL, VerifiedAt TEXT, CreatedAt TEXT NOT NULL);";
             create.ExecuteNonQuery();
         }
         else
@@ -306,11 +306,13 @@ using (var scope = app.Services.CreateScope())
             using var reader = info.ExecuteReader();
             var hasPhone = false;
             var hasRelationship = false;
+            var hasVerifiedAt = false;
             while (reader.Read())
             {
                 var column = reader.GetString(1);
                 if (column == "Phone") hasPhone = true;
                 if (column == "Relationship") hasRelationship = true;
+                if (column == "VerifiedAt") hasVerifiedAt = true;
             }
             if (!hasPhone)
             {
@@ -322,6 +324,12 @@ using (var scope = app.Services.CreateScope())
             {
                 using var alter = conn.CreateCommand();
                 alter.CommandText = "ALTER TABLE Beneficiaries ADD COLUMN Relationship TEXT;";
+                alter.ExecuteNonQuery();
+            }
+            if (!hasVerifiedAt)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE Beneficiaries ADD COLUMN VerifiedAt TEXT;";
                 alter.ExecuteNonQuery();
             }
         }
