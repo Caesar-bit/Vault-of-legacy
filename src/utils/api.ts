@@ -186,6 +186,31 @@ export async function removeTrustee(token: string, id: string) {
   if (!res.ok) throw new Error(await res.text());
 }
 
+export async function updateTrustee(
+  token: string,
+  id: string,
+  data: { name?: string; email?: string; tier?: string }
+) {
+  const res = await fetch(`${API_BASE}/api/trustees/${id}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function verifyTrustee(token: string, id: string) {
+  const res = await fetch(`${API_BASE}/api/trustees/${id}/verify`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
 export async function fetchBeneficiaries(token: string) {
   const res = await fetch(`${API_BASE}/api/beneficiaries`, {
     headers: { Authorization: `Bearer ${token}` },
