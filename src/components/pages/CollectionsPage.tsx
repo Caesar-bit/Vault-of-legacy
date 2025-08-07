@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Grid3X3, 
-  List, 
-  Eye, 
-  Share2, 
-  Edit, 
+import {
+  Plus,
+  Search,
+  Grid3X3,
+  List,
+  Eye,
+  Share2,
+  Edit,
   Trash2,
   FolderOpen,
   ImageIcon,
   Lock,
   Globe
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { FileManager, VaultItem } from '../FileManager';
 import { useUserData } from '../../utils/userData';
 
@@ -78,26 +79,58 @@ export function CollectionsPage() {
   };
 
   return (
-    <>
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Collections</h1>
-          <p className="mt-2 text-gray-600">Organize your assets into meaningful collections</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700"></div>
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative px-6 py-16 sm:py-24">
+          <div className="mx-auto max-w-7xl">
+            <div className="text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="flex justify-center mb-6"
+              >
+                <div className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <FolderOpen className="h-12 w-12 text-white" />
+                </div>
+              </motion.div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="text-4xl sm:text-5xl font-bold text-white mb-4"
+              >
+                Collections
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-xl text-blue-100 max-w-2xl mx-auto"
+              >
+                Organize your assets into meaningful collections
+              </motion.p>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Collection
-        </button>
       </div>
+
+      <div className="relative -mt-16 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Collection
+          </button>
+        </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
               <FolderOpen className="h-6 w-6 text-blue-600" />
@@ -108,7 +141,7 @@ export function CollectionsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
               <ImageIcon className="h-6 w-6 text-green-600" />
@@ -121,7 +154,7 @@ export function CollectionsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
               <Globe className="h-6 w-6 text-purple-600" />
@@ -134,7 +167,7 @@ export function CollectionsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 rounded-lg">
               <Lock className="h-6 w-6 text-orange-600" />
@@ -150,7 +183,7 @@ export function CollectionsPage() {
       </div>
 
       {/* Search and View Controls */}
-      <div className="bg-white p-6 rounded-xl border border-gray-200">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div className="flex-1 max-w-lg">
             <div className="relative">
@@ -184,7 +217,7 @@ export function CollectionsPage() {
       </div>
 
       {/* Collections Grid/List */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50">
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
             {filteredCollections.map((collection) => (
@@ -546,6 +579,7 @@ export function CollectionsPage() {
         </div>
       </div>
     )}
-    </>
+  </div>
   );
 }
+

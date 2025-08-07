@@ -10,12 +10,8 @@ import {
   CheckCircle,
   Pencil,
   Plus,
-  Filter,
   Shield,
-  Clock,
-  Star,
-  Eye,
-  MoreVertical
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {

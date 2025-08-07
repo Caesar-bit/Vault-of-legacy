@@ -3,43 +3,63 @@ import { SendEthForm } from '../SendEthForm';
 import { ContractInteractionForm } from '../ContractInteractionForm';
 import { NetworkInfo } from '../NetworkInfo';
 import { LocalBlockchain } from '../LocalBlockchain';
+import { Network } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function BlockchainPage() {
   return (
-    <div className="space-y-8">
-      <div
-        className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden"
-        style={{ background: 'linear-gradient(120deg,rgba(59,130,246,0.10),rgba(236,72,153,0.10) 100%)' }}
-      >
-        <div>
-          <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm tracking-tight">Blockchain</h1>
-          <p className="mt-2 text-lg text-gray-700">Interact with Ethereum in real time</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700"></div>
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative px-6 py-16 sm:py-24">
+          <div className="mx-auto max-w-7xl">
+            <div className="text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="flex justify-center mb-6"
+              >
+                <div className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <Network className="h-12 w-12 text-white" />
+                </div>
+              </motion.div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="text-4xl sm:text-5xl font-bold text-white mb-4"
+              >
+                Blockchain
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-xl text-blue-100 max-w-2xl mx-auto"
+              >
+                Interact with Ethereum in real time
+              </motion.p>
+            </div>
+          </div>
         </div>
-        <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl animate-pulse z-0" />
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-pink-400/20 rounded-full blur-2xl animate-pulse z-0" />
       </div>
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <NetworkInfo />
-          <EthereumWallet />
-          <SendEthForm />
-        </div>
-        <div className="space-y-6">
-          <ContractInteractionForm />
-          <LocalBlockchain />
+
+      <div className="relative -mt-16 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            <NetworkInfo />
+            <EthereumWallet />
+            <SendEthForm />
+          </div>
+          <div className="space-y-6">
+            <ContractInteractionForm />
+            <LocalBlockchain />
+          </div>
         </div>
       </div>
-      <style>{`
-        .glassy-card {
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(12px);
-        }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(16px); }
-          to { opacity: 1; transform: none; }
-        }
-        .animate-fade-in { animation: fade-in 0.7s cubic-bezier(.4,0,.2,1) both; }
-      `}</style>
     </div>
   );
 }
+

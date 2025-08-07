@@ -4,15 +4,15 @@ import { fetchApiKeys, createApiKey, deleteApiKey, regenerateApiKey } from '../.
 import { fetchApiEndpoints } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { AnimatedAlert } from '../AnimatedAlert';
-import { 
-  Key, 
-  Plus, 
-  Copy, 
-  Eye, 
-  EyeOff, 
-  Trash2, 
-  RefreshCw, 
-  Shield, 
+import {
+  Key,
+  Plus,
+  Copy,
+  Eye,
+  EyeOff,
+  Trash2,
+  RefreshCw,
+  Shield,
   Book,
   AlertTriangle,
   CheckCircle,
@@ -20,6 +20,7 @@ import {
   Activity,
   BarChart3
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 
 
@@ -169,7 +170,7 @@ export function APIPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <APIKeyModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -182,13 +183,46 @@ export function APIPage() {
           onClose={() => setAlert(null)}
         />
       )}
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">API Management</h1>
-          <p className="mt-2 text-gray-600">Manage API keys and access to your Vault of Legacy data</p>
+
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700"></div>
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative px-6 py-16 sm:py-24">
+          <div className="mx-auto max-w-7xl">
+            <div className="text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="flex justify-center mb-6"
+              >
+                <div className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <Key className="h-12 w-12 text-white" />
+                </div>
+              </motion.div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="text-4xl sm:text-5xl font-bold text-white mb-4"
+              >
+                API Management
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-xl text-blue-100 max-w-2xl mx-auto"
+              >
+                Manage API keys and access to your Vault of Legacy data
+              </motion.p>
+            </div>
+          </div>
         </div>
-        <div className="mt-4 sm:mt-0 flex space-x-3">
+      </div>
+
+      <div className="relative -mt-16 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
           <button
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
             onClick={handleOpenDocs}
@@ -196,7 +230,7 @@ export function APIPage() {
             <Book className="h-4 w-4 mr-2" />
             API Documentation
           </button>
-          <button 
+          <button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
           >
@@ -204,62 +238,60 @@ export function APIPage() {
             Create API Key
           </button>
         </div>
-      </div>
 
-      {/* API Usage Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Key className="h-6 w-6 text-blue-600" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Key className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Keys</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {apiKeys.filter(k => k.status === 'active').length}
+                </p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Keys</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {apiKeys.filter(k => k.status === 'active').length}
-              </p>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Activity className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Requests</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {apiKeys.reduce((sum, key) => sum + (key.requests || 0), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <BarChart3 className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Rate Limit</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">1000/hr</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Shield className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Security Level</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">High</p>
+              </div>
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Activity className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Requests</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {apiKeys.reduce((sum, key) => sum + (key.requests || 0), 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Rate Limit</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">1000/hr</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Shield className="h-6 w-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Security Level</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">High</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* API Keys List */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 shadow-lg">
         <div className="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">API Keys</h3>
           <input
@@ -356,7 +388,7 @@ export function APIPage() {
       </div>
 
       {/* API Endpoints Documentation */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 shadow-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">API Endpoints</h3>
         </div>
@@ -376,7 +408,7 @@ export function APIPage() {
 
       {/* Rate Limiting & Security */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 p-6 shadow-lg">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Rate Limiting</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -400,7 +432,7 @@ export function APIPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 p-6 shadow-lg">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Security Features</h3>
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -423,6 +455,7 @@ export function APIPage() {
               <AlertTriangle className="h-5 w-5 text-orange-600" />
               <span className="text-sm text-gray-900 dark:text-white">Audit logging</span>
             </div>
+          </div>
           </div>
         </div>
       </div>
