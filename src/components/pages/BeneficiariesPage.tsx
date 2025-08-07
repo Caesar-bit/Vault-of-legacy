@@ -1,0 +1,270 @@
+import { useEffect, useState, useMemo } from 'react';
+import {
+  User,
+  CheckCircle,
+  Mail,
+  PlusCircle,
+  Trash2,
+  Pencil,
+  Phone,
+  Heart,
+  Search,
+  X,
+} from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+  fetchBeneficiaries,
+  addBeneficiary,
+  removeBeneficiary,
+  verifyBeneficiary,
+  updateBeneficiary,
+} from '../../utils/api';
+import { AnimatedAlert } from '../AnimatedAlert';
+import { AddBeneficiaryModal } from '../AddBeneficiaryModal';
+import { BeneficiaryForm } from '../BeneficiaryForm';
+import { AnimatePresence, motion } from 'framer-motion';
+
+interface BeneficiaryItem {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  relationship: string;
+  verified: boolean;
+  verifiedAt?: string | null;
+}
+
+export function BeneficiariesPage() {
+  const { token, isAuthenticated } = useAuth();
+  const [beneficiaries, setBeneficiaries] = useState<BeneficiaryItem[]>([]);
+  const [alert, setAlert] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<BeneficiaryItem | null>(null);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+
+  const stats = useMemo(() => {
+    const verified = beneficiaries.filter((b) => b.verified).length;
+    const total = beneficiaries.length;
+    return { total, verified, unverified: total - verified };
+  }, [beneficiaries]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+    load();
+  }, [isAuthenticated, token]);
+
+  const load = async () => {
+    try {
+      const data = await fetchBeneficiaries(token!);
+      setBeneficiaries(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveBeneficiary = async (data: {
+    name: string;
+    email: string;
+    phone: string;
+    relationship: string;
+  }) => {
+    if (!token) return;
+    try {
+      if (editing) {
+        await updateBeneficiary(token, editing.id, data);
+        setAlert('Beneficiary updated');
+      } else {
+        await addBeneficiary(token, data);
+        setAlert('Beneficiary added');
+      }
+      setEditing(null);
+      load();
+    } catch (e) {
+      console.error(e);
+      setAlert('Failed to save');
+    }
+  };
+
+  const handleCreate = async (data: {
+    name: string;
+    email: string;
+    phone: string;
+    relationship: string;
+  }) => {
+    await saveBeneficiary(data);
+    setShowForm(false);
+  };
+
+  const onRemove = async (id: string) => {
+    if (!token) return;
+    try {
+      await removeBeneficiary(token, id);
+      load();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const onVerify = async (id: string) => {
+    if (!token) return;
+    try {
+      await verifyBeneficiary(token, id);
+      load();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const onEdit = (b: BeneficiaryItem) => {
+    setEditing(b);
+    setShowModal(true);
+  };
+
+  const filtered = beneficiaries.filter(
+    (b) =>
+      b.name.toLowerCase().includes(search.toLowerCase()) ||
+      b.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-8">
+      {alert && <AnimatedAlert message={alert} type="success" onClose={() => setAlert(null)} />}
+      <div className="relative px-6 pt-10 pb-8 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden">
+        <h1 className="text-4xl font-extrabold text-gray-900">Beneficiaries</h1>
+        <p className="text-lg text-gray-700 mt-2">Manage who will receive your files</p>
+        <div className="absolute -top-10 -right-10 w-48 h-48 bg-green-400/20 rounded-full blur-2xl animate-pulse" />
+      </div>
+      <div className="glassy-card p-6 rounded-3xl border border-white/30 shadow-xl flex justify-between items-center">
+        <h3 className="text-lg font-bold">Beneficiaries</h3>
+        <button
+          onClick={() => {
+            setEditing(null);
+            setShowForm((s) => !s);
+          }}
+          className="flex items-center gap-1 bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
+        >
+          {showForm ? (
+            <>
+              <X className="h-5 w-5" /> Close
+            </>
+          ) : (
+            <>
+              <PlusCircle className="h-5 w-5" /> Add
+            </>
+          )}
+        </button>
+      </div>
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="glassy-card p-6 rounded-3xl border border-white/30 shadow-xl mt-4">
+              <BeneficiaryForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="stat-card">
+          <User className="w-6 h-6 text-indigo-600" />
+          <div className="text-2xl font-bold">{stats.total}</div>
+          <div className="text-gray-600 text-sm">Total</div>
+        </div>
+        <div className="stat-card">
+          <CheckCircle className="w-6 h-6 text-green-600" />
+          <div className="text-2xl font-bold">{stats.verified}</div>
+          <div className="text-gray-600 text-sm">Verified</div>
+        </div>
+        <div className="stat-card">
+          <User className="w-6 h-6 text-yellow-600" />
+          <div className="text-2xl font-bold">{stats.unverified}</div>
+          <div className="text-gray-600 text-sm">Unverified</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <input
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 focus:ring-primary-500"
+            placeholder="Search beneficiaries"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filtered.map((b) => (
+          <div
+            key={b.id}
+            className="glassy-card rounded-2xl border border-white/30 p-5 shadow-lg backdrop-blur-lg relative overflow-hidden transform transition hover:-translate-y-1 hover:shadow-2xl animate-slide-up"
+          >
+            <div className="absolute -top-6 -right-6 w-16 h-16 bg-green-400/10 rounded-full blur-xl" />
+            <div className="flex items-center space-x-3 mb-2 relative z-10">
+              <div className="p-2 bg-white/60 rounded-xl shadow">
+                <User className="h-5 w-5 text-gray-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">{b.name}</h3>
+            </div>
+            <div className="space-y-1 text-sm text-gray-600 mb-3 relative z-10">
+              <div className="flex items-center"><Mail className="h-4 w-4 mr-1" />{b.email}</div>
+              {b.phone && (
+                <div className="flex items-center"><Phone className="h-4 w-4 mr-1" />{b.phone}</div>
+              )}
+              {b.relationship && (
+                <div className="flex items-center"><Heart className="h-4 w-4 mr-1" /> <span className="italic">{b.relationship}</span></div>
+              )}
+            </div>
+            <div className="flex items-center justify-between relative z-10">
+              {b.verified ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <button onClick={() => onVerify(b.id)} className="text-primary-600 hover:underline text-sm flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-1" /> Verify
+                </button>
+              )}
+              <div className="flex gap-2">
+                <button onClick={() => onEdit(b)} className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button onClick={() => onRemove(b.id)} className="p-2 text-red-500 hover:text-red-700 rounded-lg hover:bg-red-50 transition">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <style>{`
+        .glassy-card {
+          background: linear-gradient(to bottom right, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
+          backdrop-filter: blur(12px);
+        }
+        .stat-card {
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 1rem;
+          transition: transform 0.2s;
+        }
+        .stat-card:hover {
+          transform: translateY(-4px);
+        }
+      `}</style>
+      <AddBeneficiaryModal
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); setEditing(null); }}
+        onCreate={saveBeneficiary}
+        initial={editing ?? undefined}
+      />
+    </div>
+  );
+}

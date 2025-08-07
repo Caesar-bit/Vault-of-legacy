@@ -1,70 +1,23 @@
 import React, { useState } from 'react';
 import { 
-  Archive, 
-  Download, 
-  Upload, 
-  Search, 
-  Filter, 
-  Calendar, 
-  Clock, 
-  Shield, 
-  Database,
+  Archive,
+  Download,
+  Search,
+  Filter,
+  Clock,
+  Shield,
   HardDrive,
   FileText,
   Image,
-  Video,
-  Music,
   Folder,
-  CheckCircle,
-  AlertTriangle,
   MoreHorizontal,
   Eye,
   Trash2,
-  RefreshCw,
-  Settings
+  RefreshCw
 } from 'lucide-react';
+import { FileManager, VaultItem } from '../FileManager';
+import { useUserData } from '../../utils/userData';
 
-const mockArchives = [
-  {
-    id: '1',
-    name: 'Family Heritage Collection 2020-2024',
-    type: 'collection',
-    size: '2.4 GB',
-    items: 1247,
-    created: '2024-01-15',
-    lastBackup: '2024-01-20',
-    status: 'active',
-    retention: '25 years',
-    format: 'ZIP',
-    checksum: 'SHA-256'
-  },
-  {
-    id: '2',
-    name: 'Historical Documents Archive',
-    type: 'documents',
-    size: '856 MB',
-    items: 342,
-    created: '2023-12-10',
-    lastBackup: '2024-01-19',
-    status: 'archived',
-    retention: 'permanent',
-    format: 'TAR.GZ',
-    checksum: 'SHA-256'
-  },
-  {
-    id: '3',
-    name: 'Media Vault Backup Q4 2023',
-    type: 'media',
-    size: '15.2 GB',
-    items: 2156,
-    created: '2023-12-31',
-    lastBackup: '2024-01-18',
-    status: 'verified',
-    retention: '50 years',
-    format: 'ZIP',
-    checksum: 'SHA-256'
-  }
-];
 
 const retentionPolicies = [
   { name: '1 Year', value: '1y', description: 'Standard retention for temporary content' },
@@ -73,11 +26,44 @@ const retentionPolicies = [
   { name: 'Permanent', value: 'permanent', description: 'Indefinite storage for critical assets' }
 ];
 
+interface Archive {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  items: number;
+  created: string;
+  lastBackup: string;
+  status: string;
+  retention: string;
+  format: string;
+  checksum: string;
+}
+
+
 export function ArchivePage() {
+  const [archives, setArchives] = useUserData<Archive[]>('archives', []);
   const [selectedArchives, setSelectedArchives] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewArchive, setViewArchive] = useState<Archive | null>(null);
+  const [deleteArchive, setDeleteArchive] = useState<Archive | null>(null);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('collection');
+  const [retention, setRetention] = useState('25 Years');
+  const [archiveFiles, setArchiveFiles] = useUserData<Record<string, VaultItem[]>>('archive_files', {});
+
+  const downloadArchive = (archive: Archive) => {
+    const data = archiveFiles[archive.id] || [];
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${archive.name}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -98,7 +84,19 @@ export function ArchivePage() {
     }
   };
 
+  const filteredArchives = archives.filter(a => {
+    const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || a.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const activeCount = archives.filter(a => a.status === 'active').length;
+  const verifiedRatio = Math.round(
+    (archives.filter(a => a.status === 'verified').length / archives.length) * 100
+  );
+
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -107,7 +105,10 @@ export function ArchivePage() {
           <p className="mt-2 text-gray-600">Long-term storage, preservation, and backup management</p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+          <button
+            onClick={() =>
+              setArchives((prev) => prev.map(a => ({ ...a, status: 'verified' })))}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
             <RefreshCw className="h-4 w-4 mr-2" />
             Verify All
           </button>
@@ -142,8 +143,8 @@ export function ArchivePage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Archives</p>
-              <p className="text-2xl font-bold text-gray-900">12</p>
-              <p className="text-xs text-gray-500">3 created this month</p>
+              <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
+              <p className="text-xs text-gray-500">{archives.length} total archives</p>
             </div>
           </div>
         </div>
@@ -154,7 +155,7 @@ export function ArchivePage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Verified</p>
-              <p className="text-2xl font-bold text-gray-900">98.5%</p>
+              <p className="text-2xl font-bold text-gray-900">{verifiedRatio}%</p>
               <p className="text-xs text-gray-500">integrity check passed</p>
             </div>
           </div>
@@ -226,7 +227,7 @@ export function ArchivePage() {
           <h3 className="text-lg font-semibold text-gray-900">Archive Inventory</h3>
         </div>
         <div className="divide-y divide-gray-200">
-          {mockArchives.map((archive) => {
+          {filteredArchives.map((archive) => {
             const TypeIcon = getTypeIcon(archive.type);
             return (
               <div key={archive.id} className="p-6 hover:bg-gray-50">
@@ -265,16 +266,25 @@ export function ArchivePage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button
+                      onClick={() => setViewArchive(archive)}
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50">
+                    <button
+                      onClick={() => downloadArchive(archive)}
+                      className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50">
                       <Download className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button
+                      onClick={() =>
+                        setArchives(prev => prev.map(a => a.id === archive.id ? { ...a, status: 'verified' } : a))}
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
                       <RefreshCw className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+                    <button
+                      onClick={() => setDeleteArchive(archive)}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
                       <MoreHorizontal className="h-4 w-4" />
                     </button>
                   </div>
@@ -293,15 +303,33 @@ export function ArchivePage() {
               {selectedArchives.length} archive{selectedArchives.length > 1 ? 's' : ''} selected
             </span>
             <div className="flex space-x-2">
-              <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <button
+                onClick={() => selectedArchives.forEach(id => {
+                  const arch = archives.find(a => a.id === id);
+                  if (arch) downloadArchive(arch);
+                })}
+                className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                 <Download className="h-4 w-4 mr-1" />
                 Download
               </button>
-              <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <button
+                onClick={() =>
+                  setArchives(prev => prev.map(a => selectedArchives.includes(a.id) ? { ...a, status: 'verified' } : a))}
+                className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                 <RefreshCw className="h-4 w-4 mr-1" />
                 Verify
               </button>
-              <button className="inline-flex items-center px-3 py-1 border border-red-300 rounded text-sm font-medium text-red-700 bg-white hover:bg-red-50">
+              <button
+                onClick={() => {
+                  setArchives(prev => prev.filter(a => !selectedArchives.includes(a.id)));
+                  setArchiveFiles(prev => {
+                    const copy = { ...prev };
+                    selectedArchives.forEach(id => { delete copy[id]; });
+                    return copy;
+                  });
+                  setSelectedArchives([]);
+                }}
+                className="inline-flex items-center px-3 py-1 border border-red-300 rounded text-sm font-medium text-red-700 bg-white hover:bg-red-50">
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete
               </button>
@@ -310,5 +338,119 @@ export function ArchivePage() {
         </div>
       )}
     </div>
+
+    {showCreateModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Archive</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const id = String(Date.now());
+              setArchives(prev => [
+                {
+                  id,
+                  name,
+                  type,
+                  size: '0 MB',
+                  items: 0,
+                  created: new Date().toISOString().slice(0, 10),
+                  lastBackup: new Date().toISOString().slice(0, 10),
+                  status: 'active',
+                  retention,
+                  format: 'ZIP',
+                  checksum: 'SHA-256',
+                },
+                ...prev,
+              ]);
+              setArchiveFiles(prev => ({ ...prev, [id]: [] }));
+              setName('');
+              setType('collection');
+              setRetention('25 Years');
+              setShowCreateModal(false);
+            }}
+          >
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+            >
+              <option value="collection">Collection</option>
+              <option value="documents">Documents</option>
+              <option value="media">Media</option>
+            </select>
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={retention}
+              onChange={(e) => setRetention(e.target.value)}
+            >
+              {retentionPolicies.map((p) => (
+                <option key={p.value} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {viewArchive && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewArchive(null)}>
+        <div className="bg-white rounded-xl shadow-xl p-4 w-full max-w-4xl" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">{viewArchive.name}</h3>
+            <button onClick={() => setViewArchive(null)} className="text-gray-500 hover:text-red-600">&times;</button>
+          </div>
+          <FileManager
+            initialItems={archiveFiles[viewArchive.id] || []}
+            onChange={(items) => {
+              setArchiveFiles(prev => ({ ...prev, [viewArchive.id]: items }));
+              setArchives(prev => prev.map(a => a.id === viewArchive.id ? { ...a, items: items.length } : a));
+            }}
+          />
+        </div>
+      </div>
+    )}
+
+    {deleteArchive && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDeleteArchive(null)}>
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete {deleteArchive.name}?</h3>
+          <div className="flex justify-end space-x-2">
+            <button className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700" onClick={() => setDeleteArchive(null)}>Cancel</button>
+            <button
+              className="px-4 py-2 rounded-lg bg-red-600 text-white"
+              onClick={() => {
+                setArchives(prev => prev.filter(a => a.id !== deleteArchive.id));
+                setArchiveFiles(prev => {
+                  const copy = { ...prev };
+                  delete copy[deleteArchive.id];
+                  return copy;
+                });
+                setSelectedArchives(prev => prev.filter(id => id !== deleteArchive.id));
+                setDeleteArchive(null);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -1,85 +1,41 @@
-import { useState } from 'react';
-import { FolderPlus, Upload, Star, FileText, Image, Video, Music, Archive, File } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { FolderPlus, Upload } from 'lucide-react';
+import { FileManager, VaultItem } from '../FileManager';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchVaultStructure, saveVaultStructure } from '../../utils/api';
 
-export function VaultPage() {
-  const [files] = useState([
-    {
-      id: 1,
-      name: 'Documents',
-      type: 'folder',
-      size: null,
-      modified: '2024-01-15',
-      owner: 'John Doe',
-      starred: false,
-      items: 24
-    },
-    {
-      id: 2,
-      name: 'Images',
-      type: 'folder',
-      size: null,
-      modified: '2024-01-14',
-      owner: 'John Doe',
-      starred: true,
-      items: 156
-    },
-    {
-      id: 3,
-      name: 'Project Proposal.pdf',
-      type: 'pdf',
-      size: '2.4 MB',
-      modified: '2024-01-13',
-      owner: 'Jane Smith',
-      starred: false
-    },
-    {
-      id: 4,
-      name: 'Presentation.pptx',
-      type: 'presentation',
-      size: '5.1 MB',
-      modified: '2024-01-12',
-      owner: 'Mike Johnson',
-      starred: true
-    },
-    {
-      id: 5,
-      name: 'Budget_2024.xlsx',
-      type: 'spreadsheet',
-      size: '1.8 MB',
-      modified: '2024-01-11',
-      owner: 'Sarah Wilson',
-      starred: false
-    },
-    {
-      id: 6,
-      name: 'Team_Photo.jpg',
-      type: 'image',
-      size: '3.2 MB',
-      modified: '2024-01-10',
-      owner: 'John Doe',
-      starred: false
-    }
-  ]);
+export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
+  const { isAuthenticated, token } = useAuth();
 
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case 'folder':
-        return <FolderPlus className="h-8 w-8 text-blue-500" />;
-      case 'pdf':
-      case 'document':
-        return <FileText className="h-8 w-8 text-red-500" />;
-      case 'image':
-        return <Image className="h-8 w-8 text-green-500" />;
-      case 'video':
-        return <Video className="h-8 w-8 text-purple-500" />;
-      case 'audio':
-        return <Music className="h-8 w-8 text-orange-500" />;
-      case 'archive':
-        return <Archive className="h-8 w-8 text-yellow-500" />;
-      default:
-        return <File className="h-8 w-8 text-gray-500" />;
+  const [structure, setStructure] = useState<VaultItem[]>([]);
+  const loadedRef = useRef(false);
+  const skipSave = useRef(true);
+  const skipLog = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const load = async () => {
+      try {
+        const data = await fetchVaultStructure(token);
+        setStructure(data);
+        skipSave.current = true;
+        loadedRef.current = true;
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [isAuthenticated, token]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !loadedRef.current) return;
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
     }
-  };
+    saveVaultStructure(token, structure, !skipLog.current).catch(console.error);
+    skipLog.current = false;
+  }, [structure, isAuthenticated, token]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-purple-50 to-orange-50">
@@ -117,32 +73,14 @@ export function VaultPage() {
         </div>
       </div>
 
-      {/* Drag & Drop Upload Area */}
-      <div className="mx-4 mb-6">
-        <div className="border-2 border-dashed border-primary-300 rounded-2xl bg-white/60 p-8 flex flex-col items-center justify-center hover:bg-primary-50 transition-all duration-300 cursor-pointer">
-          <Upload className="h-10 w-10 text-primary-400 mb-2 animate-bounce" />
-          <span className="text-primary-600 font-semibold">Drag & drop files here or click to upload</span>
-        </div>
-      </div>
-
-      {/* File Grid */}
-      <div className="p-4 md:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {files.map((file: any) => (
-            <div key={file.id} className="relative bg-white rounded-lg border-2 p-4 hover:shadow-md transition-shadow cursor-pointer">
-              <div className="flex flex-col items-center text-center">
-                <div className="mb-3">{getFileIcon(file.type)}</div>
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate w-full mb-1">{file.name}</h3>
-                <p className="text-xs text-gray-500">{file.type === 'folder' ? `${file.items} items` : file.size}</p>
-                <p className="text-xs text-gray-400 mt-1">{file.modified}</p>
-              </div>
-              {file.starred && (
-                <Star className="absolute top-2 right-2 h-4 w-4 text-yellow-500 fill-current" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <FileManager
+        initialItems={structure}
+        onChange={setStructure}
+        onUpload={() => {
+          skipLog.current = true;
+        }}
+        initialPath={initialPath}
+      />
     </div>
   );
 }

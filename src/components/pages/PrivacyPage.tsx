@@ -1,18 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  Shield, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Globe, 
-  Users, 
-  FileText, 
-  Settings,
+import React, { useEffect, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
+import {
+  Shield,
+  Lock,
   Save,
   AlertTriangle,
-  CheckCircle,
   Info,
-  Key,
   Database,
   UserCheck
 } from 'lucide-react';
@@ -33,22 +26,61 @@ export function PrivacyPage() {
     accessLogging: true
   });
 
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showDataExport, setShowDataExport] = useState(false);
   const [showDataDeletion, setShowDataDeletion] = useState(false);
 
-  const handleSettingChange = (key: string, value: any) => {
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
+
+  const handleSettingChange = (key: string, value: boolean | string) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const saveChanges = () => {
+    localStorage.setItem('privacy_settings', JSON.stringify(settings));
+    setAlert({ message: 'Settings saved', type: 'success' });
+  };
+
+  const exportData = () => {
+    const data = localStorage.getItem('vault_settings') || '{}';
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vault-export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    setAlert({ message: 'Export started', type: 'success' });
+  };
+
+  const deleteAccount = () => {
+    localStorage.clear();
+    setAlert({ message: 'Account deleted', type: 'success' });
   };
 
   return (
     <div className="space-y-6">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Privacy & Data Protection</h1>
           <p className="mt-2 text-gray-600">Manage your privacy settings and data protection preferences</p>
         </div>
-        <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+        <button
+          onClick={saveChanges}
+          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+        >
           <Save className="h-4 w-4 mr-2" />
           Save Changes
         </button>
@@ -278,6 +310,42 @@ export function PrivacyPage() {
           </div>
         </div>
       </div>
+
+      {showDataExport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Export Your Data</h3>
+            <p className="text-sm text-gray-600">Download a copy of all your stored information.</p>
+            <div className="flex justify-end space-x-2">
+              <button onClick={() => setShowDataExport(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">Cancel</button>
+              <button
+                onClick={() => { exportData(); setShowDataExport(false); }}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white"
+              >
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDataDeletion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Delete Account</h3>
+            <p className="text-sm text-gray-600">This will remove all of your data from this device.</p>
+            <div className="flex justify-end space-x-2">
+              <button onClick={() => setShowDataDeletion(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700">Cancel</button>
+              <button
+                onClick={() => { deleteAccount(); setShowDataDeletion(false); }}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

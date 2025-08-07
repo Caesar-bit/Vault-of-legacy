@@ -1,26 +1,138 @@
-import { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { ThemeToggle } from './ThemeToggle';
-import { Bell, Search, Plus, Menu, User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Bell, Search, Plus, Menu, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { NewProjectModal } from './NewProjectModal';
+import { ProfileDropdown } from './ProfileDropdown';
+import { useNavigate } from 'react-router-dom';
+import { ActivityLog } from '../types';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
 export function Header({ onToggleSidebar }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showNewProject, setShowNewProject] = useState(false);
+  const connectionRef = useRef<HubConnection | null>(null);
+  const [avatar, setAvatar] = useState<string>(user?.avatar || '');
 
-  const notifications = [
-    { id: 1, title: 'New collection shared', message: 'Sarah shared "Wedding Photos" with you', time: '2 min ago', unread: true },
-    { id: 2, title: 'Archive completed', message: 'Family Documents archive has been processed', time: '1 hour ago', unread: true },
-    { id: 3, title: 'Timeline updated', message: 'New milestone added to "Life Journey"', time: '3 hours ago', unread: false },
-  ];
+  useEffect(() => {
+    try {
+      const key = user ? `vault_settings_${user.id}` : 'vault_settings';
+      const settings = JSON.parse(localStorage.getItem(key) || '{}');
+      setAvatar(settings.profile?.avatar || user?.avatar || '');
+    } catch {
+      setAvatar(user?.avatar || '');
+    }
+    const handler = () => {
+      try {
+        const key = user ? `vault_settings_${user.id}` : 'vault_settings';
+        const settings = JSON.parse(localStorage.getItem(key) || '{}');
+        setAvatar(settings.profile?.avatar || user?.avatar || '');
+      } catch {
+        setAvatar(user?.avatar || '');
+      }
+    };
+    window.addEventListener('vault_settings_updated', handler);
+    return () => window.removeEventListener('vault_settings_updated', handler);
+  }, [user]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [notifications, setNotifications] = useState(() => {
+    const stored = localStorage.getItem('vault_notifications');
+    if (stored) return JSON.parse(stored);
+    return [
+      { id: 1, title: 'New collection shared', message: 'Sarah shared "Wedding Photos" with you', time: '2 min ago', unread: true },
+      { id: 2, title: 'Archive completed', message: 'Family Documents archive has been processed', time: '1 hour ago', unread: true },
+      { id: 3, title: 'Timeline updated', message: 'New milestone added to "Life Journey"', time: '3 hours ago', unread: false },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('vault_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  useEffect(() => {
+    if (!token) return;
+    const connection = new HubConnectionBuilder()
+      .withUrl('/hubs/activity', { accessTokenFactory: () => token })
+      .withAutomaticReconnect()
+      .build();
+    connection.on('NewActivity', (activity: ActivityLog) => {
+      setNotifications(prev => {
+        if (prev.some(n => n.id === activity.id)) return prev;
+        const item = {
+          id: activity.id,
+          title: activity.action,
+          message: activity.item,
+          time: new Date(activity.timestamp).toLocaleString(),
+          unread: true,
+        };
+        return [item, ...prev].slice(0, 50);
+      });
+    });
+    connection.start();
+    connectionRef.current = connection;
+    return () => {
+      connection.stop();
+    };
+  }, [token]);
 
   const unreadCount = notifications.filter(n => n.unread).length;
+
+  const searchItems = [
+    { name: t('dashboard'), page: 'dashboard' },
+    { name: t('vault'), page: 'vault' },
+    { name: t('timeline'), page: 'timeline' },
+    { name: t('collections'), page: 'collections' },
+    { name: t('archive'), page: 'archive' },
+    { name: t('gallery'), page: 'gallery' },
+    { name: t('research'), page: 'research' },
+    ...(user?.role === 'admin' ? [{ name: t('users'), page: 'users' }] : []),
+    ...(user?.role === 'admin' ? [{ name: t('analytics'), page: 'analytics' }] : []),
+    { name: t('settings'), page: 'settings' },
+    { name: t('templates'), page: 'templates' },
+    { name: t('export'), page: 'export' },
+    ...(user?.role === 'admin' ? [{ name: 'API', page: 'api' }] : []),
+    { name: 'Blockchain', page: 'blockchain' },
+    { name: t('about'), page: 'about' },
+  ];
+
+  const filteredSuggestions = searchItems.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelect = (page: string) => {
+    setSearchTerm('');
+    setShowSuggestions(false);
+    navigate(`/${page}`);
+  };
+
+  const markAsRead = (id: number) => {
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, unread: false } : n)));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  const handleCreateProject = (project: { name: string; description: string }) => {
+    const stored = localStorage.getItem('vault_projects');
+    const projects = stored ? JSON.parse(stored) : [];
+    projects.push({ id: Date.now(), ...project });
+    localStorage.setItem('vault_projects', JSON.stringify(projects));
+  };
 
   return (
     <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-primary-200 bg-white/60 bg-gradient-to-r from-white/80 to-primary-50/80 px-2 sm:px-4 shadow-lg sm:gap-x-6 sm:px-6 lg:px-8 backdrop-blur-xl">
@@ -41,7 +153,32 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             className="block h-full w-full border-0 py-0 pl-10 pr-0 text-gray-900 placeholder:text-primary-400 focus:ring-2 focus:ring-primary-500 rounded-lg sm:text-sm bg-white/70 backdrop-blur-md shadow-inner"
             placeholder={t('searchPlaceholder')}
             type="search"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           />
+          {showSuggestions && searchTerm && (
+            <ul className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
+              {filteredSuggestions.length > 0 ? (
+                filteredSuggestions.map(item => (
+                  <li key={item.page}>
+                    <button
+                      onMouseDown={() => handleSelect(item.page)}
+                      className="block w-full text-left px-4 py-2 hover:bg-primary-50"
+                    >
+                      {item.name}
+                    </button>
+                  </li>
+                ))
+              ) : (
+                <li className="px-4 py-2 text-sm text-gray-500">No results</li>
+              )}
+            </ul>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-x-2 sm:gap-x-4 lg:gap-x-6">
@@ -49,6 +186,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         <button
           type="button"
           className="flex items-center gap-x-2 rounded-xl bg-gradient-to-r from-primary-500 to-purple-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg hover:from-primary-600 hover:to-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-all duration-300 hover:shadow-xl hover:scale-105"
+          onClick={() => setShowNewProject(true)}
         >
           <Plus className="h-4 w-4" />
           <span className="hidden xs:inline">{t('newProject')}</span>
@@ -73,12 +211,19 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-white/90 rounded-2xl shadow-2xl border border-gray-200 py-2 z-50 backdrop-blur-xl">
-              <div className="px-4 py-2 border-b border-gray-200">
+              <div className="px-4 py-2 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-primary-700">{t('notifications')}</h3>
+                {notifications.length > 0 && (
+                  <button onClick={markAllAsRead} className="text-xs text-primary-500 hover:underline">Mark all read</button>
+                )}
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {notifications.map((notification) => (
-                  <div key={notification.id} className={`px-4 py-3 hover:bg-primary-50/60 cursor-pointer rounded-xl transition-all duration-200 ${notification.unread ? 'bg-blue-50/60' : ''}`}>
+                  <div
+                    key={notification.id}
+                    onClick={() => markAsRead(notification.id)}
+                    className={`px-4 py-3 hover:bg-primary-50/60 cursor-pointer rounded-xl transition-all duration-200 ${notification.unread ? 'bg-blue-50/60' : ''}`}
+                  >
                     <div className="flex items-start space-x-3">
                       <div className={`w-2 h-2 rounded-full mt-2 ${notification.unread ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
                       <div className="flex-1 min-w-0">
@@ -89,9 +234,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                     </div>
                   </div>
                 ))}
+                {notifications.length === 0 && (
+                  <p className="px-4 py-3 text-sm text-gray-500">No notifications</p>
+                )}
               </div>
-              <div className="px-4 py-2 border-t border-gray-200">
-                <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">View all notifications</button>
+              <div className="px-4 py-2 border-t border-gray-200 flex justify-between">
+                <button onClick={clearNotifications} className="text-sm text-red-600 hover:text-red-800 font-medium">Clear</button>
+                <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">View all</button>
               </div>
             </div>
           )}
@@ -101,15 +250,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {/* Profile Dropdown */}
         <div className="relative">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setShowProfileDropdown(!showProfileDropdown)}
             className="-m-1.5 flex items-center p-1.5 hover:bg-primary-100/60 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400"
           >
             <span className="sr-only">Open user menu</span>
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-lg border-2 border-white/60">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-10 w-10 rounded-full object-cover" />
+              {avatar ? (
+                <img src={avatar} alt={user?.name} className="h-10 w-10 rounded-full object-cover" />
               ) : (
                 <span className="text-sm font-bold text-white">
                   {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
@@ -123,43 +272,20 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <ChevronDown className="ml-2 h-4 w-4 text-gray-400" />
             </span>
           </button>
-
-          {showProfileDropdown && (
-            <div className="absolute right-0 mt-2 w-56 bg-white/90 rounded-2xl shadow-2xl border border-gray-200 py-2 z-50 backdrop-blur-xl">
-              <div className="px-4 py-3 border-b border-gray-200">
-                <p className="text-sm font-bold text-gray-900">{user?.name || 'User'}</p>
-                <p className="text-sm text-gray-600">{user?.email || 'user@example.com'}</p>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                  {user?.role || 'User'}
-                </span>
-              </div>
-              <div className="py-1">
-                <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl">
-                  <User className="h-4 w-4 mr-3" />
-                  {t('profile')}
-                </button>
-                <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50/60 rounded-xl">
-                  <Settings className="h-4 w-4 mr-3" />
-                  {t('settings')}
-                </button>
-              </div>
-              <div className="border-t border-gray-200 py-1">
-                <button 
-                  onClick={logout}
-                  className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 rounded-xl"
-                >
-                  <LogOut className="h-4 w-4 mr-3" />
-                  {t('signOut')}
-                </button>
-              </div>
-            </div>
-          )}
+          <ProfileDropdown
+            user={user}
+            t={t}
+            logout={logout}
+            show={showProfileDropdown}
+            onClose={() => setShowProfileDropdown(false)}
+          />
         </div>
       </div>
+      <NewProjectModal
+        isOpen={showNewProject}
+        onClose={() => setShowNewProject(false)}
+        onCreate={handleCreateProject}
+      />
     </div>
   );
-// Add bell animation for notification
-// Add this to your global CSS (e.g., index.css or tailwind.css):
-// .animate-bell { animation: bell-shake 1s cubic-bezier(.36,.07,.19,.97) both infinite; }
-// @keyframes bell-shake { 0%,100%{transform:rotate(0);} 10%,30%,50%,70%,90%{transform:rotate(-10deg);} 20%,40%,60%,80%{transform:rotate(10deg);} }
 }

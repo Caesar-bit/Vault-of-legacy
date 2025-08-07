@@ -1,64 +1,33 @@
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Edit, 
-  Trash2, 
-  ImageIcon, 
+import { useUserData } from '../../utils/userData';
+import { FileUpload } from '../FileUpload';
+import {
+  Plus,
+  Calendar,
+  MapPin,
+  Clock,
+  Edit,
+  Trash2,
+  ImageIcon,
   FileText,
-  Filter,
   Search
 } from 'lucide-react';
 
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Birth of John Smith',
-    description: 'Born in Springfield Hospital',
-    date: '1950-03-15',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: ['birth_certificate.pdf', 'hospital_photo.jpg']
-  },
-  {
-    id: '2',
-    title: 'First Day of School',
-    description: 'Started kindergarten at Lincoln Elementary',
-    date: '1955-09-01',
-    type: 'event',
-    location: 'Springfield, IL',
-    assets: ['school_photo.jpg']
-  },
-  {
-    id: '3',
-    title: 'High School Graduation',
-    description: 'Graduated valedictorian from Springfield High',
-    date: '1968-06-15',
-    type: 'achievement',
-    location: 'Springfield, IL',
-    assets: ['diploma.pdf', 'graduation_photo.jpg', 'speech.mp3']
-  },
-  {
-    id: '4',
-    title: 'Wedding Day',
-    description: 'Married Mary Johnson at St. Mary\'s Church',
-    date: '1972-08-20',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: ['wedding_photos.zip', 'marriage_certificate.pdf']
-  },
-  {
-    id: '5',
-    title: 'First Child Born',
-    description: 'Sarah Smith was born',
-    date: '1975-04-10',
-    type: 'milestone',
-    location: 'Springfield, IL',
-    assets: ['baby_photos.jpg', 'birth_announcement.pdf']
-  }
-];
+interface EventAsset {
+  name: string;
+  url: string;
+}
+
+interface TimelineEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  type: string;
+  location: string;
+  assets: EventAsset[];
+}
+
 
 const getEventTypeColor = (type: string) => {
   switch (type) {
@@ -80,18 +49,30 @@ const getEventTypeIcon = (type: string) => {
 
 
 export function TimelinePage() {
+  const [events, setEvents] = useUserData<TimelineEvent[]>('timeline_events', []);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    type: 'milestone',
+    location: '',
+    assets: [] as File[]
+  });
 
-  const filteredEvents = mockEvents.filter(event => {
+  const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || event.type === selectedType;
     return matchesSearch && matchesType;
   });
 
-  const sortedEvents = filteredEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sortedEvents = filteredEvents.sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
 
   return (
     <div className="relative min-h-screen pb-20">
@@ -102,7 +83,11 @@ export function TimelinePage() {
           <p className="mt-2 text-lg text-gray-600">Chronicle your life's journey through time</p>
         </div>
         <button
-          onClick={() => setShowAddEvent(true)}
+          onClick={() => {
+            setEditingId(null);
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+            setShowForm(true);
+          }}
           className="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           <Plus className="h-5 w-5 mr-2" />
@@ -118,7 +103,7 @@ export function TimelinePage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Total Events</p>
-            <p className="text-2xl font-extrabold text-gray-900">{mockEvents.length}</p>
+            <p className="text-2xl font-extrabold text-gray-900">{events.length}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -186,7 +171,7 @@ export function TimelinePage() {
         <div className="absolute left-12 top-8 bottom-8 w-1 bg-gradient-to-b from-blue-300 via-purple-200 to-pink-200 animate-pulse-timeline rounded-full z-0" style={{ minHeight: 'calc(100% - 4rem)' }}></div>
 
         <div className="space-y-12 relative z-10">
-          {sortedEvents.map((event, index) => (
+          {sortedEvents.map((event) => (
             <div key={event.id} className="relative flex items-start space-x-8 group">
               {/* Timeline Dot with Icon */}
               <div className="relative flex items-center justify-center w-24 h-24 bg-white/80 border-4 border-blue-200 shadow-lg rounded-full z-20 group-hover:scale-105 transition-transform">
@@ -223,21 +208,44 @@ export function TimelinePage() {
                         <div className="flex items-center space-x-2 mt-2">
                           <span className="text-sm text-gray-500">Assets:</span>
                           <div className="flex flex-wrap gap-2">
-                            {event.assets.map((asset, assetIndex) => (
-                              <span key={assetIndex} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 shadow">
+                            {event.assets.map((asset: EventAsset, assetIndex: number) => (
+                              <a
+                                key={assetIndex}
+                                href={asset.url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 shadow"
+                              >
                                 <FileText className="h-3 w-3 mr-1" />
-                                {asset}
-                              </span>
+                                {asset.name ?? asset}
+                              </a>
                             ))}
                           </div>
                         </div>
                       )}
                     </div>
                     <div className="flex flex-col items-end space-y-2 ml-6">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white/70 transition-colors">
+                      <button
+                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-white/70 transition-colors"
+                        onClick={() => {
+                          setEditingId(event.id);
+                          setForm({
+                            title: event.title,
+                            description: event.description,
+                            date: event.date,
+                            type: event.type,
+                            location: event.location,
+                            assets: []
+                          });
+                          setShowForm(true);
+                        }}
+                      >
                         <Edit className="h-5 w-5" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white/70 transition-colors">
+                      <button
+                        className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white/70 transition-colors"
+                        onClick={() => setEvents((prev) => prev.filter((ev) => ev.id !== event.id))}
+                      >
                         <Trash2 className="h-5 w-5" />
                       </button>
                     </div>
@@ -250,7 +258,11 @@ export function TimelinePage() {
 
         {/* Floating Add Event Button */}
         <button
-          onClick={() => setShowAddEvent(true)}
+          onClick={() => {
+            setEditingId(null);
+            setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+            setShowForm(true);
+          }}
           className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400 animate-bounce"
           title="Add Event"
         >
@@ -258,22 +270,110 @@ export function TimelinePage() {
         </button>
       </div>
 
-      {/* Add Event Modal (Coming Soon) */}
-      {showAddEvent && (
+      {/* Add/Edit Event Modal */}
+      {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-lg relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-xl"
-              onClick={() => setShowAddEvent(false)}
-              title="Close"
+              className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
+              onClick={() => {
+                setShowForm(false);
+                setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+              }}
             >
               &times;
             </button>
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Add New Event</h2>
-            <p className="text-gray-500 mb-6">Event creation coming soon!</p>
-            <div className="flex items-center justify-center">
-              <Plus className="h-12 w-12 text-blue-400 animate-pulse" />
-            </div>
+            <h2 className="text-xl font-bold mb-4 text-gray-900">{editingId ? 'Edit Event' : 'Add New Event'}</h2>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const uploaded = form.assets.map((f) => ({
+                  name: f.name,
+                  url: URL.createObjectURL(f),
+                }));
+                if (editingId) {
+                  setEvents((prev) =>
+                    prev.map((ev) =>
+                      ev.id === editingId
+                        ? { ...ev, ...form, assets: [...ev.assets, ...uploaded] }
+                        : ev
+                    )
+                  );
+                } else {
+                  setEvents((prev) => [
+                    ...prev,
+                    {
+                      id: Date.now().toString(),
+                      ...form,
+                      assets: uploaded,
+                    },
+                  ]);
+                }
+                setShowForm(false);
+                setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+              }}
+            >
+              <input
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
+              <textarea
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Description"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                required
+              />
+              <input
+                type="date"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                required
+              />
+              <input
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Location"
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+              />
+              <select
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
+              >
+                <option value="milestone">Milestone</option>
+                <option value="event">Event</option>
+                <option value="achievement">Achievement</option>
+              </select>
+              <div className="w-full">
+                <FileUpload
+                  multiple
+                  onFilesSelected={(files) =>
+                    setForm({ ...form, assets: Array.from(files) })
+                  }
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    setForm({ title: '', description: '', date: '', type: 'milestone', location: '', assets: [] });
+                  }}
+                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                  {editingId ? 'Save' : 'Create'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

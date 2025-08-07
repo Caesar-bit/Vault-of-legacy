@@ -1,14 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthState } from '../types';
-import { EncryptionService } from '../utils/encryption';
-import { blockchain } from '../utils/blockchain';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { User, AuthState } from "../types";
+import { EncryptionService } from "../utils/encryption";
+import { blockchain } from "../utils/blockchain";
+import { authenticateFingerprint } from "../utils/fingerprint";
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  loginWithFingerprint: (userId: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,7 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
@@ -31,59 +40,120 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: false,
     isLoading: true,
     error: null,
+    token: null,
   });
 
   useEffect(() => {
     // Check for existing session
-    const checkAuth = async () => {
+    const checkAuth = () => {
       try {
-        const encryptedUser = localStorage.getItem('vault_user');
-        if (encryptedUser) {
-          const userData = JSON.parse(EncryptionService.decrypt(encryptedUser));
+        const encryptedUser = localStorage.getItem("vault_user");
+        const token = localStorage.getItem("vault_token");
+        if (encryptedUser && token) {
+          const decrypted = JSON.parse(
+            EncryptionService.decrypt(encryptedUser),
+          );
+          let avatar: string | undefined;
+          try {
+            const key = `vault_settings_${decrypted.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
+            avatar = settings.profile?.avatar;
+          } catch {
+            avatar = undefined;
+          }
+          const userData = { status: "active", avatar, ...decrypted } as User;
           setAuthState({
             user: userData,
             isAuthenticated: true,
             isLoading: false,
             error: null,
+            token,
           });
         } else {
-          setAuthState(prev => ({ ...prev, isLoading: false }));
+          setAuthState((prev) => ({ ...prev, isLoading: false }));
         }
-      } catch (error) {
-        setAuthState(prev => ({ ...prev, isLoading: false, error: 'Session validation failed' }));
+      } catch (err) {
+        console.error(err);
+        setAuthState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: "Session validation failed",
+        }));
       }
     };
 
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!authState.user) return;
+    const handler = () => {
+      try {
+        const key = `vault_settings_${authState.user?.id}`;
+        const settings = JSON.parse(localStorage.getItem(key) || '{}');
+        setAuthState(prev => ({
+          ...prev,
+          user: prev.user ? { ...prev.user, avatar: settings.profile?.avatar } : null,
+        }));
+      } catch {
+        // ignore parse errors
+      }
+    };
+    window.addEventListener('vault_settings_updated', handler);
+    return () => window.removeEventListener('vault_settings_updated', handler);
+  }, [authState.user]);
+
   const login = async (email: string, password: string): Promise<void> => {
-    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock user data
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data: {
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+        status: string;
+        createdAt: string;
+        lastLogin: string | null;
+        token: string;
+      } = await res.json();
+
       const user: User = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        role: 'admin',
-        createdAt: new Date(),
-        lastLogin: new Date(),
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role as User["role"],
+        status: data.status as User["status"],
+        createdAt: new Date(data.createdAt),
+        lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: data.avatar ?? (() => {
+          try {
+            const key = `vault_settings_${data.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
+            return settings.profile?.avatar;
+          } catch {
+            return undefined;
+          }
+        })(),
       };
 
-      // Encrypt and store user data
+      localStorage.setItem("vault_token", data.token);
       const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
-      localStorage.setItem('vault_user', encryptedUser);
+      localStorage.setItem("vault_user", encryptedUser);
 
-      // Add login event to blockchain
       blockchain.addBlock({
-        type: 'user_login',
+        type: "user_login",
         userId: user.id,
         timestamp: new Date(),
-        ip: 'xxx.xxx.xxx.xxx'
+        ip: "0.0.0.0",
       });
 
       setAuthState({
@@ -91,120 +161,206 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        token: data.token,
       });
-    } catch (error) {
-      setAuthState(prev => ({
+    } catch (err) {
+      console.error(err);
+      setAuthState((prev) => ({
         ...prev,
         isLoading: false,
-        error: 'Invalid credentials'
+        error: err instanceof Error ? err.message : "Invalid credentials",
       }));
     }
   };
 
-  const signup = async (email: string, password: string, name: string): Promise<void> => {
+  const loginWithFingerprint = async (userId: string): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const user: User = {
-        id: Date.now().toString(),
-        email,
-        name,
-        role: 'editor',
-        createdAt: new Date(),
-      };
-
-      // Hash password and store securely
-      const salt = EncryptionService.generateSalt();
-      const hashedPassword = EncryptionService.hashPassword(password, salt);
-
-      // Add user creation to blockchain
-      blockchain.addBlock({
-        type: 'user_created',
-        userId: user.id,
-        email: user.email,
-        timestamp: new Date()
-      });
-
+      const result = await authenticateFingerprint<User>(userId);
+      if (!result) throw new Error('failed');
+      const { user, token } = result;
+      localStorage.setItem('vault_token', token);
       const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
       localStorage.setItem('vault_user', encryptedUser);
+      setAuthState({ user, isAuthenticated: true, isLoading: false, error: null, token });
+    } catch (err) {
+      console.error(err);
+      setAuthState(prev => ({ ...prev, isLoading: false, error: 'Fingerprint authentication failed' }));
+    }
+  };
+
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+  ): Promise<void> => {
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data: {
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+        status: string;
+        createdAt: string;
+        lastLogin: string | null;
+        token: string;
+      } = await res.json();
+
+      const user: User = {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role as User["role"],
+        status: data.status as User["status"],
+        createdAt: new Date(data.createdAt),
+        lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: data.avatar ?? (() => {
+          try {
+            const key = `vault_settings_${data.id}`;
+            const settings = JSON.parse(localStorage.getItem(key) || "{}");
+            return settings.profile?.avatar;
+          } catch {
+            return undefined;
+          }
+        })(),
+      };
+
+      localStorage.setItem("vault_token", data.token);
+      const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
+      localStorage.setItem("vault_user", encryptedUser);
+
+      blockchain.addBlock({
+        type: "user_created",
+        userId: user.id,
+        email: user.email,
+        timestamp: new Date(),
+      });
 
       setAuthState({
         user,
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        token: data.token,
       });
-    } catch (error) {
-      setAuthState(prev => ({
+    } catch (err) {
+      console.error(err);
+      setAuthState((prev) => ({
         ...prev,
         isLoading: false,
-        error: 'Registration failed'
+        error: "Registration failed",
       }));
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('vault_user');
+    localStorage.removeItem("vault_user");
+    localStorage.removeItem("vault_token");
     setAuthState({
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      token: null,
     });
   };
 
   const forgotPassword = async (email: string): Promise<void> => {
-    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
+
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Add password reset request to blockchain
-      blockchain.addBlock({
-        type: 'password_reset_requested',
+      const requestBlock = blockchain.addBlock({
+        type: "password_reset_requested",
         email,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    } catch (error) {
-      setAuthState(prev => ({
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
+
+      // Simulate completion after verification
+      setTimeout(() => {
+        blockchain.addBlock({
+          type: "password_reset_completed",
+          email,
+          requestIndex: requestBlock.index,
+          timestamp: new Date(),
+        });
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setAuthState((prev) => ({
         ...prev,
         isLoading: false,
-        error: 'Failed to send reset email'
+        error: "Failed to send reset email",
       }));
     }
   };
 
-  const resetPassword = async (token: string, newPassword: string): Promise<void> => {
-    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+  const resetPassword = async (
+    token: string,
+    newPassword: string,
+  ): Promise<void> => {
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Hash new password
-      const salt = EncryptionService.generateSalt();
-      const hashedPassword = EncryptionService.hashPassword(newPassword, salt);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      void newPassword;
 
       // Add password reset to blockchain
       blockchain.addBlock({
-        type: 'password_reset_completed',
+        type: "password_reset_completed",
         token,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    } catch (error) {
-      setAuthState(prev => ({
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
+    } catch (err) {
+      console.error(err);
+      setAuthState((prev) => ({
         ...prev,
         isLoading: false,
-        error: 'Failed to reset password'
+        error: "Failed to reset password",
       }));
+    }
+  };
+
+  const refreshProfile = async (): Promise<void> => {
+    if (!authState.token) return;
+    try {
+      const res = await fetch('/api/account/me', {
+        headers: { Authorization: `Bearer ${authState.token}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      const updated: User = {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role as User['role'],
+        status: data.status as User['status'],
+        createdAt: new Date(data.createdAt),
+        lastLogin: data.lastLogin ? new Date(data.lastLogin) : undefined,
+        avatar: data.avatar ?? authState.user?.avatar,
+      };
+      const encrypted = EncryptionService.encrypt(JSON.stringify(updated));
+      localStorage.setItem('vault_user', encrypted);
+      setAuthState(prev => ({ ...prev, user: updated }));
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -213,10 +369,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         ...authState,
         login,
+        loginWithFingerprint,
         signup,
         logout,
         forgotPassword,
         resetPassword,
+        refreshProfile,
       }}
     >
       {children}

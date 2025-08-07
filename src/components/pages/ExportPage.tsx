@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
+import { VaultItem } from '../FileManager';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchVaultStructure } from '../../utils/api';
+import { useUserData } from '../../utils/userData';
 import { 
   Download, 
   FileText, 
@@ -6,8 +11,7 @@ import {
   Video, 
   Music, 
   Archive, 
-  Settings, 
-  Calendar, 
+  Settings,
   Clock,
   CheckCircle,
   AlertTriangle,
@@ -15,12 +19,40 @@ import {
   Eye,
   Trash2,
   Share2,
-  Filter,
   Search,
   HardDrive,
   Cloud,
   Database
 } from 'lucide-react';
+
+const parseSize = (size: string) => {
+  const [value, unit] = size.split(' ');
+  const num = parseFloat(value);
+  switch (unit?.toLowerCase()) {
+    case 'gb':
+      return num * 1024 * 1024 * 1024;
+    case 'mb':
+      return num * 1024 * 1024;
+    case 'kb':
+      return num * 1024;
+    default:
+      return num;
+  }
+};
+
+const formatSize = (bytes: number) => {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${bytes} B`;
+};
+
+const generateRandomSize = () => {
+  const bytes =
+    Math.floor(Math.random() * (5 * 1024 ** 3 - 100 * 1024 ** 2)) +
+    100 * 1024 ** 2;
+  return formatSize(bytes);
+};
 
 const exportFormats = [
   {
@@ -61,52 +93,6 @@ const exportFormats = [
   }
 ];
 
-const mockExports = [
-  {
-    id: '1',
-    name: 'Family Heritage Complete Export',
-    format: 'ZIP',
-    size: '2.4 GB',
-    status: 'completed',
-    created: '2024-01-20T10:30:00Z',
-    expires: '2024-02-20T10:30:00Z',
-    downloadCount: 3,
-    includes: ['photos', 'documents', 'timeline', 'collections']
-  },
-  {
-    id: '2',
-    name: 'Wedding Memories PDF',
-    format: 'PDF',
-    size: '156 MB',
-    status: 'processing',
-    created: '2024-01-19T15:45:00Z',
-    expires: '2024-02-19T15:45:00Z',
-    downloadCount: 0,
-    includes: ['photos', 'timeline']
-  },
-  {
-    id: '3',
-    name: 'Research Documentation',
-    format: 'HTML',
-    size: '89 MB',
-    status: 'completed',
-    created: '2024-01-18T09:20:00Z',
-    expires: '2024-02-18T09:20:00Z',
-    downloadCount: 1,
-    includes: ['documents', 'research', 'citations']
-  },
-  {
-    id: '4',
-    name: 'Photo Archive Backup',
-    format: 'ZIP',
-    size: '1.8 GB',
-    status: 'failed',
-    created: '2024-01-17T14:15:00Z',
-    expires: null,
-    downloadCount: 0,
-    includes: ['photos', 'videos']
-  }
-];
 
 const contentTypes = [
   { id: 'photos', name: 'Photos', icon: Image, count: 1247 },
@@ -124,6 +110,147 @@ export function ExportPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [format, setFormat] = useState('zip');
+  const [source, setSource] = useState<'vault' | 'gallery'>('vault');
+  const { isAuthenticated, token } = useAuth();
+  const [vaultStructure, setVaultStructure] = useState<VaultItem[]>([]);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const load = async () => {
+      try {
+        const data = await fetchVaultStructure(token);
+        setVaultStructure(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [isAuthenticated, token]);
+  const [vaultPath, setVaultPath] = useState<string[]>([]);
+  const [vaultSelected, setVaultSelected] = useState<string[]>([]);
+  interface GalleryItem {
+    id: string;
+    title: string;
+  }
+  const [galleryItems] = useUserData<GalleryItem[]>('gallery_items', []);
+  const [gallerySelected, setGallerySelected] = useState<string[]>([]);
+  interface ExportItem {
+    id: string;
+    name: string;
+    format: string;
+    status: string;
+    created: string;
+    size: string;
+    downloadCount: number;
+    includes: string[];
+    source?: 'vault' | 'gallery';
+    path?: string[];
+    items: string[];
+    itemNames?: string[];
+    expires?: string;
+  }
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [detailsExport, setDetailsExport] = useState<ExportItem | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const [exportsList, setExportsList] = useUserData<ExportItem[]>('exports', []);
+
+  const folderOptions = useMemo(() => {
+    const paths: Array<{ label: string; path: string[] }> = [];
+    const traverse = (items: VaultItem[], base: string[], labelParts: string[]) => {
+      paths.push({ label: labelParts.join('/') || 'Root', path: base });
+      for (const item of items) {
+        if (item.type === 'folder') {
+          traverse(item.children || [], [...base, item.id], [...labelParts, item.name]);
+        }
+      }
+    };
+    traverse(vaultStructure, [], []);
+    return paths;
+  }, [vaultStructure]);
+
+  const getItemsAtPath = (items: VaultItem[], p: string[]): VaultItem[] => {
+    let current = items;
+    for (const id of p) {
+      const folder = current.find((i) => i.id === id && i.type === 'folder');
+      if (!folder) return [];
+      current = folder.children || [];
+    }
+    return current;
+  };
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
+
+
+  const simulateProcessing = (id: string) => {
+    setTimeout(() => {
+      setExportsList((prev) =>
+        prev.map((ex) =>
+          ex.id === id
+            ? {
+                ...ex,
+                status: 'completed',
+                size: ex.size === '0 MB' ? generateRandomSize() : ex.size,
+              }
+            : ex
+        )
+      );
+      setAlert({ message: 'Export completed', type: 'success' });
+    }, 3000);
+  };
+
+  const exportCSV = () => {
+    const headers = ['Name', 'Format', 'Size', 'Status', 'Created'];
+    const rows = exportsList.map((e) =>
+      [e.name, e.format, e.size, e.status, e.created].join(',')
+    );
+    const blob = new Blob([
+      [headers.join(','), ...rows].join('\n')
+    ], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'exports.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareExport = async (item: ExportItem) => {
+    const url = `${window.location.origin}?export=${item.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: item.name, url });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setAlert({ message: 'Link copied to clipboard', type: 'success' });
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ message: 'Unable to share', type: 'error' });
+    }
+  };
+
+  const deleteExport = (id: string) => {
+    setExportsList((prev) => prev.filter((e) => e.id !== id));
+    setDeleteId(null);
+    setAlert({ message: 'Export deleted', type: 'success' });
+  };
+
+  const refreshStatuses = () => {
+    exportsList.forEach((e) => {
+      if (e.status === 'processing') simulateProcessing(e.id);
+    });
+    setAlert({ message: 'Refreshing exports', type: 'success' });
+  };
+
+  const totalSize = formatSize(
+    exportsList.reduce((sum, e) => sum + parseSize(e.size), 0)
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -158,20 +285,44 @@ export function ExportPage() {
   };
 
   return (
+    <>
     <div className="space-y-6">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Export & Migration</h1>
           <p className="mt-2 text-gray-600">Export your data in various formats for backup or migration</p>
         </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Create Export
-        </button>
+        <div className="flex space-x-2 mt-4 sm:mt-0">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Create Export
+          </button>
+          <button
+            onClick={refreshStatuses}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </button>
+          <button
+            onClick={exportCSV}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -183,7 +334,7 @@ export function ExportPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Exports</p>
-              <p className="text-2xl font-bold text-gray-900">{mockExports.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{exportsList.length}</p>
             </div>
           </div>
         </div>
@@ -195,7 +346,7 @@ export function ExportPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Completed</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockExports.filter(e => e.status === 'completed').length}
+                {exportsList.filter(e => e.status === 'completed').length}
               </p>
             </div>
           </div>
@@ -207,7 +358,7 @@ export function ExportPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Size</p>
-              <p className="text-2xl font-bold text-gray-900">4.5 GB</p>
+              <p className="text-2xl font-bold text-gray-900">{totalSize}</p>
             </div>
           </div>
         </div>
@@ -219,7 +370,7 @@ export function ExportPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Downloads</p>
               <p className="text-2xl font-bold text-gray-900">
-                {mockExports.reduce((sum, e) => sum + e.downloadCount, 0)}
+                {exportsList.reduce((sum, e) => sum + e.downloadCount, 0)}
               </p>
             </div>
           </div>
@@ -332,7 +483,12 @@ export function ExportPage() {
           </div>
         </div>
         <div className="divide-y divide-gray-200">
-          {mockExports.map((exportItem) => {
+          {exportsList
+            .filter((e) =>
+              (filterStatus === 'all' || e.status === filterStatus) &&
+              e.name.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((exportItem) => {
             const StatusIcon = getStatusIcon(exportItem.status);
             return (
               <div key={exportItem.id} className="p-6 hover:bg-gray-50">
@@ -368,22 +524,56 @@ export function ExportPage() {
                             {include}
                           </span>
                         ))}
+                        {exportItem.itemNames && exportItem.itemNames.map((n) => (
+                          <span key={n} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {n}
+                          </span>
+                        ))}
                       </div>
+                      {exportItem.source && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Source: {exportItem.source}
+                          {exportItem.path && (
+                            <> &nbsp;| Path: {exportItem.path.length ? exportItem.path.join(' / ') : 'Root'}</>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {exportItem.status === 'completed' && (
-                      <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50">
-                        <Download className="h-4 w-4" />
-                      </button>
+                    <button
+                      onClick={() => {
+                        setExportsList((prev) =>
+                          prev.map((ex) =>
+                            ex.id === exportItem.id
+                              ? { ...ex, downloadCount: (ex.downloadCount || 0) + 1 }
+                              : ex
+                          )
+                        );
+                        setAlert({ message: 'Download started', type: 'success' });
+                      }}
+                      className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
                     )}
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button
+                      onClick={() => setDetailsExport(exportItem)}
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                    >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                    <button
+                      onClick={() => shareExport(exportItem)}
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                    >
                       <Share2 className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                    <button
+                      onClick={() => setDeleteId(exportItem.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -394,5 +584,201 @@ export function ExportPage() {
         </div>
       </div>
     </div>
+
+    {showCreateModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Export</h3>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const itemNames =
+                source === 'vault'
+                  ? vaultSelected.map(id => {
+                      const file = getItemsAtPath(vaultStructure, vaultPath).find(f => f.id === id);
+                      return file?.name || id;
+                    })
+                  : gallerySelected.map(id => {
+                      const item = galleryItems.find(g => g.id === id);
+                      return item?.title || id;
+                    });
+              const newExport = {
+                id: String(Date.now()),
+                name: newName || 'New Export',
+                format,
+                status: 'processing',
+                created: new Date().toISOString(),
+                size: '0 MB',
+                downloadCount: 0,
+                includes: selectedContent,
+                source,
+                path: source === 'vault' ? vaultPath : undefined,
+                items: source === 'vault' ? vaultSelected : gallerySelected,
+                itemNames,
+              };
+              setExportsList(prev => [newExport, ...prev]);
+              simulateProcessing(newExport.id);
+              setAlert({ message: 'Export queued', type: 'success' });
+              setNewName('');
+              setFormat('zip');
+              setVaultSelected([]);
+              setGallerySelected([]);
+              setShowCreateModal(false);
+            }}
+          >
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="Export Name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={format}
+              onChange={(e) => setFormat(e.target.value)}
+            >
+              {exportFormats.map((fmt) => (
+                <option key={fmt.id} value={fmt.id}>{fmt.name}</option>
+              ))}
+            </select>
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              value={source}
+              onChange={(e) => setSource(e.target.value as 'vault' | 'gallery')}
+            >
+              <option value="vault">Vault Files</option>
+              <option value="gallery">Gallery Media</option>
+            </select>
+            {source === 'vault' && (
+              <>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  value={vaultPath.join('/')}
+                  onChange={(e) => setVaultPath(e.target.value ? e.target.value.split('/') : [])}
+                >
+                  {folderOptions.map((opt) => (
+                    <option key={opt.path.join('/')} value={opt.path.join('/')}>{opt.label}</option>
+                  ))}
+                </select>
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                  {getItemsAtPath(vaultStructure, vaultPath).map(item => (
+                    <label key={item.id} className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={vaultSelected.includes(item.id)}
+                        onChange={(e) =>
+                          setVaultSelected((prev) =>
+                            e.target.checked ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                          )
+                        }
+                      />
+                      <span>{item.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+            {source === 'gallery' && (
+              <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                {galleryItems.map(item => (
+                  <label key={item.id} className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={gallerySelected.includes(item.id)}
+                      onChange={(e) =>
+                        setGallerySelected((prev) =>
+                          e.target.checked ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                        )
+                      }
+                    />
+                    <span>{item.title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setVaultSelected([]);
+                  setGallerySelected([]);
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {detailsExport && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">{detailsExport.name}</h3>
+          <p className="text-sm text-gray-500">Format: {detailsExport.format}</p>
+          <p className="text-sm text-gray-500">Size: {detailsExport.size}</p>
+          <p className="text-sm text-gray-500">Created: {formatDate(detailsExport.created)}</p>
+          {detailsExport.source && (
+            <p className="text-sm text-gray-500">
+              Source: {detailsExport.source}
+              {detailsExport.path && (
+                <> &nbsp;| Path: {detailsExport.path.length ? detailsExport.path.join(' / ') : 'Root'}</>
+              )}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1">
+            {detailsExport.includes.map((inc: string) => (
+              <span key={inc} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {inc}
+              </span>
+            ))}
+            {detailsExport.itemNames && detailsExport.itemNames.map((n: string) => (
+              <span key={n} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {n}
+              </span>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setDetailsExport(null)}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {deleteId && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Delete Export?</h3>
+          <p className="text-sm text-gray-500">This action cannot be undone.</p>
+          <div className="flex justify-end space-x-2">
+            <button
+              onClick={() => setDeleteId(null)}
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteExport(deleteId)}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

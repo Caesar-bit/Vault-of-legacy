@@ -2,7 +2,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'editor' | 'viewer';
+  role: 'admin' | 'user' | 'viewer';
+  status: 'active' | 'pending' | 'inactive' | 'suspended';
   avatar?: string;
   createdAt: Date;
   lastLogin?: Date;
@@ -17,7 +18,7 @@ export interface Asset {
   uploadedAt: Date;
   uploadedBy: string;
   tags: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Collection {
@@ -46,7 +47,7 @@ export interface BlockchainRecord {
   hash: string;
   previousHash: string;
   timestamp: Date;
-  data: any;
+  data: unknown;
   nonce: number;
 }
 
@@ -55,4 +56,30 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  token: string | null;
+}
+
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  action: string;
+  item: string;
+  timestamp: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  status: string;
+  createdAt: string;
 }

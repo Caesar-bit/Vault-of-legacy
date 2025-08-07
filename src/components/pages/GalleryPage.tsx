@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   Image, 
   Video, 
@@ -7,132 +8,72 @@ import {
   Share2, 
   Heart, 
   Eye, 
-  Search, 
-  Filter, 
+  Search,
   Grid3X3, 
   List, 
   Plus,
   Camera,
   Film,
   Palette,
-  Maximize2,
   MoreHorizontal,
   Star,
   Calendar,
   MapPin,
-  Tag
+  Tag,
+  Trash2
 } from 'lucide-react';
+import { UploadMediaModal } from '../UploadMediaModal';
+import { useUserData } from '../../utils/userData';
 
-const mockGalleryItems = [
-  {
-    id: '1',
-    title: 'Family Reunion 2023',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?w=300',
-    date: '2023-07-15',
-    location: 'Central Park, NY',
-    views: 245,
-    likes: 18,
-    tags: ['family', 'reunion', 'celebration'],
-    featured: true
-  },
-  {
-    id: '2',
-    title: 'Grandpa\'s Stories',
-    type: 'video',
-    url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=300',
-    date: '2023-06-20',
-    location: 'Home',
-    views: 89,
-    likes: 12,
-    tags: ['stories', 'oral history', 'heritage'],
-    featured: false,
-    duration: '15:32'
-  },
-  {
-    id: '3',
-    title: 'Wedding Day Memories',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?w=300',
-    date: '1972-08-20',
-    location: 'St. Mary\'s Church',
-    views: 156,
-    likes: 24,
-    tags: ['wedding', 'vintage', 'love'],
-    featured: true
-  },
-  {
-    id: '4',
-    title: 'Childhood Adventures',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1104007/pexels-photo-1104007.jpeg?w=300',
-    date: '1965-05-10',
-    location: 'Backyard',
-    views: 78,
-    likes: 9,
-    tags: ['childhood', 'play', 'memories'],
-    featured: false
-  },
-  {
-    id: '5',
-    title: 'Holiday Traditions',
-    type: 'video',
-    url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?w=300',
-    date: '2022-12-25',
-    location: 'Family Home',
-    views: 134,
-    likes: 21,
-    tags: ['holidays', 'traditions', 'family'],
-    featured: true,
-    duration: '8:45'
-  },
-  {
-    id: '6',
-    title: 'School Days',
-    type: 'image',
-    url: 'https://images.pexels.com/photos/1720186/pexels-photo-1720186.jpeg',
-    thumbnail: 'https://images.pexels.com/photos/1720186/pexels-photo-1720186.jpeg?w=300',
-    date: '1968-09-01',
-    location: 'Lincoln Elementary',
-    views: 92,
-    likes: 7,
-    tags: ['school', 'education', 'childhood'],
-    featured: false
-  }
-];
+interface GalleryItem {
+  id: string;
+  title: string;
+  type: 'image' | 'video';
+  url: string;
+  thumbnail: string;
+  date: string;
+  location: string;
+  views: number;
+  likes: number;
+  tags: string[];
+  featured: boolean;
+  liked?: boolean;
+  duration?: string;
+}
+const exhibitions: Array<{id: string; title: string; description: string; itemCount: number; featured: boolean; thumbnail: string;}> = [];
 
-const exhibitions = [
-  {
-    id: '1',
-    title: 'Three Generations',
-    description: 'A journey through family history spanning 75 years',
-    itemCount: 45,
-    featured: true,
-    thumbnail: 'https://images.pexels.com/photos/1128318/pexels-photo-1128318.jpeg?w=300'
-  },
-  {
-    id: '2',
-    title: 'Milestone Moments',
-    description: 'Celebrating life\'s most important achievements',
-    itemCount: 28,
-    featured: false,
-    thumbnail: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?w=300'
-  }
-];
+
+
 
 
 // Lightbox Modal for viewing images/videos
-function LightboxModal({ item, onClose }) {
+interface LightboxModalProps {
+  item: GalleryItem;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+}
+
+function LightboxModal({ item, onClose, onDelete }: LightboxModalProps) {
   if (!item) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="relative bg-white/90 rounded-2xl shadow-2xl p-4 max-w-2xl w-full flex flex-col items-center">
-        <button className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl" onClick={onClose}>&times;</button>
+        <button
+          className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+          onClick={onClose}
+        >
+          &times;
+        </button>
+        <button
+          className="absolute top-2 left-2 text-gray-400 hover:text-gray-600"
+          onClick={() => {
+            onClose();
+            onDelete(item.id);
+          }}
+          title="Delete"
+        >
+          <Trash2 className="h-5 w-5" />
+        </button>
         <div className="w-full flex flex-col items-center">
           {item.type === 'image' ? (
             <img src={item.url} alt={item.title} className="rounded-xl max-h-[60vh] object-contain" />
@@ -165,11 +106,88 @@ export function GalleryPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [selectedItems, setSelectedItems] = useState([]);
   const [showExhibitions, setShowExhibitions] = useState(false);
-  const [lightboxItem, setLightboxItem] = useState(null);
+  const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
+  const [galleryItems, setGalleryItems] = useUserData<GalleryItem[]>('gallery_items', []);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const filteredItems = mockGalleryItems.filter(item => {
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
+
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject();
+      reader.readAsDataURL(file);
+    });
+
+  const handleUpload = async (file: File) => {
+    const base64 = await toBase64(file);
+    const type = file.type.startsWith('video') ? 'video' : 'image';
+    const newItem: GalleryItem = {
+      id: Date.now().toString(),
+      title: file.name,
+      type,
+      url: base64,
+      thumbnail: base64,
+      date: new Date().toISOString().split('T')[0],
+      location: 'Unknown',
+      views: 0,
+      likes: 0,
+      tags: [],
+      featured: false,
+      liked: false,
+      duration: type === 'video' ? '' : undefined,
+    };
+    setGalleryItems((prev) => [newItem, ...prev]);
+  };
+
+  const handleLike = (id: string) => {
+    setGalleryItems((items) =>
+      items.map((it) =>
+        it.id === id
+          ? {
+              ...it,
+              likes: it.liked ? it.likes - 1 : it.likes + 1,
+              liked: !it.liked,
+            }
+          : it,
+      ),
+    );
+  };
+
+  const handleDelete = (id: string) => {
+    setGalleryItems((items) => items.filter((it) => it.id !== id));
+  };
+
+  const handleDownload = (item: GalleryItem) => {
+    const link = document.createElement('a');
+    link.href = item.url;
+    link.download = item.title;
+    link.click();
+  };
+
+  const handleShare = async (item: GalleryItem) => {
+    const shareData = { title: item.title, url: item.url };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(item.url);
+        setAlert({ message: 'Link copied to clipboard', type: 'success' });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const filteredItems = galleryItems.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === 'all' || item.type === filterType;
@@ -178,6 +196,13 @@ export function GalleryPage() {
 
   return (
     <div className="relative min-h-screen pb-20">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Animated Glassy Hero Header */}
       <div className="backdrop-blur-md bg-white/70 border border-gray-200 rounded-2xl shadow-lg px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 animate-fade-in">
         <div>
@@ -195,7 +220,7 @@ export function GalleryPage() {
             <Palette className="h-5 w-5 mr-2" />
             Exhibitions
           </button>
-          <button className="inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform">
+          <button onClick={() => setShowUploadModal(true)} className="inline-flex items-center px-5 py-2.5 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:scale-105 transition-transform">
             <Plus className="h-5 w-5 mr-2" />
             Add Media
           </button>
@@ -210,7 +235,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Total Images</p>
-            <p className="text-2xl font-extrabold text-gray-900">1,247</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.filter(i => i.type === 'image').length}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -219,7 +244,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Videos</p>
-            <p className="text-2xl font-extrabold text-gray-900">89</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.filter(i => i.type === 'video').length}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -228,7 +253,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Total Views</p>
-            <p className="text-2xl font-extrabold text-gray-900">12,456</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.reduce((sum, i) => sum + i.views, 0)}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -237,7 +262,7 @@ export function GalleryPage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Likes</p>
-            <p className="text-2xl font-extrabold text-gray-900">891</p>
+            <p className="text-2xl font-extrabold text-gray-900">{galleryItems.reduce((sum, i) => sum + i.likes, 0)}</p>
           </div>
         </div>
       </div>
@@ -349,14 +374,44 @@ export function GalleryPage() {
                     </div>
                   )}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                    <button className="p-1 bg-white rounded shadow-sm hover:bg-gray-50" title="More">
+                    <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-gray-50"
+                      title="More"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MoreHorizontal className="h-4 w-4 text-gray-600" />
                     </button>
-                    <button className="p-1 bg-white rounded shadow-sm hover:bg-blue-50" title="Download">
+                    <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-blue-50"
+                      title="Download"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(item);
+                      }}
+                    >
                       <Download className="h-4 w-4 text-blue-600" />
                     </button>
-                    <button className="p-1 bg-white rounded shadow-sm hover:bg-red-50" title="Like">
-                      <Heart className="h-4 w-4 text-red-500" />
+                  <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-red-50"
+                      title="Like"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(item.id);
+                      }}
+                    >
+                      <Heart
+                        className={`h-4 w-4 ${item.liked ? 'text-red-600 fill-current' : 'text-red-500'}`}
+                      />
+                    </button>
+                    <button
+                      className="p-1 bg-white rounded shadow-sm hover:bg-gray-50"
+                      title="Delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-gray-600" />
                     </button>
                   </div>
                   {item.duration && (
@@ -433,17 +488,57 @@ export function GalleryPage() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-blue-600" title="View">
+                  <button
+                    className="p-2 text-gray-400 hover:text-blue-600"
+                    title="View"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxItem(item);
+                    }}
+                  >
                     <Eye className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-green-600" title="Download">
+                  <button
+                    className="p-2 text-gray-400 hover:text-green-600"
+                    title="Download"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(item);
+                    }}
+                  >
                     <Download className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-blue-600" title="Share">
+                  <button
+                    className="p-2 text-gray-400 hover:text-blue-600"
+                    title="Share"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShare(item);
+                    }}
+                  >
                     <Share2 className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-red-600" title="Like">
-                    <Heart className="h-4 w-4" />
+                  <button
+                    className="p-2 text-gray-400 hover:text-red-600"
+                    title="Like"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleLike(item.id);
+                    }}
+                  >
+                    <Heart
+                      className={`h-4 w-4 ${item.liked ? 'text-red-600 fill-current' : ''}`}
+                    />
+                  </button>
+                  <button
+                    className="p-2 text-gray-400 hover:text-gray-600"
+                    title="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(item.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -453,6 +548,7 @@ export function GalleryPage() {
 
         {/* Floating Add Media Button */}
         <button
+          onClick={() => setShowUploadModal(true)}
           className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400 animate-bounce"
           title="Add Media"
         >
@@ -460,7 +556,20 @@ export function GalleryPage() {
         </button>
 
         {/* Lightbox Modal */}
-        {lightboxItem && <LightboxModal item={lightboxItem} onClose={() => setLightboxItem(null)} />}
+        {lightboxItem && (
+          <LightboxModal
+            item={lightboxItem}
+            onClose={() => setLightboxItem(null)}
+            onDelete={handleDelete}
+          />
+        )}
+        {showUploadModal && (
+          <UploadMediaModal
+            isOpen={showUploadModal}
+            onClose={() => setShowUploadModal(false)}
+            onUpload={handleUpload}
+          />
+        )}
       </div>
 
       {/* Custom Styles for glass and animation */}

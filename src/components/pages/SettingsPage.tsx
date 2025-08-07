@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
-  Settings, 
-  User, 
-  Shield, 
-  Bell, 
-  Palette, 
-  Database, 
-  Globe, 
-  Key, 
-  Download, 
+  User,
+  Shield,
+  Bell,
+  Palette,
+  Database,
+  Globe,
+  Key,
+  Download,
   Upload,
   Save,
-  RefreshCw,
   Eye,
   EyeOff,
   Check,
-  X,
-  AlertTriangle,
-  Info
+  Fingerprint
 } from 'lucide-react';
+import { enrollFingerprint, removeFingerprint, hasFingerprint } from '../../utils/fingerprint';
+import { changePassword, updateProfile } from '../../utils/api';
 
 
 const settingsSections = [
@@ -33,48 +33,273 @@ const settingsSections = [
 ];
 
 export function SettingsPage() {
+  const { user, token, refreshProfile } = useAuth();
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
-  const [settings, setSettings] = useState({
-    profile: {
-      name: 'John Smith',
-      email: 'john.smith@email.com',
-      bio: 'Digital heritage enthusiast preserving family history for future generations.',
-      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=100'
-    },
-    security: {
-      twoFactorEnabled: true,
-      passwordLastChanged: '2024-01-15',
-      sessionTimeout: 30,
-      loginNotifications: true
-    },
-    notifications: {
-      emailNotifications: true,
-      pushNotifications: false,
-      weeklyDigest: true,
-      securityAlerts: true,
-      collaborationUpdates: true
-    },
-    appearance: {
-      theme: 'light',
-      language: 'en',
-      timezone: 'America/New_York',
-      dateFormat: 'MM/DD/YYYY'
-    },
-    data: {
-      storageUsed: 18.5,
-      storageLimit: 100,
-      autoBackup: true,
-      compressionEnabled: true,
-      retentionPeriod: 25
-    },
-    privacy: {
-      profileVisibility: 'private',
-      searchEngineIndexing: false,
-      analyticsTracking: true,
-      dataSharing: false
-    }
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [sessions, setSessions] = useState<Array<{ id: string; device: string; ip: string; lastActive: string }>>(() => {
+    const stored = localStorage.getItem('vault_sessions');
+    return (
+      stored ? JSON.parse(stored) : [{ id: 'current', device: 'This Device', ip: '127.0.0.1', lastActive: new Date().toISOString() }]
+    );
   });
+  const [sessionLoading, setSessionLoading] = useState<string | null>(null);
+  const [notificationLoading, setNotificationLoading] = useState<Record<string, boolean>>({});
+  const [apiKeys, setApiKeys] = useState(() => {
+    const stored = localStorage.getItem('vault_api_keys');
+    return stored ? JSON.parse(stored) : [];
+  });
+  const defaultSettings = {
+    profile: {
+      name: user?.name || '',
+      email: user?.email || '',
+      bio: '',
+      avatar: user?.avatar || '',
+    },
+    security: { twoFactorEnabled: false, passwordLastChanged: "", sessionTimeout: 30, loginNotifications: false, fingerprintEnabled: false },
+    notifications: { emailNotifications: false, pushNotifications: false, weeklyDigest: false, securityAlerts: false, collaborationUpdates: false },
+    appearance: { theme: "light", language: "en", timezone: "UTC", dateFormat: "MM/DD/YYYY" },
+    data: { storageUsed: 0, storageLimit: 100, autoBackup: false, compressionEnabled: false, retentionPeriod: 0 },
+    privacy: { profileVisibility: "private", searchEngineIndexing: false, analyticsTracking: false, dataSharing: false }
+  };
+  const [settings, setSettings] = useState(() => defaultSettings);
+
+  useEffect(() => {
+    if (!user) return;
+    const stored = localStorage.getItem(`vault_settings_${user.id}`);
+    const base = stored ? JSON.parse(stored) : {
+      ...defaultSettings,
+      profile: {
+        ...defaultSettings.profile,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || defaultSettings.profile.avatar,
+      },
+    };
+    (async () => {
+      try {
+        const enabled = token ? await hasFingerprint(token) : false;
+        base.security = { ...base.security, fingerprintEnabled: enabled };
+      } catch {
+        base.security = { ...base.security, fingerprintEnabled: false };
+      }
+      setSettings(base);
+    })();
+  }, [user, token]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [passwordInputs, setPasswordInputs] = useState({ current: '', new: '', confirm: '' });
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
+
+  useEffect(() => {
+    localStorage.setItem('vault_sessions', JSON.stringify(sessions));
+  }, [sessions]);
+
+  const saveSettings = async () => {
+    if (!token || !user) return;
+    setIsSaving(true);
+    try {
+      await updateProfile(token, { name: settings.profile.name, email: settings.profile.email, avatar: settings.profile.avatar });
+      await refreshProfile();
+      localStorage.setItem(`vault_settings_${user.id}`, JSON.stringify(settings));
+      localStorage.setItem('vault_api_keys', JSON.stringify(apiKeys));
+      window.dispatchEvent(new Event('vault_settings_updated'));
+      setAlert({ message: 'Settings saved', type: 'success' });
+    } catch (e) {
+      console.error(e);
+      setAlert({ message: 'Failed to save settings', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const downloadFile = (data: string, name: string, type: string) => {
+    const blob = new Blob([data], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBackup = () => {
+    downloadFile(JSON.stringify(settings, null, 2), 'vault-backup.json', 'application/json');
+    setAlert({ message: 'Backup downloaded', type: 'success' });
+  };
+
+  const handleExport = (format: 'csv' | 'json') => {
+    if (format === 'json') {
+      downloadFile(JSON.stringify(settings, null, 2), 'vault-export.json', 'application/json');
+    } else {
+      const csv = Object.entries(settings.profile)
+        .map(([k, v]) => `${k},${String(v)}`)
+        .join('\n');
+      downloadFile(csv, 'vault-export.csv', 'text/csv');
+    }
+    setAlert({ message: `Exported ${format.toUpperCase()}`, type: 'success' });
+  };
+
+  const copyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    setAlert({ message: 'Key copied', type: 'success' });
+  };
+
+  const revokeKey = (id: string) => {
+    setApiKeys(prev => {
+      const updated = prev.filter(k => k.id !== id);
+      localStorage.setItem('vault_api_keys', JSON.stringify(updated));
+      return updated;
+    });
+    setAlert({ message: 'Key revoked', type: 'success' });
+  };
+
+  const generateKey = () => {
+    const newKey = `sk-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
+    setApiKeys(prev => {
+      const updated = [...prev, { id: Date.now().toString(), key: newKey }];
+      localStorage.setItem('vault_api_keys', JSON.stringify(updated));
+      return updated;
+    });
+    setAlert({ message: 'Key generated', type: 'success' });
+  };
+
+  const handlePhotoClick = () => fileInputRef.current?.click();
+  const onPhotoChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () =>
+        setSettings(prev => ({
+          ...prev,
+          profile: { ...prev.profile, avatar: reader.result as string },
+        }));
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (!token || !passwordInputs.new || passwordInputs.new !== passwordInputs.confirm) {
+      setAlert({ message: 'Passwords do not match', type: 'error' });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await changePassword(token, passwordInputs.current, passwordInputs.new);
+      setSettings(prev => ({
+        ...prev,
+        security: {
+          ...prev.security,
+          passwordLastChanged: new Date().toISOString().slice(0, 10),
+        },
+      }));
+      setPasswordInputs({ current: '', new: '', confirm: '' });
+      setAlert({ message: 'Password updated', type: 'success' });
+    } catch (e) {
+      console.error(e);
+      setAlert({ message: 'Failed to update password', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleTwoFactor = async () => {
+    setTwoFactorLoading(true);
+    try {
+      await fetch('/api/twofactor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enable: !settings.security.twoFactorEnabled }),
+      });
+    } catch {
+      // ignore network errors in offline demo
+    }
+    setSettings(prev => ({
+      ...prev,
+      security: { ...prev.security, twoFactorEnabled: !prev.security.twoFactorEnabled },
+    }));
+    setTwoFactorLoading(false);
+    setAlert({ message: `Two-factor ${!settings.security.twoFactorEnabled ? 'enabled' : 'disabled'}`, type: 'success' });
+  };
+
+  const handleEnrollFingerprint = async () => {
+    if (!user) return;
+    setTwoFactorLoading(true);
+    try {
+      await enrollFingerprint(user, token || '');
+      setSettings(prev => ({
+        ...prev,
+        security: { ...prev.security, fingerprintEnabled: true },
+      }));
+      setAlert({ message: 'Fingerprint enrolled', type: 'success' });
+    } catch {
+      setAlert({ message: 'Fingerprint enrollment failed', type: 'error' });
+    }
+    setTwoFactorLoading(false);
+  };
+
+  const handleRemoveFingerprint = () => {
+    if (!user) return;
+    removeFingerprint(token || '');
+    setSettings(prev => ({
+      ...prev,
+      security: { ...prev.security, fingerprintEnabled: false },
+    }));
+    setAlert({ message: 'Fingerprint removed', type: 'success' });
+  };
+
+  const revokeSession = async (id: string) => {
+    setSessionLoading(id);
+    try {
+      await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    } catch {
+      // ignore network errors
+    }
+    setSessions(prev => prev.filter(s => s.id !== id));
+    setSessionLoading(null);
+    setAlert({ message: 'Session revoked', type: 'success' });
+  };
+
+  const revokeAllSessions = async () => {
+    setSessionLoading('all');
+    try {
+      await fetch('/api/sessions', { method: 'DELETE' });
+    } catch {
+      // ignore errors
+    }
+    setSessions([{ id: 'current', device: 'This Device', ip: '127.0.0.1', lastActive: new Date().toISOString() }]);
+    setSessionLoading(null);
+    setAlert({ message: 'Other sessions revoked', type: 'success' });
+  };
+
+  const toggleNotification = async (key: string) => {
+    setNotificationLoading(prev => ({ ...prev, [key]: true }));
+    try {
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: !settings.notifications[key as keyof typeof settings.notifications] }),
+      });
+    } catch {
+      // ignore errors
+    }
+    setSettings(prev => ({
+      ...prev,
+      notifications: {
+        ...prev.notifications,
+        [key]: !prev.notifications[key as keyof typeof prev.notifications],
+      },
+    }));
+    setNotificationLoading(prev => ({ ...prev, [key]: false }));
+    setAlert({ message: 'Notification preferences updated', type: 'success' });
+  };
 
   const renderProfileSettings = () => (
     <div className="space-y-6">
@@ -88,11 +313,15 @@ export function SettingsPage() {
               className="w-20 h-20 rounded-full object-cover"
             />
             <div>
-              <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <button
+                onClick={handlePhotoClick}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
                 <Upload className="h-4 w-4 mr-2" />
                 Change Photo
               </button>
               <p className="text-xs text-gray-500 mt-1">JPG, PNG up to 5MB</p>
+              <input ref={fileInputRef} onChange={onPhotoChange} type="file" accept="image/*" className="hidden" />
             </div>
           </div>
           
@@ -121,6 +350,39 @@ export function SettingsPage() {
                 className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            {user && (
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <input
+                    type="text"
+                    value={user.role}
+                    readOnly
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <input
+                    type="text"
+                    value={user.status}
+                    readOnly
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                  />
+                </div>
+                {user.lastLogin && (
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Login</label>
+                    <input
+                      type="text"
+                      value={new Date(user.lastLogin).toLocaleString()}
+                      readOnly
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <div>
@@ -137,6 +399,30 @@ export function SettingsPage() {
             />
           </div>
         </div>
+
+        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div>
+            <h4 className="font-medium text-gray-900">Fingerprint Sign-In</h4>
+            <p className="text-sm text-gray-600">Use your device biometrics for quick login</p>
+          </div>
+          {settings.security.fingerprintEnabled ? (
+            <button
+              onClick={handleRemoveFingerprint}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Remove
+            </button>
+          ) : (
+            <button
+              onClick={handleEnrollFingerprint}
+              disabled={twoFactorLoading}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-60"
+            >
+              <Fingerprint className="h-4 w-4 mr-1" /> Enroll
+            </button>
+          )}
+        </div>
+
       </div>
     </div>
   );
@@ -152,17 +438,13 @@ export function SettingsPage() {
               <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
             </div>
             <div className="flex items-center space-x-2">
-              {settings.security.twoFactorEnabled && (
-                <Check className="h-5 w-5 text-green-600" />
-              )}
+              {settings.security.twoFactorEnabled && <Check className="h-5 w-5 text-green-600" />}
               <button
-                onClick={() => setSettings(prev => ({
-                  ...prev,
-                  security: { ...prev.security, twoFactorEnabled: !prev.security.twoFactorEnabled }
-                }))}
+                onClick={handleToggleTwoFactor}
+                disabled={twoFactorLoading}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   settings.security.twoFactorEnabled ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
+                } ${twoFactorLoading ? 'opacity-60' : ''}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -182,6 +464,8 @@ export function SettingsPage() {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    value={passwordInputs.current}
+                    onChange={e => setPasswordInputs(p => ({ ...p, current: e.target.value }))}
                     className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -202,6 +486,8 @@ export function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
                   <input
                     type="password"
+                    value={passwordInputs.new}
+                    onChange={e => setPasswordInputs(p => ({ ...p, new: e.target.value }))}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -209,12 +495,17 @@ export function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
                   <input
                     type="password"
+                    value={passwordInputs.confirm}
+                    onChange={e => setPasswordInputs(p => ({ ...p, confirm: e.target.value }))}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
-              <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                Update Password
+              <button
+                onClick={handlePasswordUpdate}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                {isSaving ? 'Updating...' : 'Update Password'}
               </button>
             </div>
           </div>
@@ -226,10 +517,12 @@ export function SettingsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Session Timeout (minutes)</label>
                 <select
                   value={settings.security.sessionTimeout}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    security: { ...prev.security, sessionTimeout: parseInt(e.target.value) }
-                  }))}
+                  onChange={(e) =>
+                    setSettings(prev => ({
+                      ...prev,
+                      security: { ...prev.security, sessionTimeout: parseInt(e.target.value) },
+                    }))
+                  }
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value={15}>15 minutes</option>
@@ -237,6 +530,36 @@ export function SettingsPage() {
                   <option value={60}>1 hour</option>
                   <option value={120}>2 hours</option>
                 </select>
+              </div>
+              <div>
+                <h5 className="font-medium text-gray-900 mt-4 mb-2">Active Sessions</h5>
+                <ul className="space-y-1 text-sm">
+                  {sessions.map((s) => (
+                    <li key={s.id} className="flex justify-between items-center">
+                      <span>
+                        {s.device} - {s.ip}
+                      </span>
+                      {s.id !== 'current' && (
+                        <button
+                          onClick={() => revokeSession(s.id)}
+                          disabled={sessionLoading === s.id}
+                          className="text-blue-600 hover:underline disabled:opacity-60"
+                        >
+                          {sessionLoading === s.id ? 'Revoking...' : 'Revoke'}
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {sessions.length > 1 && (
+                  <button
+                    onClick={revokeAllSessions}
+                    disabled={sessionLoading === 'all'}
+                    className="mt-2 text-sm text-red-600 hover:underline disabled:opacity-60"
+                  >
+                    {sessionLoading === 'all' ? 'Revoking...' : 'Revoke All Other Sessions'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -263,16 +586,11 @@ export function SettingsPage() {
                 <p className="text-sm text-gray-600">{notification.description}</p>
               </div>
               <button
-                onClick={() => setSettings(prev => ({
-                  ...prev,
-                  notifications: { 
-                    ...prev.notifications, 
-                    [notification.key]: !prev.notifications[notification.key as keyof typeof prev.notifications]
-                  }
-                }))}
+                onClick={() => toggleNotification(notification.key)}
+                disabled={notificationLoading[notification.key]}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   settings.notifications[notification.key as keyof typeof settings.notifications] ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
+                } ${notificationLoading[notification.key] ? 'opacity-60' : ''}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -466,12 +784,34 @@ export function SettingsPage() {
           <div className="p-4 border border-gray-200 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Your API Keys</h4>
             <p className="text-sm text-gray-600 mb-2">Manage your API keys for integrations and automation.</p>
-            <div className="flex items-center space-x-2">
-              <input type="text" value="sk-1234-5678-ABCD" readOnly className="w-64 px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" />
-              <button className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Copy</button>
-              <button className="px-3 py-2 rounded-lg bg-red-100 text-red-700 text-sm font-medium hover:bg-red-200">Revoke</button>
-            </div>
-            <button className="mt-4 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">Generate New Key</button>
+            {apiKeys.map(key => (
+              <div key={key.id} className="flex items-center space-x-2 mb-2">
+                <input
+                  type="text"
+                  value={key.key}
+                  readOnly
+                  className="w-64 px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+                />
+                <button
+                  onClick={() => copyKey(key.key)}
+                  className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={() => revokeKey(key.id)}
+                  className="px-3 py-2 rounded-lg bg-red-100 text-red-700 text-sm font-medium hover:bg-red-200"
+                >
+                  Revoke
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={generateKey}
+              className="mt-4 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+            >
+              Generate New Key
+            </button>
           </div>
         </div>
       </div>
@@ -487,14 +827,29 @@ export function SettingsPage() {
           <div className="p-4 border border-gray-200 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Backup Data</h4>
             <p className="text-sm text-gray-600 mb-2">Download a backup of your data for safekeeping.</p>
-            <button className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 inline-flex items-center"><Download className="h-4 w-4 mr-2" />Download Backup</button>
+            <button
+              onClick={handleBackup}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 inline-flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />Download Backup
+            </button>
           </div>
           <div className="p-4 border border-gray-200 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Export Data</h4>
             <p className="text-sm text-gray-600 mb-2">Export your data in CSV or JSON format.</p>
             <div className="flex space-x-2">
-              <button className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">Export CSV</button>
-              <button className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700">Export JSON</button>
+              <button
+                onClick={() => handleExport('csv')}
+                className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+              >
+                Export CSV
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700"
+              >
+                Export JSON
+              </button>
             </div>
           </div>
         </div>
@@ -519,15 +874,26 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-8">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Glassy Animated Header */}
       <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden" style={{background: 'linear-gradient(120deg,rgba(59,130,246,0.10),rgba(236,72,153,0.10) 100%)'}}>
         <div>
           <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm tracking-tight">Settings</h1>
           <p className="mt-2 text-lg text-gray-700">Manage your account preferences and configuration</p>
         </div>
-        <button className="mt-6 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-pink-500 shadow-lg hover:scale-105 hover:shadow-xl transition">
+        <button
+          onClick={saveSettings}
+          disabled={isSaving}
+          className="mt-6 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-pink-500 shadow-lg hover:scale-105 hover:shadow-xl transition disabled:opacity-60"
+        >
           <Save className="h-4 w-4 mr-2" />
-          Save Changes
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
         {/* Animated background blobs */}
         <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl animate-pulse z-0" />

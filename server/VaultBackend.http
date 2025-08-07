@@ -1,0 +1,6 @@
+@VaultBackend_HostAddress = http://localhost:5266
+
+GET {{VaultBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

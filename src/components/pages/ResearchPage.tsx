@@ -1,81 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   Search, 
   BookOpen, 
-  FileText, 
-  Link, 
-  Quote, 
+  FileText,
+  Quote,
   CheckCircle, 
   AlertTriangle, 
   Plus, 
   Filter, 
   Calendar, 
-  User, 
   Globe,
   Archive,
-  Bookmark,
   Edit,
   Trash2,
-  ExternalLink,
   Download,
   Share2
 } from 'lucide-react';
+import { FileUpload } from '../FileUpload';
+import { useUserData } from '../../utils/userData';
 
 // Mock data
-const mockResearchItems = [
-  {
-    id: '1',
-    title: 'Birth Records - Springfield Hospital 1950',
-    type: 'document',
-    source: 'Springfield County Archives',
-    date: '1950-03-15',
-    verified: true,
-    reliability: 'high',
-    notes: 'Official birth certificate obtained from county records office',
-    citations: ['Springfield County Birth Records, Vol. 23, Page 156'],
-    tags: ['birth', 'official', 'hospital'],
-    attachments: ['birth_certificate.pdf']
-  },
-  {
-    id: '2',
-    title: 'Military Service Record - John Smith',
-    type: 'military',
-    source: 'National Archives',
-    date: '1968-1970',
-    verified: true,
-    reliability: 'high',
-    notes: 'Service record from Vietnam War era, includes commendations',
-    citations: ['National Personnel Records Center, Military Personnel File'],
-    tags: ['military', 'vietnam', 'service'],
-    attachments: ['service_record.pdf', 'commendations.pdf']
-  },
-  {
-    id: '3',
-    title: 'Immigration Records - Ellis Island',
-    type: 'immigration',
-    source: 'Ellis Island Foundation',
-    date: '1923-04-12',
-    verified: false,
-    reliability: 'medium',
-    notes: 'Passenger manifest shows arrival from Ireland, need to verify spelling of surname',
-    citations: ['Ellis Island Passenger Lists, Ship: SS Celtic'],
-    tags: ['immigration', 'ireland', 'ellis island'],
-    attachments: ['passenger_manifest.jpg']
-  },
-  {
-    id: '4',
-    title: 'Marriage License - Smith & Johnson',
-    type: 'vital',
-    source: 'Springfield City Hall',
-    date: '1972-08-20',
-    verified: true,
-    reliability: 'high',
-    notes: 'Original marriage license with witness signatures',
-    citations: ['Springfield Marriage Records, License #ML-1972-0856'],
-    tags: ['marriage', 'license', 'official'],
-    attachments: ['marriage_license.pdf']
-  }
-];
 
 const researchSources = [
   { name: 'National Archives', type: 'government', reliability: 'high', count: 23 },
@@ -86,6 +31,25 @@ const researchSources = [
   { name: 'Personal Collection', type: 'personal', reliability: 'high', count: 156 }
 ];
 
+interface ResearchAttachment {
+  name: string;
+  url: string;
+}
+
+interface ResearchItem {
+  id: string;
+  title: string;
+  type: string;
+  source: string;
+  date: string;
+  verified: boolean;
+  reliability: 'high' | 'medium' | 'low';
+  notes: string;
+  citations: string[];
+  tags: string[];
+  attachments: ResearchAttachment[];
+}
+
 
 export function ResearchPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,6 +57,28 @@ export function ResearchPage() {
   const [filterReliability, setFilterReliability] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [researchItems, setResearchItems] = useUserData<ResearchItem[]>('research_items', []);
+  const [form, setForm] = useState({
+    title: '',
+    type: 'document',
+    source: '',
+    date: '',
+    verified: false,
+    reliability: 'high',
+    notes: '',
+    citations: '',
+    tags: '',
+    attachments: [] as File[]
+  });
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
 
   // Glassy color helpers
   const getReliabilityColor = (reliability: string) => {
@@ -114,8 +100,71 @@ export function ResearchPage() {
     }
   };
 
+  const handleDownload = (item: ResearchItem) => {
+    const data = JSON.stringify(item, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${item.title.replace(/\s+/g, '_')}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleShare = async (item: ResearchItem) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: item.title, text: item.notes });
+      } else {
+        await navigator.clipboard.writeText(`${item.title}\n${item.notes}`);
+        setAlert({ message: 'Info copied to clipboard', type: 'success' });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Delete this research item?')) {
+      setResearchItems(prev => prev.filter(r => r.id !== id));
+    }
+  };
+
+  const openEdit = (item: ResearchItem) => {
+    setEditingId(item.id);
+    setForm({
+      title: item.title,
+      type: item.type,
+      source: item.source,
+      date: item.date,
+      verified: item.verified,
+      reliability: item.reliability,
+      notes: item.notes,
+      citations: item.citations.join(', '),
+      tags: item.tags.join(', '),
+      attachments: []
+    });
+    setShowAddModal(true);
+  };
+
   return (
     <div className="relative min-h-screen pb-24">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Animated Glassy Hero */}
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-10 pb-8 mb-6 rounded-3xl bg-white/60 backdrop-blur-lg shadow-xl border border-white/30 overflow-hidden" style={{background: 'linear-gradient(120deg,rgba(59,130,246,0.08),rgba(236,72,153,0.08) 100%)'}}>
         <div>
@@ -164,7 +213,7 @@ export function ResearchPage() {
       <div className="bg-white/70 rounded-3xl border border-white/30 p-6 mb-6 shadow-xl backdrop-blur-lg">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Research Sources</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {researchSources.map((source, i) => (
+          {researchSources.map((source) => (
             <div key={source.name} className="glassy-card border border-white/40 rounded-2xl p-5 shadow-lg hover:scale-[1.03] hover:shadow-2xl transition group relative overflow-hidden">
               <div className="absolute -top-6 -right-6 w-16 h-16 bg-blue-400/10 rounded-full blur-xl group-hover:scale-125 transition" />
               <div className="flex items-center justify-between mb-2 relative z-10">
@@ -227,7 +276,19 @@ export function ResearchPage() {
           <h3 className="text-lg font-bold text-gray-900">Research Items</h3>
         </div>
         <div className="divide-y divide-white/30">
-          {mockResearchItems.map((item) => {
+          {researchItems
+            .filter((item) => {
+              const matchesSearch =
+                item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.tags.some((t) =>
+                  t.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+              const matchesType = filterType === 'all' || item.type === filterType;
+              const matchesRel =
+                filterReliability === 'all' || item.reliability === filterReliability;
+              return matchesSearch && matchesType && matchesRel;
+            })
+            .map((item) => {
             const TypeIcon = getTypeIcon(item.type);
             const expanded = expandedItem === item.id;
             return (
@@ -277,11 +338,18 @@ export function ResearchPage() {
                           {item.attachments.length > 0 && (
                             <div className="flex items-center space-x-2">
                               <span className="text-sm text-gray-500">Attachments:</span>
-                              {item.attachments.map((attachment, index) => (
-                                <span key={index} className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">
+                              {item.attachments.map((att, index) => (
+                                <a
+                                  key={index}
+                                  href={att.url || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <FileText className="h-3 w-3 mr-1" />
-                                  {attachment}
-                                </span>
+                                  {att.name}
+                                </a>
                               ))}
                             </div>
                           )}
@@ -290,16 +358,40 @@ export function ResearchPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(item);
+                      }}
+                    >
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(item);
+                      }}
+                    >
                       <Download className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShare(item);
+                      }}
+                    >
                       <Share2 className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" onClick={e => {e.stopPropagation();}}>
+                    <button
+                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -319,22 +411,156 @@ export function ResearchPage() {
         <Plus className="h-7 w-7" />
       </button>
 
-      {/* Add Research Modal (UI only) */}
+      {/* Add/Edit Research Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative animate-fade-in">
-            <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => setShowAddModal(false)}>
-              <Trash2 className="h-5 w-5" />
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
+              onClick={() => setShowAddModal(false)}
+            >
+              &times;
             </button>
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Add New Research</h2>
-            <form className="space-y-4">
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Title" />
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Source" />
-              <input className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Date" />
-              <textarea className="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Notes" />
+            <h2 className="text-xl font-bold mb-4 text-gray-900">
+              {editingId ? 'Edit Research' : 'Add New Research'}
+            </h2>
+            <form
+              className="space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const uploaded = await Promise.all(
+                  form.attachments.map(async (f) => ({
+                    name: f.name,
+                    url: await readFileAsDataURL(f),
+                  }))
+                );
+                const baseItem = {
+                  id: editingId ?? Date.now().toString(),
+                  title: form.title,
+                  type: form.type,
+                  source: form.source,
+                  date: form.date,
+                  verified: form.verified,
+                  reliability: form.reliability as 'high' | 'medium' | 'low',
+                  notes: form.notes,
+                  citations: form.citations ? form.citations.split(/,\s*/) : [],
+                  tags: form.tags ? form.tags.split(/,\s*/) : [],
+                };
+                setResearchItems((prev) => {
+                  if (editingId) {
+                    return prev.map((it) =>
+                      it.id === editingId
+                        ? {
+                            ...baseItem,
+                            attachments: [...it.attachments, ...uploaded],
+                          }
+                        : it
+                    );
+                  }
+                  return [
+                    { ...baseItem, attachments: uploaded },
+                    ...prev,
+                  ];
+                });
+                setShowAddModal(false);
+                setEditingId(null);
+                setForm({
+                  title: '',
+                  type: 'document',
+                  source: '',
+                  date: '',
+                  verified: false,
+                  reliability: 'high',
+                  notes: '',
+                  citations: '',
+                  tags: '',
+                  attachments: []
+                });
+              }}
+            >
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Source"
+                value={form.source}
+                onChange={(e) => setForm({ ...form, source: e.target.value })}
+              />
+              <input
+                type="date"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+              <textarea
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Notes"
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Citations (comma separated)"
+                value={form.citations}
+                onChange={(e) => setForm({ ...form, citations: e.target.value })}
+              />
+              <input
+                className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                placeholder="Tags (comma separated)"
+                value={form.tags}
+                onChange={(e) => setForm({ ...form, tags: e.target.value })}
+              />
+              <div className="w-full">
+                <FileUpload
+                  multiple
+                  onFilesSelected={(files) =>
+                    setForm({ ...form, attachments: Array.from(files) })
+                  }
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.verified}
+                    onChange={(e) => setForm({ ...form, verified: e.target.checked })}
+                  />
+                  <span>Verified</span>
+                </label>
+                <select
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={form.reliability}
+                  onChange={(e) =>
+                    setForm({ ...form, reliability: e.target.value })
+                  }
+                >
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
               <div className="flex space-x-2">
-                <button type="button" className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200">Cancel</button>
-                <button type="submit" className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Add</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingId(null);
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                >
+                  {editingId ? 'Save' : 'Add'}
+                </button>
               </div>
             </form>
           </div>

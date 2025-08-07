@@ -91,6 +91,7 @@ export default {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'bounce-slow': 'bounce 2s infinite',
+        bell: 'bell-shake 1s cubic-bezier(.36,.07,.19,.97) both infinite',
       },
       keyframes: {
         fadeIn: {
@@ -100,6 +101,11 @@ export default {
         slideUp: {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'bell-shake': {
+          '0%,100%': { transform: 'rotate(0)' },
+          '10%,30%,50%,70%,90%': { transform: 'rotate(-10deg)' },
+          '20%,40%,60%,80%': { transform: 'rotate(10deg)' },
         },
       },
     },

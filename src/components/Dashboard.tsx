@@ -1,5 +1,8 @@
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect, useRef } from 'react';
+import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
+import { UploadMediaModal } from './UploadMediaModal';
 import { 
   TrendingUp, 
   Users, 
@@ -12,23 +15,22 @@ import {
   Video,
   Music,
   FolderOpen,
+  Lock,
+  MessageSquare,
   Calendar as CalendarIcon
 } from 'lucide-react';
+import { ActivityLog } from '../types';
+import { getRecentActivity, getStats, getAssetBreakdown } from '../utils/api';
+import type { LucideIcon } from 'lucide-react';
 
-const stats = [
-  { name: 'Total Assets', value: '12,847', change: '+12%', changeType: 'increase', icon: FileText },
-  { name: 'Active Projects', value: '23', change: '+3', changeType: 'increase', icon: FolderOpen },
-  { name: 'Monthly Views', value: '45,672', change: '+18%', changeType: 'increase', icon: Eye },
-  { name: 'Contributors', value: '156', change: '+7', changeType: 'increase', icon: Users },
-];
+interface Stat {
+  name: string;
+  value: string;
+  change: string;
+  changeType: 'increase' | 'decrease';
+  icon: LucideIcon;
+}
 
-const recentActivity = [
-  { id: 1, action: 'Uploaded', item: 'Family Photos 1950-1960', time: '2 hours ago', type: 'image' },
-  { id: 2, action: 'Created', item: 'WWII Veterans Collection', time: '4 hours ago', type: 'collection' },
-  { id: 3, action: 'Archived', item: 'Audio Interviews Vol. 3', time: '6 hours ago', type: 'audio' },
-  { id: 4, action: 'Updated', item: 'Timeline: Industrial Revolution', time: '1 day ago', type: 'timeline' },
-  { id: 5, action: 'Exported', item: 'Heritage Documentation', time: '2 days ago', type: 'document' },
-];
 
 const quickActions = [
   { name: 'Upload Media', icon: Upload, color: 'bg-blue-500' },
@@ -37,29 +39,113 @@ const quickActions = [
   { name: 'Archive Content', icon: Archive, color: 'bg-orange-500' },
 ];
 
-const assetBreakdown = [
-  { type: 'Images', count: 7842, icon: ImageIcon, color: 'text-blue-600' },
-  { type: 'Documents', count: 3205, icon: FileText, color: 'text-green-600' },
-  { type: 'Videos', count: 1456, icon: Video, color: 'text-purple-600' },
-  { type: 'Audio', count: 344, icon: Music, color: 'text-orange-600' },
-];
-
-function getActivityIcon(type: string) {
-  switch (type) {
-    case 'image': return ImageIcon;
-    case 'collection': return FolderOpen;
-    case 'audio': return Music;
-    case 'timeline': return Clock;
-    case 'document': return FileText;
-    default: return FileText;
-  }
+interface AssetBreakdownItem {
+  type: string;
+  count: number;
+  icon: LucideIcon;
+  color: string;
 }
+
+function getActivityIcon(action: string) {
+  if (action.includes('Uploaded')) return Upload;
+  if (action.includes('password')) return Lock;
+  if (action.includes('profile')) return Users;
+  if (action.includes('chat')) return MessageSquare;
+  return FileText;
+}
+
+import { useNavigate } from 'react-router-dom';
 
 export function Dashboard() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const [stats, setStats] = useState<Stat[]>([
+    { name: 'Total Assets', value: '0', change: '', changeType: 'increase', icon: FileText },
+    { name: 'Active Projects', value: '0', change: '', changeType: 'increase', icon: FolderOpen },
+    { name: 'Monthly Views', value: '0', change: '', changeType: 'increase', icon: Eye },
+    { name: 'Contributors', value: '0', change: '', changeType: 'increase', icon: Users },
+  ]);
+  const [assetBreakdown, setAssetBreakdown] = useState<AssetBreakdownItem[]>([
+    { type: 'Images', count: 0, icon: ImageIcon, color: 'text-primary-600' },
+    { type: 'Documents', count: 0, icon: FileText, color: 'text-emerald-600' },
+    { type: 'Videos', count: 0, icon: Video, color: 'text-purple-600' },
+    { type: 'Audio', count: 0, icon: Music, color: 'text-orange-600' },
+  ]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [recent, setRecent] = useState<ActivityLog[]>([]);
+  const connectionRef = useRef<HubConnection | null>(null);
+  const navigate = useNavigate();
+
+  const handleView = (activity: ActivityLog) => {
+    const action = activity.action.toLowerCase();
+    if (action.includes('vault') || action.includes('file')) {
+      navigate('/vault');
+    } else if (action.includes('profile') || action.includes('password')) {
+      navigate('/settings');
+    } else if (action.includes('chat')) {
+      navigate('/research');
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    getRecentActivity(token).then(setRecent).catch(console.error);
+    getStats(token)
+      .then((data) => {
+        setStats([
+          { name: 'Total Assets', value: data.totalAssets.toLocaleString(), change: '', changeType: 'increase', icon: FileText },
+          { name: 'Active Projects', value: data.activeProjects.toString(), change: '', changeType: 'increase', icon: FolderOpen },
+          { name: 'Monthly Views', value: data.monthlyViews.toLocaleString(), change: '', changeType: 'increase', icon: Eye },
+          { name: 'Contributors', value: data.contributors.toString(), change: '', changeType: 'increase', icon: Users },
+        ]);
+      })
+      .catch(console.error);
+    getAssetBreakdown(token)
+      .then((data) => {
+        setAssetBreakdown([
+          { type: 'Images', count: data.images, icon: ImageIcon, color: 'text-primary-600' },
+          { type: 'Documents', count: data.documents, icon: FileText, color: 'text-emerald-600' },
+          { type: 'Videos', count: data.videos, icon: Video, color: 'text-purple-600' },
+          { type: 'Audio', count: data.audio, icon: Music, color: 'text-orange-600' },
+        ]);
+      })
+      .catch(console.error);
+    const connection = new HubConnectionBuilder()
+      .withUrl('/hubs/activity', { accessTokenFactory: () => token })
+      .withAutomaticReconnect()
+      .build();
+    connection.on('NewActivity', (activity: ActivityLog) => {
+      setRecent((prev) => {
+        if (prev.some((a) => a.id === activity.id)) return prev;
+        return [activity, ...prev].slice(0, 20);
+      });
+    });
+    connection.start();
+    connectionRef.current = connection;
+    return () => { connection.stop(); };
+  }, [token]);
+
+  const handleQuickAction = (actionName: string) => {
+    switch (actionName) {
+      case 'Upload Media':
+        setShowUploadModal(true);
+        break;
+      case 'Create Timeline':
+        navigate('/timeline');
+        break;
+      case 'New Collection':
+        navigate('/collections');
+        break;
+      case 'Archive Content':
+        navigate('/archive');
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
+    <>
     <div className="space-y-8">
       {/* Hero Welcome Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-purple-500 to-orange-400 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 shadow-2xl mb-4">
@@ -153,6 +239,7 @@ export function Dashboard() {
                 return (
                 <button
                   key={action.name}
+                  onClick={() => handleQuickAction(action.name)}
                   className="flex flex-col items-center p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary-300 hover:bg-gradient-to-br hover:from-primary-50 hover:to-purple-50 transition-all duration-300 group hover:shadow-lg"
                 >
                   <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${gradients[index]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
@@ -214,8 +301,8 @@ export function Dashboard() {
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-primary-100 mb-4 sm:mb-6">Recent Activity</h3>
           <div className="flow-root">
             <ul className="-my-4 sm:-my-5 divide-y divide-gray-200 dark:divide-gray-800">
-              {recentActivity.map((activity) => {
-                const ActivityIcon = getActivityIcon(activity.type);
+              {recent.map((activity) => {
+                const ActivityIcon = getActivityIcon(activity.action);
                 return (
                   <li key={activity.id} className="py-4 sm:py-5">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
@@ -228,10 +315,10 @@ export function Dashboard() {
                         <p className="text-sm sm:text-base text-gray-900">
                           <span className="font-semibold text-primary-600">{activity.action}</span> {activity.item}
                         </p>
-                        <p className="text-xs sm:text-sm text-gray-600">{activity.time}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">{new Date(activity.timestamp).toLocaleString()}</p>
                       </div>
                       <div className="flex-shrink-0 flex items-center justify-end">
-                        <button className="text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-semibold px-2 sm:px-3 py-1 rounded-lg hover:bg-primary-50 transition-all duration-200">
+                        <button onClick={() => handleView(activity)} className="text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-semibold px-2 sm:px-3 py-1 rounded-lg hover:bg-primary-50 transition-all duration-200">
                           View
                         </button>
                       </div>
@@ -244,6 +331,14 @@ export function Dashboard() {
         </div>
       </div>
     </div>
+    {showUploadModal && (
+      <UploadMediaModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUpload={(file) => console.log('Uploaded', file.name)}
+      />
+    )}
+    </>
   );
 // Simple calendar mini component for visual effect
 function CalendarMini() {

@@ -2,34 +2,32 @@ import React from 'react';
 import { useState } from 'react';
 import { Navigation } from './Navigation';
 import { Header } from './Header';
+import { Footer } from './Footer';
+import { ChatWidget } from './chat/ChatWidget';
 
 interface LayoutProps {
   children: React.ReactNode;
-  currentPage: string;
-  onPageChange: (page: string) => void;
 }
 
-export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
+export function Layout({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-purple-50">
-      <Navigation 
-        currentPage={currentPage} 
-        onPageChange={onPageChange}
+      <Navigation
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
-        <Header 
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
+        <Header onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} />
         <main className="py-8">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {children}
           </div>
         </main>
+        <Footer />
       </div>
+      <ChatWidget />
     </div>
   );
 }

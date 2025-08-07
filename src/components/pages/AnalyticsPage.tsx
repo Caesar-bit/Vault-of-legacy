@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
-  Eye, 
-  Users, 
-  Clock, 
-  Download, 
+import React, { useEffect, useState } from 'react';
+import { AnimatedAlert } from '../AnimatedAlert';
+import {
+  TrendingDown,
+  Eye,
+  Users,
+  Clock,
+  Download,
   Share2,
-  Calendar,
-  Filter,
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
@@ -18,54 +15,187 @@ import {
   Monitor,
   Tablet
 } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const mockAnalyticsData = {
+interface AnalyticsData {
   overview: {
-    totalViews: 45672,
-    uniqueVisitors: 12847,
-    avgSessionDuration: '4:32',
-    bounceRate: '32.5%',
+    totalViews: number;
+    uniqueVisitors: number;
+    avgSessionDuration: string;
+    bounceRate: string;
     trends: {
-      views: 18.2,
-      visitors: 12.5,
-      duration: -5.3,
-      bounce: -8.1
-    }
-  },
-  timeSeriesData: [
-    { date: '2024-01-01', views: 1200, visitors: 450, sessions: 380 },
-    { date: '2024-01-02', views: 1350, visitors: 520, sessions: 420 },
-    { date: '2024-01-03', views: 1100, visitors: 380, sessions: 340 },
-    { date: '2024-01-04', views: 1450, visitors: 580, sessions: 480 },
-    { date: '2024-01-05', views: 1600, visitors: 620, sessions: 520 },
-    { date: '2024-01-06', views: 1300, visitors: 490, sessions: 410 },
-    { date: '2024-01-07', views: 1750, visitors: 680, sessions: 580 }
-  ],
-  deviceData: [
-    { name: 'Desktop', value: 45, color: '#3B82F6' },
-    { name: 'Mobile', value: 35, color: '#10B981' },
-    { name: 'Tablet', value: 20, color: '#F59E0B' }
-  ],
-  topContent: [
-    { title: 'Family Heritage Collection', views: 2847, engagement: '85%', type: 'collection' },
-    { title: 'Wedding Day Memories', views: 2156, engagement: '78%', type: 'gallery' },
-    { title: 'Timeline: Three Generations', views: 1923, engagement: '82%', type: 'timeline' },
-    { title: 'WWII Documents Archive', views: 1654, engagement: '71%', type: 'archive' },
-    { title: 'Childhood Adventures', views: 1432, engagement: '76%', type: 'gallery' }
-  ],
-  geographicData: [
-    { country: 'United States', visitors: 5847, percentage: 45.5 },
-    { country: 'Canada', visitors: 1923, percentage: 15.0 },
-    { country: 'United Kingdom', visitors: 1456, percentage: 11.3 },
-    { country: 'Australia', visitors: 987, percentage: 7.7 },
-    { country: 'Germany', visitors: 654, percentage: 5.1 }
-  ]
+      views: number;
+      visitors: number;
+      duration: number;
+      bounce: number;
+    };
+  };
+  timeSeriesData: { date: string; views: number; visitors: number; sessions: number }[];
+  deviceData: { name: string; value: number; color: string }[];
+  topContent: { title: string; views: number; engagement: string; type: string }[];
+  geographicData: { country: string; visitors: number; percentage: number }[];
+}
+
+
+const getDaysForRange = (range: string) => {
+  switch (range) {
+    case '30d':
+      return 30;
+    case '90d':
+      return 90;
+    case '1y':
+      return 365;
+    default:
+      return 7;
+  }
+};
+
+const randomInt = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+const generateAnalyticsData = (days: number): AnalyticsData => {
+  const timeSeriesData = Array.from({ length: days }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - i - 1));
+    return {
+      date: date.toISOString().slice(0, 10),
+      views: randomInt(50, 150),
+      visitors: randomInt(20, 120),
+      sessions: randomInt(15, 100),
+    };
+  });
+
+  const totals = timeSeriesData.reduce(
+    (acc, d) => {
+      acc.views += d.views;
+      acc.visitors += d.visitors;
+      return acc;
+    },
+    { views: 0, visitors: 0 }
+  );
+
+  const avgSessionSeconds = randomInt(60, 600);
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const deviceRaw = [Math.random(), Math.random(), Math.random()];
+  const deviceTotal = deviceRaw.reduce((a, b) => a + b, 0);
+  const [desktopRaw, mobileRaw, tabletRaw] = deviceRaw;
+  const desktopPct = Math.round((desktopRaw / deviceTotal) * 100);
+  const mobilePct = Math.round((mobileRaw / deviceTotal) * 100);
+  let tabletPct = Math.round((tabletRaw / deviceTotal) * 100);
+  const diff = 100 - (desktopPct + mobilePct + tabletPct);
+  tabletPct += diff;
+  const deviceData = [
+    { name: 'Desktop', value: desktopPct, color: '#3B82F6' },
+    { name: 'Mobile', value: mobilePct, color: '#10B981' },
+    { name: 'Tablet', value: tabletPct, color: '#F59E0B' },
+  ];
+
+  const sampleTitles = [
+    'Getting Started Guide',
+    'Advanced Security Tips',
+    'Managing Collections',
+    'Exporting Your Data',
+    'Mobile App Overview',
+  ];
+  const topContent = sampleTitles.slice(0, 4).map((title) => ({
+    title,
+    views: randomInt(200, 2000),
+    engagement: `${randomInt(40, 90)}%`,
+    type: ['article', 'video', 'guide'][randomInt(0, 2)],
+  }));
+
+  const countries = ['United States', 'Germany', 'Brazil', 'Japan', 'India'];
+  const geographicData = countries.map((c) => ({
+    country: c,
+    visitors: randomInt(50, 500),
+    percentage: randomInt(5, 40),
+  }));
+
+  return {
+    overview: {
+      totalViews: totals.views,
+      uniqueVisitors: totals.visitors,
+      avgSessionDuration: formatDuration(avgSessionSeconds),
+      bounceRate: `${randomInt(20, 70)}%`,
+      trends: {
+        views: randomInt(-10, 10),
+        visitors: randomInt(-10, 10),
+        duration: randomInt(-5, 5),
+        bounce: randomInt(-5, 5),
+      },
+    },
+    timeSeriesData,
+    deviceData,
+    topContent,
+    geographicData,
+  };
 };
 
 export function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('7d');
   const [selectedMetric, setSelectedMetric] = useState('views');
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>(() => {
+    const stored = localStorage.getItem('analytics-7d');
+    return stored ? JSON.parse(stored) : generateAnalyticsData(7);
+  });
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    const key = `analytics-${dateRange}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      setAnalyticsData(JSON.parse(stored));
+    } else {
+      const data = generateAnalyticsData(getDaysForRange(dateRange));
+      setAnalyticsData(data);
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+  }, [dateRange]);
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
+
+  const handleRefresh = () => {
+    const data = generateAnalyticsData(getDaysForRange(dateRange));
+    setAnalyticsData(data);
+    localStorage.setItem(`analytics-${dateRange}`, JSON.stringify(data));
+  };
+
+  const handleExport = () => {
+    const header = 'date,views,visitors,sessions\n';
+    const rows = analyticsData.timeSeriesData
+      .map((d) => `${d.date},${d.views},${d.visitors},${d.sessions}`)
+      .join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${dateRange}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    const text = `Total views: ${analyticsData.overview.totalViews}, unique visitors: ${analyticsData.overview.uniqueVisitors}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Analytics Summary', text });
+      } catch {
+        // ignore cancel
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      setAlert({ message: 'Summary copied to clipboard', type: 'success' });
+    }
+  };
 
   const getDeviceIcon = (device: string) => {
     switch (device) {
@@ -84,6 +214,13 @@ export function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -101,13 +238,26 @@ export function AnalyticsPage() {
             <option value="90d">Last 90 days</option>
             <option value="1y">Last year</option>
           </select>
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+          <button
+            onClick={handleRefresh}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </button>
-          <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
             <Download className="h-4 w-4 mr-2" />
             Export Report
+          </button>
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share
           </button>
         </div>
       </div>
@@ -118,20 +268,20 @@ export function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Views</p>
-              <p className="text-2xl font-bold text-gray-900">{formatNumber(mockAnalyticsData.overview.totalViews)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatNumber(analyticsData.overview.totalViews)}</p>
             </div>
             <div className="p-2 bg-blue-100 rounded-lg">
               <Eye className="h-6 w-6 text-blue-600" />
             </div>
           </div>
           <div className="mt-4 flex items-center">
-            {mockAnalyticsData.overview.trends.views > 0 ? (
+            {analyticsData.overview.trends.views > 0 ? (
               <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
             ) : (
               <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
             )}
-            <span className={`text-sm font-medium ${mockAnalyticsData.overview.trends.views > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {Math.abs(mockAnalyticsData.overview.trends.views)}%
+            <span className={`text-sm font-medium ${analyticsData.overview.trends.views > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {Math.abs(analyticsData.overview.trends.views)}%
             </span>
             <span className="text-sm text-gray-500 ml-1">vs last period</span>
           </div>
@@ -141,7 +291,7 @@ export function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Unique Visitors</p>
-              <p className="text-2xl font-bold text-gray-900">{formatNumber(mockAnalyticsData.overview.uniqueVisitors)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatNumber(analyticsData.overview.uniqueVisitors)}</p>
             </div>
             <div className="p-2 bg-green-100 rounded-lg">
               <Users className="h-6 w-6 text-green-600" />
@@ -150,7 +300,7 @@ export function AnalyticsPage() {
           <div className="mt-4 flex items-center">
             <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
             <span className="text-sm font-medium text-green-600">
-              {mockAnalyticsData.overview.trends.visitors}%
+              {analyticsData.overview.trends.visitors}%
             </span>
             <span className="text-sm text-gray-500 ml-1">vs last period</span>
           </div>
@@ -160,7 +310,7 @@ export function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Avg Session Duration</p>
-              <p className="text-2xl font-bold text-gray-900">{mockAnalyticsData.overview.avgSessionDuration}</p>
+              <p className="text-2xl font-bold text-gray-900">{analyticsData.overview.avgSessionDuration}</p>
             </div>
             <div className="p-2 bg-purple-100 rounded-lg">
               <Clock className="h-6 w-6 text-purple-600" />
@@ -169,7 +319,7 @@ export function AnalyticsPage() {
           <div className="mt-4 flex items-center">
             <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
             <span className="text-sm font-medium text-red-600">
-              {Math.abs(mockAnalyticsData.overview.trends.duration)}%
+              {Math.abs(analyticsData.overview.trends.duration)}%
             </span>
             <span className="text-sm text-gray-500 ml-1">vs last period</span>
           </div>
@@ -179,7 +329,7 @@ export function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Bounce Rate</p>
-              <p className="text-2xl font-bold text-gray-900">{mockAnalyticsData.overview.bounceRate}</p>
+              <p className="text-2xl font-bold text-gray-900">{analyticsData.overview.bounceRate}</p>
             </div>
             <div className="p-2 bg-orange-100 rounded-lg">
               <TrendingDown className="h-6 w-6 text-orange-600" />
@@ -188,7 +338,7 @@ export function AnalyticsPage() {
           <div className="mt-4 flex items-center">
             <ArrowDownRight className="h-4 w-4 text-green-600 mr-1" />
             <span className="text-sm font-medium text-green-600">
-              {Math.abs(mockAnalyticsData.overview.trends.bounce)}%
+              {Math.abs(analyticsData.overview.trends.bounce)}%
             </span>
             <span className="text-sm text-gray-500 ml-1">improvement</span>
           </div>
@@ -212,7 +362,7 @@ export function AnalyticsPage() {
             </select>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={mockAnalyticsData.timeSeriesData}>
+            <AreaChart data={analyticsData.timeSeriesData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -235,7 +385,7 @@ export function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={mockAnalyticsData.deviceData}
+                  data={analyticsData.deviceData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -243,7 +393,7 @@ export function AnalyticsPage() {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {mockAnalyticsData.deviceData.map((entry, index) => (
+                  {analyticsData.deviceData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -252,7 +402,7 @@ export function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
           <div className="mt-4 space-y-2">
-            {mockAnalyticsData.deviceData.map((device) => {
+            {analyticsData.deviceData.map((device) => {
               const DeviceIcon = getDeviceIcon(device.name);
               return (
                 <div key={device.name} className="flex items-center justify-between">
@@ -276,7 +426,7 @@ export function AnalyticsPage() {
             <h3 className="text-lg font-semibold text-gray-900">Top Performing Content</h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {mockAnalyticsData.topContent.map((content, index) => (
+            {analyticsData.topContent.map((content, index) => (
               <div key={content.title} className="p-6 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div>
@@ -302,7 +452,7 @@ export function AnalyticsPage() {
             <h3 className="text-lg font-semibold text-gray-900">Geographic Distribution</h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {mockAnalyticsData.geographicData.map((location) => (
+            {analyticsData.geographicData.map((location) => (
               <div key={location.country} className="p-6 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">

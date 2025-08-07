@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { APIKeyModal } from './APIKeyModal';
 import { fetchApiKeys, createApiKey, deleteApiKey, regenerateApiKey } from '../../utils/apikeys';
+import { fetchApiEndpoints } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { AnimatedAlert } from '../AnimatedAlert';
 import { 
   Key, 
   Plus, 
@@ -19,58 +21,35 @@ import {
   BarChart3
 } from 'lucide-react';
 
-const mockApiKeys = [
-  {
-    id: '1',
-    name: 'Production API Key',
-    key: 'vl_prod_1234567890abcdef',
-    permissions: ['read', 'write', 'delete'],
-    lastUsed: '2024-01-20T10:30:00Z',
-    created: '2024-01-01',
-    status: 'active',
-    requests: 15420
-  },
-  {
-    id: '2',
-    name: 'Development API Key',
-    key: 'vl_dev_abcdef1234567890',
-    permissions: ['read', 'write'],
-    lastUsed: '2024-01-19T15:45:00Z',
-    created: '2024-01-10',
-    status: 'active',
-    requests: 3240
-  },
-  {
-    id: '3',
-    name: 'Analytics Integration',
-    key: 'vl_analytics_fedcba0987654321',
-    permissions: ['read'],
-    lastUsed: '2024-01-18T09:20:00Z',
-    created: '2024-01-15',
-    status: 'inactive',
-    requests: 890
-  }
-];
 
-const apiEndpoints = [
-  { method: 'GET', endpoint: '/api/v1/assets', description: 'Retrieve all assets' },
-  { method: 'POST', endpoint: '/api/v1/assets', description: 'Create new asset' },
-  { method: 'GET', endpoint: '/api/v1/collections', description: 'List collections' },
-  { method: 'POST', endpoint: '/api/v1/collections', description: 'Create collection' },
-  { method: 'GET', endpoint: '/api/v1/timeline', description: 'Get timeline events' },
-  { method: 'POST', endpoint: '/api/v1/timeline', description: 'Add timeline event' },
-  { method: 'GET', endpoint: '/api/v1/users', description: 'List users (admin only)' },
-  { method: 'GET', endpoint: '/api/v1/analytics', description: 'Get analytics data' }
-];
 
 export function APIPage() {
   useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [visibleKeys, setVisibleKeys] = useState<string[]>([]);
-  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [apiEndpoints, setApiEndpoints] = useState<{ method: string; endpoint: string }[]>([]);
+  interface ApiKey {
+    id: string;
+    name: string;
+    key: string;
+    permissions: string[];
+    lastUsed?: string;
+    created: string;
+    status: string;
+    requests?: number;
+  }
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // auto hide alert
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 3000);
+    return () => clearTimeout(t);
+  }, [alert]);
+  const [search, setSearch] = useState('');
 
   const toggleKeyVisibility = (keyId: string) => {
     setVisibleKeys(prev => 
@@ -86,12 +65,13 @@ export function APIPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('vault_jwt');
+        const token = localStorage.getItem('vault_token');
         if (!token) throw new Error('Not authenticated');
         const keys = await fetchApiKeys(token);
         setApiKeys(keys);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load API keys');
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to load API keys';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -99,51 +79,69 @@ export function APIPage() {
     load();
   }, []);
 
+  // Fetch API endpoints on mount
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const token = localStorage.getItem('vault_token');
+        if (!token) return;
+        const routes = await fetchApiEndpoints(token);
+        setApiEndpoints(routes);
+      } catch {
+        // ignore errors
+      }
+    };
+    load();
+  }, []);
+
   const handleCreateKey = async (name: string, permissions: string[]) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
+      const token = localStorage.getItem('vault_token');
       if (!token) throw new Error('Not authenticated');
       const newKey = await createApiKey(token, name, permissions);
       setApiKeys(prev => [newKey, ...prev]);
-      setToast('API key created!');
-    } catch (e: any) {
-      setToast(e.message || 'Failed to create API key');
+      setAlert({ message: 'API key created!', type: 'success' });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to create API key';
+      setAlert({ message, type: 'error' });
     }
   };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    setToast('Copied to clipboard!');
+    setAlert({ message: 'Copied to clipboard!', type: 'success' });
   };
 
   const handleRefresh = async (id: string) => {
     try {
-      const token = localStorage.getItem('vault_jwt');
+      const token = localStorage.getItem('vault_token');
       if (!token) throw new Error('Not authenticated');
       const updated = await regenerateApiKey(token, id);
       setApiKeys(prev => prev.map(k => k.id === id ? updated : k));
-      setToast('API key regenerated!');
-    } catch (e: any) {
-      setToast(e.message || 'Failed to regenerate API key');
+      setAlert({ message: 'API key regenerated!', type: 'success' });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to regenerate API key';
+      setAlert({ message, type: 'error' });
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to revoke this API key?')) {
       try {
-        const token = localStorage.getItem('vault_jwt');
+        const token = localStorage.getItem('vault_token');
         if (!token) throw new Error('Not authenticated');
         await deleteApiKey(token, id);
         setApiKeys(prev => prev.filter(k => k.id !== id));
-        setToast('API key revoked!');
-      } catch (e: any) {
-        setToast(e.message || 'Failed to revoke API key');
+        setAlert({ message: 'API key revoked!', type: 'success' });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to revoke API key';
+        setAlert({ message, type: 'error' });
       }
     }
   };
 
   const handleOpenDocs = () => {
-    window.open('https://your-api-docs-url.com', '_blank');
+    window.open('https://vault-of-legacy-docs.example.com/api', '_blank');
   };
 
 
@@ -166,6 +164,10 @@ export function APIPage() {
     }
   };
 
+  const filteredKeys = apiKeys.filter((k) =>
+    k.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <APIKeyModal
@@ -173,10 +175,12 @@ export function APIPage() {
         onClose={() => setShowCreateModal(false)}
         onCreate={handleCreateKey}
       />
-      {toast && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          {toast}
-        </div>
+      {alert && (
+        <AnimatedAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
       )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -211,7 +215,9 @@ export function APIPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Keys</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{mockApiKeys.filter(k => k.status === 'active').length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {apiKeys.filter(k => k.status === 'active').length}
+              </p>
             </div>
           </div>
         </div>
@@ -223,7 +229,7 @@ export function APIPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Requests</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {mockApiKeys.reduce((sum, key) => sum + key.requests, 0).toLocaleString()}
+                {apiKeys.reduce((sum, key) => sum + (key.requests || 0), 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -254,8 +260,15 @@ export function APIPage() {
 
       {/* API Keys List */}
       <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">API Keys</h3>
+          <input
+            type="text"
+            placeholder="Search keys..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mt-2 md:mt-0 px-3 py-2 border rounded w-full md:w-60"
+          />
         </div>
         {loading ? (
           <div className="p-6 text-gray-500">Loading...</div>
@@ -263,7 +276,7 @@ export function APIPage() {
           <div className="p-6 text-red-500">{error}</div>
         ) : (
         <div className="divide-y divide-gray-200">
-          {apiKeys.map((apiKey) => (
+          {filteredKeys.map((apiKey) => (
             <div key={apiKey.id} className="p-6 hover:bg-gray-50">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -350,14 +363,11 @@ export function APIPage() {
         <div className="divide-y divide-gray-200">
           {apiEndpoints.map((endpoint, index) => (
             <div key={index} className="p-6 hover:bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getMethodColor(endpoint.method)}`}>
-                    {endpoint.method}
-                  </span>
-                  <code className="text-sm font-mono text-gray-900 dark:text-white">{endpoint.endpoint}</code>
-                </div>
-                <p className="text-sm text-gray-600">{endpoint.description}</p>
+              <div className="flex items-center space-x-4">
+                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getMethodColor(endpoint.method)}`}>
+                  {endpoint.method}
+                </span>
+                <code className="text-sm font-mono text-gray-900 dark:text-white">{endpoint.endpoint}</code>
               </div>
             </div>
           ))}
