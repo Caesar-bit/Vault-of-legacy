@@ -27,11 +27,14 @@ import { TrusteesPage } from './components/pages/TrusteesPage';
 import { ReleasesPage } from './components/pages/ReleasesPage';
 import { BeneficiariesPage } from './components/pages/BeneficiariesPage';
 import { SupportPage } from './components/pages/SupportPage';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from './components/PageTransition';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (isLoading) {
     return <LoadingScreen message="Initializing secure connection..." />;
@@ -39,40 +42,44 @@ function AppContent() {
 
   if (!isAuthenticated) {
     return (
-      <Routes>
-        <Route path="/signup" element={<SignupForm onSwitchToLogin={() => navigate('/login')} />} />
-        <Route path="/forgot-password" element={<ForgotPasswordForm onSwitchToLogin={() => navigate('/login')} />} />
-        <Route path="*" element={<LoginForm onSwitchToSignup={() => navigate('/signup')} onSwitchToForgotPassword={() => navigate('/forgot-password')} />} />
-      </Routes>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/signup" element={<PageTransition><SignupForm onSwitchToLogin={() => navigate('/login')} /></PageTransition>} />
+          <Route path="/forgot-password" element={<PageTransition><ForgotPasswordForm onSwitchToLogin={() => navigate('/login')} /></PageTransition>} />
+          <Route path="*" element={<PageTransition><LoginForm onSwitchToSignup={() => navigate('/signup')} onSwitchToForgotPassword={() => navigate('/forgot-password')} /></PageTransition>} />
+        </Routes>
+      </AnimatePresence>
     );
   }
 
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/vault" element={<VaultPage />} />
-        <Route path="/timeline" element={<TimelinePage />} />
-        <Route path="/collections" element={<CollectionsPage />} />
-        <Route path="/archive" element={<ArchivePage />} />
-        <Route path="/gallery" element={<GalleryPage />} />
-        <Route path="/research" element={<ResearchPage />} />
-        <Route path="/users" element={user?.role === 'admin' ? <UsersPage /> : <div className="p-6">Access denied</div>} />
-        <Route path="/analytics" element={user?.role === 'admin' ? <AnalyticsPage /> : <div className="p-6">Access denied</div>} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/templates" element={<TemplatesPage />} />
-        <Route path="/export" element={<ExportPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/api" element={user?.role === 'admin' ? <APIPage /> : <div className="p-6">Access denied</div>} />
-        <Route path="/backup" element={<BackupPage />} />
-        <Route path="/blockchain" element={<BlockchainPage />} />
-        <Route path="/trustees" element={<TrusteesPage />} />
-        <Route path="/beneficiaries" element={<BeneficiariesPage />} />
-        <Route path="/releases" element={<ReleasesPage />} />
-        <Route path="/support" element={<SupportPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
+          <Route path="/vault" element={<PageTransition><VaultPage /></PageTransition>} />
+          <Route path="/timeline" element={<PageTransition><TimelinePage /></PageTransition>} />
+          <Route path="/collections" element={<PageTransition><CollectionsPage /></PageTransition>} />
+          <Route path="/archive" element={<PageTransition><ArchivePage /></PageTransition>} />
+          <Route path="/gallery" element={<PageTransition><GalleryPage /></PageTransition>} />
+          <Route path="/research" element={<PageTransition><ResearchPage /></PageTransition>} />
+          <Route path="/users" element={user?.role === 'admin' ? <PageTransition><UsersPage /></PageTransition> : <div className="p-6">Access denied</div>} />
+          <Route path="/analytics" element={user?.role === 'admin' ? <PageTransition><AnalyticsPage /></PageTransition> : <div className="p-6">Access denied</div>} />
+          <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+          <Route path="/templates" element={<PageTransition><TemplatesPage /></PageTransition>} />
+          <Route path="/export" element={<PageTransition><ExportPage /></PageTransition>} />
+          <Route path="/privacy" element={<PageTransition><PrivacyPage /></PageTransition>} />
+          <Route path="/api" element={user?.role === 'admin' ? <PageTransition><APIPage /></PageTransition> : <div className="p-6">Access denied</div>} />
+          <Route path="/backup" element={<PageTransition><BackupPage /></PageTransition>} />
+          <Route path="/blockchain" element={<PageTransition><BlockchainPage /></PageTransition>} />
+          <Route path="/trustees" element={<PageTransition><TrusteesPage /></PageTransition>} />
+          <Route path="/beneficiaries" element={<PageTransition><BeneficiariesPage /></PageTransition>} />
+          <Route path="/releases" element={<PageTransition><ReleasesPage /></PageTransition>} />
+          <Route path="/support" element={<PageTransition><SupportPage /></PageTransition>} />
+          <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
     </Layout>
   );
 }

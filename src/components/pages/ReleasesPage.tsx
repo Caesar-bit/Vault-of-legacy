@@ -1,8 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchReleases, addRelease, triggerRelease } from '../../utils/api';
+import {
+  fetchReleases,
+  addRelease,
+  triggerRelease,
+  fetchVaultStructure,
+  fetchBeneficiaries,
+  fetchTrustees,
+} from '../../utils/api';
 import { AnimatedAlert } from '../AnimatedAlert';
+import { VaultItem } from '../FileManager';
+import { Clock, CheckCircle } from 'lucide-react';
 
 interface ReleaseItem {
   id: string;
@@ -10,8 +19,27 @@ interface ReleaseItem {
   releaseDate: string;
   triggerEvent: string;
   beneficiaryEmail: string;
+  trusteeEmail?: string;
   requiresApproval: boolean;
   released: boolean;
+}
+
+interface FlatFile {
+  path: string;
+  display: string;
+}
+
+function flattenFiles(items: VaultItem[], prefix = ''): FlatFile[] {
+  let list: FlatFile[] = [];
+  for (const item of items) {
+    const current = prefix ? `${prefix}/${item.name}` : item.name;
+    if (item.type === 'folder') {
+      list = list.concat(flattenFiles(item.children || [], current));
+    } else if (item.path) {
+      list.push({ path: item.path, display: current });
+    }
+  }
+  return list;
 }
 
 export function ReleasesPage() {
@@ -21,9 +49,22 @@ export function ReleasesPage() {
   const [releaseDate, setReleaseDate] = useState('');
   const [triggerEvent, setTriggerEvent] = useState('date');
   const [beneficiaryEmail, setBeneficiaryEmail] = useState('');
+  const [trusteeEmail, setTrusteeEmail] = useState('');
+  const [vaultFiles, setVaultFiles] = useState<FlatFile[]>([]);
+  const [beneficiaries, setBeneficiaries] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [trustees, setTrustees] = useState<{ id: string; name: string; email: string }[]>([]);
   const [alert, setAlert] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const connectionRef = useRef<HubConnection | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await fetchReleases(token!);
+      setReleases(data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!isAuthenticated || !token) return;
@@ -40,25 +81,47 @@ export function ReleasesPage() {
     return () => {
       connection.stop();
     };
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, load]);
 
-  const load = async () => {
-    try {
-      const data = await fetchReleases(token!);
-      setReleases(data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+    const loadRefs = async () => {
+      try {
+        const [structure, bens, trs] = await Promise.all([
+          fetchVaultStructure(token),
+          fetchBeneficiaries(token),
+          fetchTrustees(token),
+        ]);
+        setVaultFiles(flattenFiles(structure));
+        setBeneficiaries(bens);
+        setTrustees(trs);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    loadRefs();
+  }, [isAuthenticated, token]);
 
   const onAdd = async () => {
     if (!token) return;
+    if (!filePath || !releaseDate || (!beneficiaryEmail && !trusteeEmail)) {
+      setAlert('Please select item, date, and recipient or trustee');
+      return;
+    }
     try {
-      await addRelease(token, { filePath, releaseDate, triggerEvent, beneficiaryEmail, requiresApproval: false });
+      await addRelease(token, {
+        filePath,
+        releaseDate,
+        triggerEvent,
+        beneficiaryEmail,
+        trusteeEmail,
+        requiresApproval: false,
+      });
       setFilePath('');
       setReleaseDate('');
       setTriggerEvent('date');
       setBeneficiaryEmail('');
+      setTrusteeEmail('');
       setAlert('Release scheduled');
       load();
     } catch (e) {
@@ -101,10 +164,25 @@ export function ReleasesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[
-          { label: 'Pending', value: stats.pending, color: 'from-yellow-100 to-yellow-50' },
-          { label: 'Completed', value: stats.completed, color: 'from-green-100 to-green-50' },
+          {
+            label: 'Pending',
+            value: stats.pending,
+            color: 'from-yellow-100 to-yellow-50',
+            icon: <Clock className="h-7 w-7 text-yellow-600" />,
+          },
+          {
+            label: 'Completed',
+            value: stats.completed,
+            color: 'from-green-100 to-green-50',
+            icon: <CheckCircle className="h-7 w-7 text-green-600" />,
+          },
         ].map((stat, i) => (
-          <div key={stat.label} className={`bg-gradient-to-br ${stat.color} p-6 rounded-2xl border border-white/40 shadow flex items-center space-x-4 glassy-card animate-fade-in`} style={{ animationDelay: `${i * 80}ms` }}>
+          <div
+            key={stat.label}
+            className={`bg-gradient-to-br ${stat.color} p-6 rounded-2xl border border-white/40 shadow flex items-center space-x-4 glassy-card animate-fade-in`}
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            <div className="p-3 bg-white/60 rounded-xl shadow">{stat.icon}</div>
             <div>
               <p className="text-sm font-medium text-gray-600">{stat.label}</p>
               <p className="text-2xl font-extrabold text-gray-900 tracking-tight">{stat.value}</p>
@@ -115,16 +193,61 @@ export function ReleasesPage() {
 
       <div className="glassy-card p-6 rounded-3xl border border-white/30 shadow-xl space-y-4">
         <h3 className="text-lg font-bold text-gray-900">Schedule Release</h3>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-          <input className="border rounded px-3 py-2 bg-white/80" placeholder="File Path" value={filePath} onChange={(e) => setFilePath(e.target.value)} />
-          <input type="date" className="border rounded px-3 py-2 bg-white/80" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-          <select className="border rounded px-3 py-2 bg-white/80" value={triggerEvent} onChange={(e) => setTriggerEvent(e.target.value)}>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+          <select
+            className="border rounded px-3 py-2 bg-white/80"
+            value={filePath}
+            onChange={(e) => setFilePath(e.target.value)}
+          >
+            <option value="">Select Item</option>
+            {vaultFiles.map((f) => (
+              <option key={f.path} value={f.path}>
+                {f.display}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            className="border rounded px-3 py-2 bg-white/80"
+            value={releaseDate}
+            onChange={(e) => setReleaseDate(e.target.value)}
+          />
+          <select
+            className="border rounded px-3 py-2 bg-white/80"
+            value={triggerEvent}
+            onChange={(e) => setTriggerEvent(e.target.value)}
+          >
             <option value="date">Date</option>
             <option value="inactivity">Inactivity</option>
             <option value="trustee">Trustee Approval</option>
           </select>
-          <input className="border rounded px-3 py-2 bg-white/80" placeholder="Beneficiary" value={beneficiaryEmail} onChange={(e) => setBeneficiaryEmail(e.target.value)} />
-          <button onClick={onAdd} className="bg-primary-600 text-white rounded px-4 py-2">Add</button>
+          <select
+            className="border rounded px-3 py-2 bg-white/80"
+            value={beneficiaryEmail}
+            onChange={(e) => setBeneficiaryEmail(e.target.value)}
+          >
+            <option value="">Beneficiary</option>
+            {beneficiaries.map((b) => (
+              <option key={b.id} value={b.email}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="border rounded px-3 py-2 bg-white/80"
+            value={trusteeEmail}
+            onChange={(e) => setTrusteeEmail(e.target.value)}
+          >
+            <option value="">Trustee</option>
+            {trustees.map((t) => (
+              <option key={t.id} value={t.email}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <button onClick={onAdd} className="bg-primary-600 text-white rounded px-4 py-2">
+            Add
+          </button>
         </div>
       </div>
 
@@ -142,7 +265,10 @@ export function ReleasesPage() {
             <div>
               <p className="font-semibold text-gray-900">{r.filePath}</p>
               <p className="text-sm text-gray-600">Release: {new Date(r.releaseDate).toLocaleDateString()} | {r.triggerEvent}</p>
-              <p className="text-sm text-gray-600">Beneficiary: {r.beneficiaryEmail}</p>
+              <p className="text-sm text-gray-600">Beneficiary: {r.beneficiaryEmail || '—'}</p>
+              {r.trusteeEmail && (
+                <p className="text-sm text-gray-600">Trustee: {r.trusteeEmail}</p>
+              )}
             </div>
             {!r.released && (
               <button onClick={() => onTrigger(r.id)} className="text-primary-600 hover:underline">Trigger</button>
