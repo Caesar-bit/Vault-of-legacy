@@ -9,6 +9,7 @@ import {
   Phone,
   Heart,
   Search,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -20,6 +21,8 @@ import {
 } from '../../utils/api';
 import { AnimatedAlert } from '../AnimatedAlert';
 import { AddBeneficiaryModal } from '../AddBeneficiaryModal';
+import { BeneficiaryForm } from '../BeneficiaryForm';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface BeneficiaryItem {
   id: string;
@@ -38,6 +41,7 @@ export function BeneficiariesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<BeneficiaryItem | null>(null);
   const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   const stats = useMemo(() => {
     const verified = beneficiaries.filter((b) => b.verified).length;
@@ -82,6 +86,16 @@ export function BeneficiariesPage() {
     }
   };
 
+  const handleCreate = async (data: {
+    name: string;
+    email: string;
+    phone: string;
+    relationship: string;
+  }) => {
+    await saveBeneficiary(data);
+    setShowForm(false);
+  };
+
   const onRemove = async (id: string) => {
     if (!token) return;
     try {
@@ -123,10 +137,38 @@ export function BeneficiariesPage() {
       </div>
       <div className="glassy-card p-6 rounded-3xl border border-white/30 shadow-xl flex justify-between items-center">
         <h3 className="text-lg font-bold">Beneficiaries</h3>
-        <button onClick={() => { setEditing(null); setShowModal(true); }} className="flex items-center gap-1 bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700">
-          <PlusCircle className="h-5 w-5" /> Add
+        <button
+          onClick={() => {
+            setEditing(null);
+            setShowForm((s) => !s);
+          }}
+          className="flex items-center gap-1 bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
+        >
+          {showForm ? (
+            <>
+              <X className="h-5 w-5" /> Close
+            </>
+          ) : (
+            <>
+              <PlusCircle className="h-5 w-5" /> Add
+            </>
+          )}
         </button>
       </div>
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="glassy-card p-6 rounded-3xl border border-white/30 shadow-xl mt-4">
+              <BeneficiaryForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="stat-card">
           <User className="w-6 h-6 text-indigo-600" />
