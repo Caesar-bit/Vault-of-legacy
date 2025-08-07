@@ -50,42 +50,45 @@ export function BeneficiaryForm({ initial, onSubmit, onCancel }: BeneficiaryForm
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <label className="block">
-        <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+        <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
           <User className="h-4 w-4" /> Name
         </span>
         <input
-          className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+          className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all duration-200"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          placeholder="Enter beneficiary's full name"
         />
       </label>
       <label className="block">
-        <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+        <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
           <Mail className="h-4 w-4" /> Email
         </span>
         <input
-          className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+          className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all duration-200"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          placeholder="Enter email address"
         />
       </label>
       <label className="block">
-        <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+        <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
           <Phone className="h-4 w-4" /> Phone
         </span>
         <input
-          className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+          className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all duration-200"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
+          placeholder="Enter phone number (optional)"
         />
       </label>
       <label className="block">
-        <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+        <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
           <Heart className="h-4 w-4" /> Relationship
         </span>
         <select
-          className="mt-1 w-full rounded-lg border-gray-300 focus:ring-primary-500"
+          className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all duration-200"
           value={relationship}
           onChange={(e) => setRelationship(e.target.value)}
         >
@@ -101,12 +104,18 @@ export function BeneficiaryForm({ initial, onSubmit, onCancel }: BeneficiaryForm
           <option value="Other">Other</option>
         </select>
       </label>
-      {error && <div className="text-red-500 text-sm pt-1">{error}</div>}
-      <div className="flex justify-end gap-2 pt-2">
+      
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+      
+      <div className="flex justify-end gap-3 pt-2">
         {onCancel && (
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+            className="px-6 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
             onClick={onCancel}
           >
             Cancel
@@ -114,12 +123,11 @@ export function BeneficiaryForm({ initial, onSubmit, onCancel }: BeneficiaryForm
         )}
         <button
           type="submit"
-          className="px-4 py-2 rounded bg-primary-600 text-white hover:bg-primary-700"
+          className="px-6 py-2 rounded-lg bg-gradient-to-r from-rose-600 to-pink-600 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
         >
-          {initial ? 'Save' : 'Add'}
+          {initial ? 'Save Changes' : 'Add Beneficiary'}
         </button>
       </div>
     </form>
   );
 }
-
