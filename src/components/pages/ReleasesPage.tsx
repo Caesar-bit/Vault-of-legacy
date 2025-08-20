@@ -120,6 +120,8 @@ export function ReleasesPage() {
     triggerEvent: string;
     beneficiaryEmail: string;
     trusteeEmail?: string;
+    inactivityPeriod?: string;
+    emergencyReason?: string;
   }) => {
     if (!token) return;
     try {
@@ -169,6 +171,8 @@ export function ReleasesPage() {
         return <Clock className="h-4 w-4" />;
       case 'trustee':
         return <Shield className="h-4 w-4" />;
+      case 'emergency':
+        return <AlertTriangle className="h-4 w-4" />;
       default:
         return <Calendar className="h-4 w-4" />;
     }
@@ -182,6 +186,8 @@ export function ReleasesPage() {
         return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'trustee':
         return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'emergency':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }

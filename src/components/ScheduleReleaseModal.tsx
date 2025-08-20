@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Calendar, FileText, Users, Shield, Zap } from 'lucide-react';
+import { X, Calendar, FileText, Users, Shield, Zap, AlertTriangle, Clock } from 'lucide-react';
 
 interface FlatFile { path: string; display: string }
 interface Person { id: string; name: string; email: string }
@@ -16,6 +16,8 @@ interface ScheduleReleaseModalProps {
     triggerEvent: string;
     beneficiaryEmail: string;
     trusteeEmail?: string;
+    inactivityPeriod?: string;
+    emergencyReason?: string;
   }) => Promise<void>;
 }
 
@@ -32,21 +34,83 @@ export function ScheduleReleaseModal({
   const [triggerEvent, setTriggerEvent] = useState('date');
   const [beneficiaryEmail, setBeneficiaryEmail] = useState('');
   const [trusteeEmail, setTrusteeEmail] = useState('');
+  const [inactivityValue, setInactivityValue] = useState('');
+  const [inactivityUnit, setInactivityUnit] = useState('months');
+  const [emergencyReason, setEmergencyReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const computeInactivityDate = (value: number, unit: string) => {
+    const date = new Date();
+    switch (unit) {
+      case 'days':
+        date.setDate(date.getDate() + value);
+        break;
+      case 'years':
+        date.setFullYear(date.getFullYear() + value);
+        break;
+      default:
+        date.setMonth(date.getMonth() + value);
+    }
+    return date.toISOString().split('T')[0];
+  };
+
   const handleSubmit = async () => {
-    if (!filePath || !releaseDate || (!beneficiaryEmail && !trusteeEmail)) {
-      setError('Please select file, date, and recipient');
+    if (!filePath || !beneficiaryEmail) {
+      setError('Please select file and beneficiary');
       return;
     }
-    await onSchedule({ filePath, releaseDate, triggerEvent, beneficiaryEmail, trusteeEmail });
+
+    let finalDate = releaseDate;
+    let inactivityPeriod: string | undefined;
+    let reason: string | undefined;
+
+    if (triggerEvent === 'date') {
+      if (!releaseDate) {
+        setError('Please choose a release date');
+        return;
+      }
+    } else if (triggerEvent === 'inactivity') {
+      if (!inactivityValue) {
+        setError('Please specify inactivity duration');
+        return;
+      }
+      finalDate = computeInactivityDate(parseInt(inactivityValue, 10), inactivityUnit);
+      inactivityPeriod = `${inactivityValue} ${inactivityUnit}`;
+    } else if (triggerEvent === 'trustee') {
+      if (!trusteeEmail) {
+        setError('Trustee approval requires selecting a trustee');
+        return;
+      }
+      finalDate = new Date().toISOString().split('T')[0];
+    } else if (triggerEvent === 'emergency') {
+      if (!emergencyReason) {
+        setError('Please provide an emergency reason');
+        return;
+      }
+      reason = emergencyReason;
+      finalDate = new Date().toISOString().split('T')[0];
+    }
+
+    await onSchedule({
+      filePath,
+      releaseDate: finalDate,
+      triggerEvent,
+      beneficiaryEmail,
+      trusteeEmail,
+      inactivityPeriod,
+      emergencyReason: reason,
+    });
+
     setFilePath('');
     setReleaseDate('');
     setTriggerEvent('date');
     setBeneficiaryEmail('');
     setTrusteeEmail('');
+    setInactivityValue('');
+    setInactivityUnit('months');
+    setEmergencyReason('');
     setError(null);
   };
 
@@ -86,18 +150,6 @@ export function ScheduleReleaseModal({
 
           <label className="block">
             <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-              <Calendar className="h-4 w-4" /> Release Date
-            </span>
-            <input
-              type="date"
-              className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              value={releaseDate}
-              onChange={(e) => setReleaseDate(e.target.value)}
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
               <Zap className="h-4 w-4" /> Trigger Event
             </span>
             <select
@@ -108,8 +160,65 @@ export function ScheduleReleaseModal({
               <option value="date">Specific Date</option>
               <option value="inactivity">Account Inactivity</option>
               <option value="trustee">Trustee Approval</option>
+              <option value="emergency">Emergency Release</option>
             </select>
           </label>
+
+          {triggerEvent === 'date' && (
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <Calendar className="h-4 w-4" /> Release Date
+              </span>
+              <input
+                type="date"
+                className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                value={releaseDate}
+                onChange={(e) => setReleaseDate(e.target.value)}
+              />
+            </label>
+          )}
+
+          {triggerEvent === 'inactivity' && (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4" /> Inactivity Period
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  value={inactivityValue}
+                  onChange={(e) => setInactivityValue(e.target.value)}
+                />
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2 invisible">unit</span>
+                <select
+                  className="px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  value={inactivityUnit}
+                  onChange={(e) => setInactivityUnit(e.target.value)}
+                >
+                  <option value="days">Days</option>
+                  <option value="months">Months</option>
+                  <option value="years">Years</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {triggerEvent === 'emergency' && (
+            <label className="block md:col-span-2">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4" /> Emergency Reason
+              </span>
+              <textarea
+                className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                value={emergencyReason}
+                onChange={(e) => setEmergencyReason(e.target.value)}
+              />
+            </label>
+          )}
 
           <label className="block">
             <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
@@ -129,23 +238,25 @@ export function ScheduleReleaseModal({
             </select>
           </label>
 
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4" /> Trustee (Optional)
-            </span>
-            <select
-              className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              value={trusteeEmail}
-              onChange={(e) => setTrusteeEmail(e.target.value)}
-            >
-              <option value="">Select Trustee</option>
-              {trustees.map((t) => (
-                <option key={t.id} value={t.email}>
-                  {t.name} ({t.email})
-                </option>
-              ))}
-            </select>
-          </label>
+          {(triggerEvent === 'trustee' || triggerEvent === 'date') && (
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4" /> Trustee {triggerEvent === 'trustee' ? '(Required)' : '(Optional)'}
+              </span>
+              <select
+                className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                value={trusteeEmail}
+                onChange={(e) => setTrusteeEmail(e.target.value)}
+              >
+                <option value="">Select Trustee</option>
+                {trustees.map((t) => (
+                  <option key={t.id} value={t.email}>
+                    {t.name} ({t.email})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         {error && (
