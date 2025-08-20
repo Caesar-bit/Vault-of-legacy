@@ -20,7 +20,7 @@ import {
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { ActivityLog } from '../types';
-import { getRecentActivity, getStats, getAssetBreakdown } from '../utils/api';
+import { getRecentActivity, getStats, getAssetBreakdown, clearRecentActivity } from '../utils/api';
 import type { LucideIcon } from 'lucide-react';
 
 interface Stat {
@@ -141,6 +141,16 @@ export function Dashboard() {
         break;
       default:
         break;
+    }
+  };
+
+  const handleClearActivity = async () => {
+    if (!token) return;
+    try {
+      await clearRecentActivity(token);
+      setRecent([]);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -298,7 +308,15 @@ export function Dashboard() {
       {/* Recent Activity */}
       <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl border border-gray-100 dark:border-gray-800">
         <div className="p-4 sm:p-6">
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-primary-100 mb-4 sm:mb-6">Recent Activity</h3>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-primary-100">Recent Activity</h3>
+            <button
+              onClick={handleClearActivity}
+              className="text-xs sm:text-sm text-red-600 hover:text-red-800 font-semibold px-2 sm:px-3 py-1 rounded-lg hover:bg-red-50 transition-colors duration-200"
+            >
+              Clear Activity
+            </button>
+          </div>
           <div className="flow-root">
             <ul className="-my-4 sm:-my-5 divide-y divide-gray-200 dark:divide-gray-800">
               {recent.map((activity) => {

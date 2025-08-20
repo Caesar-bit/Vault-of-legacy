@@ -39,5 +39,17 @@ namespace VaultBackend.Controllers
                 .ToListAsync();
             return Ok(items);
         }
+
+        [HttpDelete("recent")]
+        public async Task<IActionResult> ClearRecent()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var logs = _db.ActivityLogs.Where(a => a.UserId == userId);
+            _db.ActivityLogs.RemoveRange(logs);
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
     }
 }

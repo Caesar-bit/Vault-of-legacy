@@ -99,6 +99,14 @@ export async function getRecentActivity(token: string) {
   return res.json();
 }
 
+export async function clearRecentActivity(token: string) {
+  const res = await fetch(`${API_BASE}/api/activity/recent`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
 
 export async function getUserData(token: string, type: string) {
   const res = await fetch(`${API_BASE}/api/userdata/${type}`, {

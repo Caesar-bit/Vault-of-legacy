@@ -9,6 +9,7 @@ import { User, AuthState } from "../types";
 import { EncryptionService } from "../utils/encryption";
 import { blockchain } from "../utils/blockchain";
 import { authenticateFingerprint } from "../utils/fingerprint";
+import { clearRecentActivity } from "../utils/api";
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -149,6 +150,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
       localStorage.setItem("vault_user", encryptedUser);
 
+      try {
+        await clearRecentActivity(data.token);
+      } catch (err) {
+        console.error(err);
+      }
+
       blockchain.addBlock({
         type: "user_login",
         userId: user.id,
@@ -182,6 +189,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('vault_token', token);
       const encryptedUser = EncryptionService.encrypt(JSON.stringify(user));
       localStorage.setItem('vault_user', encryptedUser);
+      try {
+        await clearRecentActivity(token);
+      } catch (err) {
+        console.error(err);
+      }
       setAuthState({ user, isAuthenticated: true, isLoading: false, error: null, token });
     } catch (err) {
       console.error(err);
