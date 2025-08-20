@@ -3,7 +3,6 @@ import {
   User,
   CheckCircle,
   Mail,
-  PlusCircle,
   Trash2,
   Pencil,
   Phone,
@@ -11,12 +10,8 @@ import {
   Search,
   X,
   Plus,
-  Filter,
   Users,
-  Shield,
   Clock,
-  Eye,
-  MoreVertical
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
