@@ -5,12 +5,50 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fetchVaultStructure, saveVaultStructure } from '../../utils/api';
 
 export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
 
   const [structure, setStructure] = useState<VaultItem[]>([]);
   const loadedRef = useRef(false);
   const skipSave = useRef(true);
   const skipLog = useRef(false);
+  const [requiresPin, setRequiresPin] = useState(false);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    const stored = localStorage.getItem(`vault_settings_${user.id}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.security?.vaultPin) {
+          setRequiresPin(true);
+        }
+      } catch {
+        /* ignore malformed storage */
+      }
+    }
+  }, [user]);
+
+  const handlePinCheck = () => {
+    if (!user) return;
+    const stored = localStorage.getItem(`vault_settings_${user.id}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.security?.vaultPin === btoa(pinInput)) {
+          setPinVerified(true);
+          setPinError('');
+          setPinInput('');
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    setPinError('Incorrect PIN');
+  };
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -36,6 +74,29 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
     saveVaultStructure(token, structure, !skipLog.current).catch(console.error);
     skipLog.current = false;
   }, [structure, isAuthenticated, token]);
+
+  if (requiresPin && !pinVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-6 rounded-lg shadow-md w-80">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 text-center">Enter Vault PIN</h2>
+          <input
+            type="password"
+            value={pinInput}
+            onChange={e => setPinInput(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {pinError && <p className="text-sm text-red-600 mb-2">{pinError}</p>}
+          <button
+            onClick={handlePinCheck}
+            className="w-full inline-flex justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-purple-50 to-orange-50">

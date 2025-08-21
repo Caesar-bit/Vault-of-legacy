@@ -58,7 +58,7 @@ export function SettingsPage() {
       bio: '',
       avatar: user?.avatar || '',
     },
-    security: { twoFactorEnabled: false, passwordLastChanged: "", sessionTimeout: 30, loginNotifications: false, fingerprintEnabled: false },
+    security: { twoFactorEnabled: false, passwordLastChanged: "", sessionTimeout: 30, loginNotifications: false, fingerprintEnabled: false, vaultPin: "" },
     notifications: { emailNotifications: false, pushNotifications: false, weeklyDigest: false, securityAlerts: false, collaborationUpdates: false },
     appearance: { theme: "light", language: "en", timezone: "UTC", dateFormat: "MM/DD/YYYY" },
     data: { storageUsed: 0, storageLimit: 100, autoBackup: false, compressionEnabled: false, retentionPeriod: 0 },
@@ -78,6 +78,7 @@ export function SettingsPage() {
         avatar: user.avatar || defaultSettings.profile.avatar,
       },
     };
+    base.security = { ...defaultSettings.security, ...base.security };
     (async () => {
       try {
         const enabled = token ? await hasFingerprint(token) : false;
@@ -91,6 +92,7 @@ export function SettingsPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [passwordInputs, setPasswordInputs] = useState({ current: '', new: '', confirm: '' });
+  const [pinInputs, setPinInputs] = useState({ current: '', new: '', confirm: '' });
 
   useEffect(() => {
     if (!alert) return;
@@ -208,6 +210,32 @@ export function SettingsPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handlePinUpdate = () => {
+    if (settings.security.vaultPin && btoa(pinInputs.current) !== settings.security.vaultPin) {
+      setAlert({ message: 'Current PIN incorrect', type: 'error' });
+      return;
+    }
+    if (!pinInputs.new || pinInputs.new !== pinInputs.confirm) {
+      setAlert({ message: 'PINs do not match', type: 'error' });
+      return;
+    }
+    setSettings(prev => ({
+      ...prev,
+      security: { ...prev.security, vaultPin: btoa(pinInputs.new) },
+    }));
+    setPinInputs({ current: '', new: '', confirm: '' });
+    setAlert({ message: 'PIN updated', type: 'success' });
+  };
+
+  const handlePinRemove = () => {
+    setSettings(prev => ({
+      ...prev,
+      security: { ...prev.security, vaultPin: '' },
+    }));
+    setPinInputs({ current: '', new: '', confirm: '' });
+    setAlert({ message: 'PIN removed', type: 'success' });
   };
 
   const handleToggleTwoFactor = async () => {
@@ -507,6 +535,64 @@ export function SettingsPage() {
               >
                 {isSaving ? 'Updating...' : 'Update Password'}
               </button>
+            </div>
+          </div>
+
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <h4 className="font-medium text-gray-900 mb-2">Vault PIN</h4>
+            <p className="text-sm text-gray-600 mb-4">
+              {settings.security.vaultPin
+                ? 'Change the PIN required to access your vault'
+                : 'Set a PIN to require before opening your vault'}
+            </p>
+            <div className="space-y-3">
+              {settings.security.vaultPin && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current PIN</label>
+                  <input
+                    type="password"
+                    value={pinInputs.current}
+                    onChange={e => setPinInputs(p => ({ ...p, current: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New PIN</label>
+                  <input
+                    type="password"
+                    value={pinInputs.new}
+                    onChange={e => setPinInputs(p => ({ ...p, new: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm PIN</label>
+                  <input
+                    type="password"
+                    value={pinInputs.confirm}
+                    onChange={e => setPinInputs(p => ({ ...p, confirm: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handlePinUpdate}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  {settings.security.vaultPin ? 'Update PIN' : 'Set PIN'}
+                </button>
+                {settings.security.vaultPin && (
+                  <button
+                    onClick={handlePinRemove}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100"
+                  >
+                    Remove PIN
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
