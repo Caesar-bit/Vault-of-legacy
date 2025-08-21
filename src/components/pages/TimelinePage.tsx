@@ -74,6 +74,18 @@ export function TimelinePage() {
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
+  const yearsCovered = (() => {
+    if (events.length === 0) return 0;
+    const years = events.map(e => new Date(e.date).getFullYear());
+    return Math.max(...years) - Math.min(...years) + 1;
+  })();
+
+  const uniqueLocations = new Set(
+    events.map(e => e.location).filter(Boolean)
+  ).size;
+
+  const totalAssets = events.reduce((sum, e) => sum + e.assets.length, 0);
+
   return (
     <div className="relative min-h-screen pb-20">
       {/* Glassy Header */}
@@ -112,7 +124,7 @@ export function TimelinePage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Years Covered</p>
-            <p className="text-2xl font-extrabold text-gray-900">25</p>
+            <p className="text-2xl font-extrabold text-gray-900">{yearsCovered}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -121,7 +133,7 @@ export function TimelinePage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Locations</p>
-            <p className="text-2xl font-extrabold text-gray-900">12</p>
+            <p className="text-2xl font-extrabold text-gray-900">{uniqueLocations}</p>
           </div>
         </div>
         <div className="glass-card flex items-center">
@@ -130,7 +142,7 @@ export function TimelinePage() {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Assets</p>
-            <p className="text-2xl font-extrabold text-gray-900">156</p>
+            <p className="text-2xl font-extrabold text-gray-900">{totalAssets}</p>
           </div>
         </div>
       </div>
