@@ -7,6 +7,7 @@ export interface User {
   avatar?: string;
   createdAt: Date;
   lastLogin?: Date;
+  hasVaultPin: boolean;
 }
 
 export interface Asset {

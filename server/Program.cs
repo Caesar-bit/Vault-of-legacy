@@ -71,6 +71,7 @@ using (var scope = app.Services.CreateScope())
         var hasRole = false;
         var hasStatus = false;
         var hasAvatar = false;
+        var hasVaultPinHash = false;
         while (reader.Read())
         {
             var column = reader.GetString(1);
@@ -93,6 +94,10 @@ using (var scope = app.Services.CreateScope())
             if (column == "Avatar")
             {
                 hasAvatar = true;
+            }
+            if (column == "VaultPinHash")
+            {
+                hasVaultPinHash = true;
             }
         }
 
@@ -134,6 +139,13 @@ using (var scope = app.Services.CreateScope())
         {
             using var alter = conn.CreateCommand();
             alter.CommandText = "ALTER TABLE Users ADD COLUMN Avatar TEXT;";
+            alter.ExecuteNonQuery();
+        }
+
+        if (!hasVaultPinHash)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Users ADD COLUMN VaultPinHash TEXT;";
             alter.ExecuteNonQuery();
         }
     }

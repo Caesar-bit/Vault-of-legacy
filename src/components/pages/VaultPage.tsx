@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { FolderPlus, Upload } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchVaultStructure, saveVaultStructure } from '../../utils/api';
+import { fetchVaultStructure, saveVaultStructure, verifyVaultPin } from '../../utils/api';
 
 export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
   const { isAuthenticated, token, user } = useAuth();
@@ -17,37 +17,19 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
   const [pinError, setPinError] = useState('');
 
   useEffect(() => {
-    if (!user) return;
-    const stored = localStorage.getItem(`vault_settings_${user.id}`);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed.security?.vaultPin) {
-          setRequiresPin(true);
-        }
-      } catch {
-        /* ignore malformed storage */
-      }
-    }
+    setRequiresPin(!!user?.hasVaultPin);
   }, [user]);
 
-  const handlePinCheck = () => {
-    if (!user) return;
-    const stored = localStorage.getItem(`vault_settings_${user.id}`);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed.security?.vaultPin === btoa(pinInput)) {
-          setPinVerified(true);
-          setPinError('');
-          setPinInput('');
-          return;
-        }
-      } catch {
-        /* ignore */
-      }
+  const handlePinCheck = async () => {
+    if (!token) return;
+    try {
+      await verifyVaultPin(token, pinInput);
+      setPinVerified(true);
+      setPinError('');
+      setPinInput('');
+    } catch {
+      setPinError('Incorrect PIN');
     }
-    setPinError('Incorrect PIN');
   };
 
   useEffect(() => {
@@ -74,6 +56,28 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
     saveVaultStructure(token, structure, !skipLog.current).catch(console.error);
     skipLog.current = false;
   }, [structure, isAuthenticated, token]);
+
+  useEffect(() => {
+    if (!pinVerified) return;
+    let timeout: ReturnType<typeof setTimeout>;
+    const reset = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setPinVerified(false), 5 * 60 * 1000);
+    };
+    const handleVisibility = () => {
+      if (document.hidden) setPinVerified(false);
+    };
+    reset();
+    window.addEventListener('mousemove', reset);
+    window.addEventListener('keydown', reset);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('mousemove', reset);
+      window.removeEventListener('keydown', reset);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [pinVerified]);
 
   if (requiresPin && !pinVerified) {
     return (

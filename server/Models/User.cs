@@ -25,6 +25,8 @@ namespace VaultBackend.Models
 
         public DateTime? LastLogin { get; set; }
 
+        public string? VaultPinHash { get; set; }
+
         // Older databases may not have populated this column so make it nullable
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
     }

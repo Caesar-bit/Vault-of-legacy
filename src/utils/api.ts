@@ -107,6 +107,42 @@ export async function clearRecentActivity(token: string) {
   if (!res.ok) throw new Error(await res.text());
 }
 
+export async function setVaultPin(token: string, newPin: string, currentPin?: string) {
+  const res = await fetch(`${API_BASE}/api/account/pin`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ currentPin, newPin }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function removeVaultPin(token: string, pin: string) {
+  const res = await fetch(`${API_BASE}/api/account/pin`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ pin }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function verifyVaultPin(token: string, pin: string) {
+  const res = await fetch(`${API_BASE}/api/account/pin/verify`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ pin }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
 
 export async function getUserData(token: string, type: string) {
   const res = await fetch(`${API_BASE}/api/userdata/${type}`, {
