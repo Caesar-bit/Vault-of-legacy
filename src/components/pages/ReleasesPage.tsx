@@ -35,6 +35,8 @@ interface ReleaseItem {
   triggerEvent: string;
   beneficiaryEmail: string;
   trusteeEmail?: string;
+  inactivityPeriod?: string;
+  emergencyReason?: string;
   requiresApproval: boolean;
   released: boolean;
 }
@@ -125,7 +127,7 @@ export function ReleasesPage() {
   }) => {
     if (!token) return;
     try {
-      await addRelease(token, { ...data, requiresApproval: false });
+      await addRelease(token, { ...data, requiresApproval: data.triggerEvent === 'trustee' });
       setAlert('Release scheduled successfully');
       setShowScheduleModal(false);
       load();
