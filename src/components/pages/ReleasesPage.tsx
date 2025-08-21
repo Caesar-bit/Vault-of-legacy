@@ -11,19 +11,15 @@ import {
 } from '../../utils/api';
 import { AnimatedAlert } from '../AnimatedAlert';
 import { VaultItem } from '../FileManager';
+import { ScheduleReleaseModal } from '../ScheduleReleaseModal';
 import { 
-  Clock, 
-  CheckCircle, 
-  Plus, 
-  Calendar, 
-  Users, 
-  FileText, 
-  Send, 
-  Filter,
+  Clock,
+  CheckCircle,
+  Plus,
+  Calendar,
+  Users,
+  Send,
   Search,
-  Eye,
-  Play,
-  Pause,
   MoreVertical,
   AlertTriangle,
   Shield,
@@ -39,6 +35,8 @@ interface ReleaseItem {
   triggerEvent: string;
   beneficiaryEmail: string;
   trusteeEmail?: string;
+  inactivityPeriod?: string;
+  emergencyReason?: string;
   requiresApproval: boolean;
   released: boolean;
 }
@@ -64,19 +62,13 @@ function flattenFiles(items: VaultItem[], prefix = ''): FlatFile[] {
 export function ReleasesPage() {
   const { token, isAuthenticated } = useAuth();
   const [releases, setReleases] = useState<ReleaseItem[]>([]);
-  const [filePath, setFilePath] = useState('');
-  const [releaseDate, setReleaseDate] = useState('');
-  const [triggerEvent, setTriggerEvent] = useState('date');
-  const [beneficiaryEmail, setBeneficiaryEmail] = useState('');
-  const [trusteeEmail, setTrusteeEmail] = useState('');
   const [vaultFiles, setVaultFiles] = useState<FlatFile[]>([]);
   const [beneficiaries, setBeneficiaries] = useState<{ id: string; name: string; email: string }[]>([]);
   const [trustees, setTrustees] = useState<{ id: string; name: string; email: string }[]>([]);
   const [alert, setAlert] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedReleases, setSelectedReleases] = useState<string[]>([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const connectionRef = useRef<HubConnection | null>(null);
 
   const load = useCallback(async () => {
@@ -124,28 +116,20 @@ export function ReleasesPage() {
     loadRefs();
   }, [isAuthenticated, token]);
 
-  const onAdd = async () => {
+  const handleSchedule = async (data: {
+    filePath: string;
+    releaseDate: string;
+    triggerEvent: string;
+    beneficiaryEmail: string;
+    trusteeEmail?: string;
+    inactivityPeriod?: string;
+    emergencyReason?: string;
+  }) => {
     if (!token) return;
-    if (!filePath || !releaseDate || (!beneficiaryEmail && !trusteeEmail)) {
-      setAlert('Please select file, date, and recipient');
-      return;
-    }
     try {
-      await addRelease(token, {
-        filePath,
-        releaseDate,
-        triggerEvent,
-        beneficiaryEmail,
-        trusteeEmail,
-        requiresApproval: false,
-      });
-      setFilePath('');
-      setReleaseDate('');
-      setTriggerEvent('date');
-      setBeneficiaryEmail('');
-      setTrusteeEmail('');
-      setShowCreateForm(false);
+      await addRelease(token, { ...data, requiresApproval: data.triggerEvent === 'trustee' });
       setAlert('Release scheduled successfully');
+      setShowScheduleModal(false);
       load();
     } catch (e) {
       console.error(e);
@@ -189,6 +173,8 @@ export function ReleasesPage() {
         return <Clock className="h-4 w-4" />;
       case 'trustee':
         return <Shield className="h-4 w-4" />;
+      case 'emergency':
+        return <AlertTriangle className="h-4 w-4" />;
       default:
         return <Calendar className="h-4 w-4" />;
     }
@@ -202,6 +188,8 @@ export function ReleasesPage() {
         return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'trustee':
         return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'emergency':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -214,6 +202,14 @@ export function ReleasesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-100">
       {alert && <AnimatedAlert message={alert} type="success" onClose={() => setAlert(null)} />}
+      <ScheduleReleaseModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        vaultFiles={vaultFiles}
+        beneficiaries={beneficiaries}
+        trustees={trustees}
+        onSchedule={handleSchedule}
+      />
 
       {/* Modern Hero Section */}
       <div className="relative overflow-hidden">
@@ -320,7 +316,7 @@ export function ReleasesPage() {
               </select>
 
               <button
-                onClick={() => setShowCreateForm(!showCreateForm)}
+                onClick={() => setShowScheduleModal(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
               >
                 <Plus className="h-5 w-5" />
@@ -329,115 +325,6 @@ export function ReleasesPage() {
             </div>
           </div>
         </motion.div>
-
-        {/* Create Release Form */}
-        <AnimatePresence>
-          {showCreateForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden mb-8"
-            >
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-emerald-600" />
-                    Schedule New Release
-                  </h3>
-                  <button
-                    onClick={() => setShowCreateForm(false)}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">File to Release</label>
-                    <select
-                      className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      value={filePath}
-                      onChange={(e) => setFilePath(e.target.value)}
-                    >
-                      <option value="">Select File</option>
-                      {vaultFiles.map((f) => (
-                        <option key={f.path} value={f.path}>
-                          {f.display}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Release Date</label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      value={releaseDate}
-                      onChange={(e) => setReleaseDate(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Trigger Event</label>
-                    <select
-                      className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      value={triggerEvent}
-                      onChange={(e) => setTriggerEvent(e.target.value)}
-                    >
-                      <option value="date">Specific Date</option>
-                      <option value="inactivity">Account Inactivity</option>
-                      <option value="trustee">Trustee Approval</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Beneficiary</label>
-                    <select
-                      className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      value={beneficiaryEmail}
-                      onChange={(e) => setBeneficiaryEmail(e.target.value)}
-                    >
-                      <option value="">Select Beneficiary</option>
-                      {beneficiaries.map((b) => (
-                        <option key={b.id} value={b.email}>
-                          {b.name} ({b.email})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Trustee (Optional)</label>
-                    <select
-                      className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      value={trusteeEmail}
-                      onChange={(e) => setTrusteeEmail(e.target.value)}
-                    >
-                      <option value="">Select Trustee</option>
-                      {trustees.map((t) => (
-                        <option key={t.id} value={t.email}>
-                          {t.name} ({t.email})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex items-end">
-                    <button
-                      onClick={onAdd}
-                      className="w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-                    >
-                      Schedule Release
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Releases List */}
         <motion.div
@@ -581,7 +468,7 @@ export function ReleasesPage() {
               }
             </p>
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={() => setShowScheduleModal(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
             >
               <Plus className="h-5 w-5" />

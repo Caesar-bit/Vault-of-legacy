@@ -71,6 +71,7 @@ using (var scope = app.Services.CreateScope())
         var hasRole = false;
         var hasStatus = false;
         var hasAvatar = false;
+        var hasVaultPinHash = false;
         while (reader.Read())
         {
             var column = reader.GetString(1);
@@ -93,6 +94,10 @@ using (var scope = app.Services.CreateScope())
             if (column == "Avatar")
             {
                 hasAvatar = true;
+            }
+            if (column == "VaultPinHash")
+            {
+                hasVaultPinHash = true;
             }
         }
 
@@ -134,6 +139,13 @@ using (var scope = app.Services.CreateScope())
         {
             using var alter = conn.CreateCommand();
             alter.CommandText = "ALTER TABLE Users ADD COLUMN Avatar TEXT;";
+            alter.ExecuteNonQuery();
+        }
+
+        if (!hasVaultPinHash)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Users ADD COLUMN VaultPinHash TEXT;";
             alter.ExecuteNonQuery();
         }
     }
@@ -266,7 +278,7 @@ using (var scope = app.Services.CreateScope())
         if (!exists)
         {
             using var create = conn.CreateCommand();
-            create.CommandText = "CREATE TABLE ReleaseSchedules (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, FilePath TEXT NOT NULL, ReleaseDate TEXT NOT NULL, TriggerEvent TEXT NOT NULL, BeneficiaryEmail TEXT, BeneficiaryId TEXT, RequiresApproval INTEGER NOT NULL, Released INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
+            create.CommandText = "CREATE TABLE ReleaseSchedules (Id TEXT PRIMARY KEY, UserId TEXT NOT NULL, FilePath TEXT NOT NULL, ReleaseDate TEXT NOT NULL, TriggerEvent TEXT NOT NULL, BeneficiaryEmail TEXT, BeneficiaryId TEXT, TrusteeEmail TEXT, InactivityPeriod TEXT, EmergencyReason TEXT, RequiresApproval INTEGER NOT NULL, Released INTEGER NOT NULL, CreatedAt TEXT NOT NULL);";
             create.ExecuteNonQuery();
         }
         else
@@ -275,14 +287,39 @@ using (var scope = app.Services.CreateScope())
             info.CommandText = "PRAGMA table_info('ReleaseSchedules');";
             using var reader = info.ExecuteReader();
             var hasBeneficiaryId = false;
+            var hasTrusteeEmail = false;
+            var hasInactivityPeriod = false;
+            var hasEmergencyReason = false;
             while (reader.Read())
             {
-                if (reader.GetString(1) == "BeneficiaryId") hasBeneficiaryId = true;
+                var column = reader.GetString(1);
+                if (column == "BeneficiaryId") hasBeneficiaryId = true;
+                if (column == "TrusteeEmail") hasTrusteeEmail = true;
+                if (column == "InactivityPeriod") hasInactivityPeriod = true;
+                if (column == "EmergencyReason") hasEmergencyReason = true;
             }
             if (!hasBeneficiaryId)
             {
                 using var alter = conn.CreateCommand();
                 alter.CommandText = "ALTER TABLE ReleaseSchedules ADD COLUMN BeneficiaryId TEXT;";
+                alter.ExecuteNonQuery();
+            }
+            if (!hasTrusteeEmail)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE ReleaseSchedules ADD COLUMN TrusteeEmail TEXT;";
+                alter.ExecuteNonQuery();
+            }
+            if (!hasInactivityPeriod)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE ReleaseSchedules ADD COLUMN InactivityPeriod TEXT;";
+                alter.ExecuteNonQuery();
+            }
+            if (!hasEmergencyReason)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE ReleaseSchedules ADD COLUMN EmergencyReason TEXT;";
                 alter.ExecuteNonQuery();
             }
         }

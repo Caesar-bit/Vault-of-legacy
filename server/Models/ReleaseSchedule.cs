@@ -24,6 +24,12 @@ namespace VaultBackend.Models
         public string? BeneficiaryId { get; set; }
         public Beneficiary? Beneficiary { get; set; }
 
+        public string? TrusteeEmail { get; set; }
+
+        public string? InactivityPeriod { get; set; }
+
+        public string? EmergencyReason { get; set; }
+
         public bool RequiresApproval { get; set; } = false;
 
         public bool Released { get; set; } = false;

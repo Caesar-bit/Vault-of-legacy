@@ -2,15 +2,35 @@ import { useEffect, useState, useRef } from 'react';
 import { FolderPlus, Upload } from 'lucide-react';
 import { FileManager, VaultItem } from '../FileManager';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchVaultStructure, saveVaultStructure } from '../../utils/api';
+import { fetchVaultStructure, saveVaultStructure, verifyVaultPin } from '../../utils/api';
 
 export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
 
   const [structure, setStructure] = useState<VaultItem[]>([]);
   const loadedRef = useRef(false);
   const skipSave = useRef(true);
   const skipLog = useRef(false);
+  const [requiresPin, setRequiresPin] = useState(false);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  useEffect(() => {
+    setRequiresPin(!!user?.hasVaultPin);
+  }, [user]);
+
+  const handlePinCheck = async () => {
+    if (!token) return;
+    try {
+      await verifyVaultPin(token, pinInput);
+      setPinVerified(true);
+      setPinError('');
+      setPinInput('');
+    } catch {
+      setPinError('Incorrect PIN');
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -36,6 +56,51 @@ export function VaultPage({ initialPath = [] }: { initialPath?: string[] }) {
     saveVaultStructure(token, structure, !skipLog.current).catch(console.error);
     skipLog.current = false;
   }, [structure, isAuthenticated, token]);
+
+  useEffect(() => {
+    if (!pinVerified) return;
+    let timeout: ReturnType<typeof setTimeout>;
+    const reset = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setPinVerified(false), 5 * 60 * 1000);
+    };
+    const handleVisibility = () => {
+      if (document.hidden) setPinVerified(false);
+    };
+    reset();
+    window.addEventListener('mousemove', reset);
+    window.addEventListener('keydown', reset);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('mousemove', reset);
+      window.removeEventListener('keydown', reset);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [pinVerified]);
+
+  if (requiresPin && !pinVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-6 rounded-lg shadow-md w-80">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 text-center">Enter Vault PIN</h2>
+          <input
+            type="password"
+            value={pinInput}
+            onChange={e => setPinInput(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {pinError && <p className="text-sm text-red-600 mb-2">{pinError}</p>}
+          <button
+            onClick={handlePinCheck}
+            className="w-full inline-flex justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-purple-50 to-orange-50">

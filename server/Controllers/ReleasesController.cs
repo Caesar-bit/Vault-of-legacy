@@ -53,6 +53,11 @@ namespace VaultBackend.Controllers
                 }
             }
 
+            if (schedule.TriggerEvent == "trustee")
+            {
+                schedule.RequiresApproval = true;
+            }
+
             _db.ReleaseSchedules.Add(schedule);
             await _db.SaveChangesAsync();
             await _logger.LogAsync(userId, "Scheduled release", schedule.FilePath);

@@ -79,7 +79,7 @@ namespace VaultBackend.Controllers
             var token = _tokens.GenerateToken(user);
             return Ok(new
             {
-                user = new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin },
+                user = new { user.Id, user.Email, user.Name, user.Role, user.Status, user.CreatedAt, user.LastLogin, user.Avatar, HasVaultPin = user.VaultPinHash != null },
                 token
             });
         }
