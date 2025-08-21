@@ -53,7 +53,7 @@ export function ScheduleReleaseModal({
       default:
         date.setMonth(date.getMonth() + value);
     }
-    return date.toISOString().split('T')[0];
+    return date.toISOString();
   };
 
   const handleSubmit = async () => {
@@ -62,7 +62,7 @@ export function ScheduleReleaseModal({
       return;
     }
 
-    let finalDate = releaseDate;
+    let finalDate = '';
     let inactivityPeriod: string | undefined;
     let reason: string | undefined;
 
@@ -71,6 +71,7 @@ export function ScheduleReleaseModal({
         setError('Please choose a release date');
         return;
       }
+      finalDate = new Date(releaseDate).toISOString();
     } else if (triggerEvent === 'inactivity') {
       if (!inactivityValue) {
         setError('Please specify inactivity duration');
@@ -83,25 +84,35 @@ export function ScheduleReleaseModal({
         setError('Trustee approval requires selecting a trustee');
         return;
       }
-      finalDate = new Date().toISOString().split('T')[0];
+      finalDate = new Date().toISOString();
     } else if (triggerEvent === 'emergency') {
       if (!emergencyReason) {
         setError('Please provide an emergency reason');
         return;
       }
       reason = emergencyReason;
-      finalDate = new Date().toISOString().split('T')[0];
+      finalDate = new Date().toISOString();
     }
 
-    await onSchedule({
+    const payload: {
+      filePath: string;
+      releaseDate: string;
+      triggerEvent: string;
+      beneficiaryEmail: string;
+      trusteeEmail?: string;
+      inactivityPeriod?: string;
+      emergencyReason?: string;
+    } = {
       filePath,
       releaseDate: finalDate,
       triggerEvent,
       beneficiaryEmail,
-      trusteeEmail,
-      inactivityPeriod,
-      emergencyReason: reason,
-    });
+    };
+    if (trusteeEmail) payload.trusteeEmail = trusteeEmail;
+    if (inactivityPeriod) payload.inactivityPeriod = inactivityPeriod;
+    if (reason) payload.emergencyReason = reason;
+
+    await onSchedule(payload);
 
     setFilePath('');
     setReleaseDate('');

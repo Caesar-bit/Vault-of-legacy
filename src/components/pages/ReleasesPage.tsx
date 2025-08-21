@@ -466,7 +466,7 @@ export function ReleasesPage() {
               }
             </p>
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={() => setShowScheduleModal(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
             >
               <Plus className="h-5 w-5" />
